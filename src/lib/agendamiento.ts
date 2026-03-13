@@ -1,0 +1,90 @@
+export type Cita = {
+  id: string
+  medicoId: string
+  pacienteNombre: string
+  pacienteRut: string
+  pacienteEmail: string
+  pacienteTelefono: string
+  fecha: string        // "2024-03-15"
+  hora: string         // "09:30"
+  motivo: string
+  estado: 'pendiente' | 'confirmada' | 'cancelada' | 'completada'
+  folio: string        // "PRX-2024-0042"
+  creadaEn: string
+}
+
+export type SlotDisponible = {
+  fecha: string
+  hora: string
+  disponible: boolean
+}
+
+export type Medico = {
+  id: string
+  nombre: string
+  especialidad: string
+  foto: string | null
+  rating: number
+  proximaDisponibilidad: string
+}
+
+// Genera un folio único tipo PRX-2024-0042
+export function generarFolio(): string {
+  const anio = new Date().getFullYear()
+  const num = Math.floor(Math.random() * 9000) + 1000
+  return `PRX-${anio}-${num}`
+}
+
+// Genera slots de 30 min entre hora inicio y fin para una fecha
+export function generarSlots(fecha: string, horaInicio: string, horaFin: string, ocupados: string[]): SlotDisponible[] {
+  const slots: SlotDisponible[] = []
+  const [hIni, mIni] = horaInicio.split(':').map(Number)
+  const [hFin, mFin] = horaFin.split(':').map(Number)
+
+  let minutos = hIni * 60 + mIni
+  const finMinutos = hFin * 60 + mFin
+
+  while (minutos < finMinutos) {
+    const h = String(Math.floor(minutos / 60)).padStart(2, '0')
+    const m = String(minutos % 60).padStart(2, '0')
+    const hora = `${h}:${m}`
+    slots.push({ fecha, hora, disponible: !ocupados.includes(hora) })
+    minutos += 30
+  }
+
+  return slots
+}
+
+// Valida RUT chileno (formato 12345678-9 o 12.345.678-9)
+export function validarRut(rut: string): boolean {
+  const clean = rut.replace(/\./g, '').replace('-', '')
+  if (clean.length < 2) return false
+
+  const cuerpo = clean.slice(0, -1)
+  const dv = clean.slice(-1).toUpperCase()
+
+  let suma = 0
+  let multiplo = 2
+
+  for (let i = cuerpo.length - 1; i >= 0; i--) {
+    suma += Number(cuerpo[i]) * multiplo
+    multiplo = multiplo === 7 ? 2 : multiplo + 1
+  }
+
+  const dvEsperado = 11 - (suma % 11)
+  const dvCalc = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : String(dvEsperado)
+
+  return dv === dvCalc
+}
+
+// Formatea RUT automáticamente mientras el usuario escribe
+export function formatearRut(valor: string): string {
+  const clean = valor.replace(/\./g, '').replace('-', '').replace(/[^0-9kK]/g, '')
+  if (clean.length <= 1) return clean
+
+  const cuerpo = clean.slice(0, -1)
+  const dv = clean.slice(-1)
+
+  const conPuntos = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${conPuntos}-${dv}`
+}
