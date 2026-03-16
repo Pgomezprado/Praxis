@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generarFolio } from '@/lib/agendamiento'
+import { enviarConfirmacionCita } from '@/lib/email/confirmacion'
 
 // Endpoint público — crea o actualiza paciente y luego crea la cita
 export async function POST(req: Request) {
@@ -105,14 +106,32 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Error al crear la cita' }, { status: 500 })
     }
 
+    const clinicaNombre   = (clinica as { nombre?: string }).nombre ?? ''
+    const clinicaDireccion = (clinica as { direccion?: string }).direccion ?? ''
+    const clinicaCiudad   = (clinica as { ciudad?: string }).ciudad ?? ''
+
+    // Enviar email de confirmación (no bloquea la respuesta)
+    void enviarConfirmacionCita({
+      to: email,
+      pacienteNombre: nombre,
+      folio: cita.folio,
+      medicoNombre: doctor.nombre,
+      especialidad: '',
+      fecha,
+      hora,
+      clinicaNombre,
+      clinicaDireccion,
+      clinicaCiudad,
+    })
+
     return Response.json({
       folio: cita.folio,
       medico: doctor.nombre,
       fecha,
       hora,
-      clinicaNombre: (clinica as { nombre?: string }).nombre ?? '',
-      clinicaDireccion: (clinica as { direccion?: string; ciudad?: string }).direccion ?? '',
-      clinicaCiudad: (clinica as { ciudad?: string }).ciudad ?? '',
+      clinicaNombre,
+      clinicaDireccion,
+      clinicaCiudad,
     }, { status: 201 })
   } catch (error) {
     console.error('Error en POST /api/public/confirmar:', error)

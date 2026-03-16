@@ -8,7 +8,9 @@ import { z } from 'zod'
 import { AlertTriangle, ChevronLeft, CheckCircle2, Clock } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { ResumenIA } from '@/components/paciente/ResumenIA'
+import { HistorialCitas } from '@/components/paciente/HistorialCitas'
 import type { MockConsulta } from '@/lib/mock-data'
+import type { CitaPaciente } from '@/components/paciente/HistorialCitas'
 
 // ── types ─────────────────────────────────────────────────────────────────────
 
@@ -40,6 +42,7 @@ type Props = {
   paciente: Paciente
   consultas: MockConsulta[]
   citaContext: CitaContext
+  citas?: CitaPaciente[]
 }
 
 // ── form schema ───────────────────────────────────────────────────────────────
@@ -64,7 +67,7 @@ function formatFecha(iso: string): string {
 
 // ── component ─────────────────────────────────────────────────────────────────
 
-export function PacienteConsultaClient({ paciente, consultas, citaContext }: Props) {
+export function PacienteConsultaClient({ paciente, consultas, citaContext, citas = [] }: Props) {
   const router = useRouter()
   const [consultasLocales, setConsultasLocales] = useState<MockConsulta[]>(consultas)
   const [saved, setSaved] = useState(false)
@@ -233,6 +236,16 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext }: Pro
 
           {/* Resumen IA — generado dinámicamente */}
           <ResumenIA pacienteId={paciente.id} />
+
+          {/* Citas */}
+          {citas.length > 0 && (
+            <div>
+              <h3 className="text-base font-semibold text-slate-800 mb-4">
+                Citas ({citas.length})
+              </h3>
+              <HistorialCitas citas={citas} />
+            </div>
+          )}
 
           {/* Historial */}
           <div>

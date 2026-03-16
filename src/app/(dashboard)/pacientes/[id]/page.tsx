@@ -4,8 +4,10 @@ import { formatRut, calcularEdad, formatFecha } from '@/lib/utils/formatters'
 import { ResumenIA } from '@/components/paciente/ResumenIA'
 import { AlergiasBadges } from '@/components/paciente/AlergiasBadges'
 import { HistorialConsultas } from '@/components/paciente/HistorialConsultas'
+import { HistorialCitas } from '@/components/paciente/HistorialCitas'
 import { FormConsulta } from '@/components/consulta/FormConsulta'
 import type { Consulta } from '@/types/database'
+import type { CitaPaciente } from '@/components/paciente/HistorialCitas'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -28,12 +30,20 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
 
   if (!paciente) notFound()
 
-  const { data: consultas } = await supabase
-    .from('consultas')
-    .select('*, doctor:usuarios(nombre, especialidad)')
-    .eq('paciente_id', id)
-    .order('fecha', { ascending: false })
-    .limit(20)
+  const [{ data: consultas }, { data: citasDb }] = await Promise.all([
+    supabase
+      .from('consultas')
+      .select('*, doctor:usuarios(nombre, especialidad)')
+      .eq('paciente_id', id)
+      .order('fecha', { ascending: false })
+      .limit(20),
+    supabase
+      .from('citas')
+      .select('id, folio, fecha, hora_inicio, estado, motivo, doctor:usuarios!citas_doctor_id_fkey(nombre, especialidad)')
+      .eq('paciente_id', id)
+      .order('fecha', { ascending: false })
+      .limit(30),
+  ])
 
   // Registrar acceso en audit_log
   const { data: { user } } = await supabase.auth.getUser()
@@ -94,6 +104,17 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
         <div className="space-y-6">
           {/* Resumen IA — siempre lo primero */}
           <ResumenIA pacienteId={paciente.id} />
+
+          {/* Historial de citas */}
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">
+              Citas ({citasDb?.length ?? 0})
+            </h3>
+            <HistorialCitas citas={(citasDb ?? []).map(c => ({
+              ...c,
+              doctor: Array.isArray(c.doctor) ? (c.doctor[0] ?? null) : c.doctor,
+            })) as CitaPaciente[]} />
+          </div>
 
           {/* Historial de consultas */}
           <div>

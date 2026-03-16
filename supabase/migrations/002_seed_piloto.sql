@@ -1,4 +1,4 @@
--- PraxisApp — Seed datos piloto UC Christus
+-- PraxisApp — Seed datos piloto
 -- Ejecutar DESPUÉS de crear el usuario en Supabase Authentication
 -- Reemplaza el email con el que creaste en Authentication → Users
 
@@ -12,7 +12,7 @@ BEGIN
 
   -- 1. Crear clínica
   INSERT INTO clinicas (nombre, slug, plan)
-  VALUES ('UC Christus', 'uc-christus', 'piloto')
+  VALUES ('Clínica Demo', 'demo', 'piloto')
   RETURNING id INTO v_clinica_id;
 
   -- 2. Obtener el UUID del usuario creado en Authentication

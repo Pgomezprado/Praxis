@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { PacienteConsultaClient } from '@/components/medico/PacienteConsultaClient'
-import { mockCitas } from '@/lib/mock-data'
 import { calcularEdad } from '@/lib/utils/formatters'
+import type { CitaPaciente } from '@/components/paciente/HistorialCitas'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -35,6 +35,26 @@ export default async function MedicoPacientePage({
     .single()
 
   if (!pacienteDb) notFound()
+
+  // Cargar cita actual si viene en query param
+  let citaContext = null
+  if (citaId) {
+    const { data: citaDb } = await supabase
+      .from('citas')
+      .select('id, folio, hora_inicio, hora_fin, motivo, tipo')
+      .eq('id', citaId)
+      .single()
+    if (citaDb) {
+      citaContext = {
+        id: citaDb.id,
+        horaInicio: citaDb.hora_inicio,
+        horaFin: citaDb.hora_fin ?? '',
+        motivo: citaDb.motivo ?? '',
+        tipo: citaDb.tipo ?? 'control',
+        folio: citaDb.folio,
+      }
+    }
+  }
 
   // Cargar consultas con datos del médico
   const { data: consultasDb } = await supabase
@@ -79,18 +99,18 @@ export default async function MedicoPacientePage({
     }
   })
 
-  // Contexto de cita (sigue siendo mock por ahora — la agenda aún usa mock data)
-  const cita = citaId ? mockCitas.find((c) => c.id === citaId) ?? null : null
-  const citaContext = cita
-    ? {
-        id: cita.id,
-        horaInicio: cita.horaInicio,
-        horaFin: cita.horaFin,
-        motivo: cita.motivo,
-        tipo: cita.tipo,
-        folio: cita.folio,
-      }
-    : null
+  // Cargar historial de citas del paciente
+  const { data: citasDb } = await supabase
+    .from('citas')
+    .select('id, folio, fecha, hora_inicio, estado, motivo, doctor:usuarios!citas_doctor_id_fkey(nombre, especialidad)')
+    .eq('paciente_id', id)
+    .order('fecha', { ascending: false })
+    .limit(30)
+
+  const citas = (citasDb ?? []).map(c => ({
+    ...c,
+    doctor: Array.isArray(c.doctor) ? (c.doctor[0] ?? null) : c.doctor,
+  })) as CitaPaciente[]
 
   return (
     <div className="-mx-2">
@@ -98,6 +118,7 @@ export default async function MedicoPacientePage({
         paciente={paciente}
         consultas={consultas}
         citaContext={citaContext}
+        citas={citas}
       />
     </div>
   )
