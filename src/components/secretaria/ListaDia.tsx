@@ -5,6 +5,7 @@ import type { MockCita } from '@/lib/mock-data'
 interface ListaDiaProps {
   citas: MockCita[]
   showMedico?: boolean
+  esDoctor?: boolean
   onEstadoCambiado?: (id: string, nuevoEstado: MockCita['estado']) => void
 }
 
@@ -24,7 +25,7 @@ function getSlotIndex(hora: string): number {
   return SLOTS_DIA.indexOf(hora)
 }
 
-export function ListaDia({ citas, showMedico = false, onEstadoCambiado }: ListaDiaProps) {
+export function ListaDia({ citas, showMedico = false, esDoctor = false, onEstadoCambiado }: ListaDiaProps) {
   if (citas.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -70,7 +71,7 @@ export function ListaDia({ citas, showMedico = false, onEstadoCambiado }: ListaD
         const cita = citasByHora.get(slot)
 
         if (cita) {
-          return <CitaCard key={cita.id} cita={cita} showMedico={showMedico} onEstadoCambiado={onEstadoCambiado} />
+          return <CitaCard key={cita.id} cita={cita} showMedico={showMedico} esDoctor={esDoctor} onEstadoCambiado={onEstadoCambiado} />
         }
 
         if (occupiedSlots.has(slot)) {

@@ -16,6 +16,7 @@ interface AgendaHoyClientProps {
   listPath?: string
   semanaPath?: string
   hideMedicoFilter?: boolean
+  esDoctor?: boolean
 }
 
 type Toast = { folio: string; paciente: string }
@@ -29,6 +30,7 @@ export function AgendaHoyClient({
   listPath,
   semanaPath,
   hideMedicoFilter,
+  esDoctor = false,
 }: AgendaHoyClientProps) {
   const [modalOpen, setModalOpen] = useState(false)
   const [citasLocales, setCitasLocales] = useState<MockCita[]>(citasIniciales)
@@ -66,7 +68,7 @@ export function AgendaHoyClient({
       />
 
       <div className="max-w-[720px] mx-auto px-4 py-6">
-        <ListaDia citas={citasLocales} showMedico={!medicoId} onEstadoCambiado={handleEstadoCambiado} />
+        <ListaDia citas={citasLocales} showMedico={!medicoId} esDoctor={esDoctor} onEstadoCambiado={handleEstadoCambiado} />
       </div>
 
       <ModalNuevaCita

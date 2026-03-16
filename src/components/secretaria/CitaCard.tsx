@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { MoreVertical, Eye, XCircle, PlayCircle, CheckCircle2, Loader2 } from 'lucide-react'
+import Link from 'next/link'
+import { MoreVertical, XCircle, PlayCircle, CheckCircle2, Loader2, CheckCheck, FileText } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import type { MockCita } from '@/lib/mock-data'
@@ -9,6 +10,7 @@ import type { MockCita } from '@/lib/mock-data'
 interface CitaCardProps {
   cita: MockCita
   showMedico?: boolean
+  esDoctor?: boolean
   onEstadoCambiado?: (id: string, nuevoEstado: MockCita['estado']) => void
 }
 
@@ -29,7 +31,7 @@ const TIPO_LABEL: Record<MockCita['tipo'], string> = {
   urgencia: 'Urgencia',
 }
 
-export function CitaCard({ cita, showMedico = false, onEstadoCambiado }: CitaCardProps) {
+export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoCambiado }: CitaCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [estadoLocal, setEstadoLocal] = useState(cita.estado)
   const [loading, setLoading] = useState(false)
@@ -62,15 +64,27 @@ export function CitaCard({ cita, showMedico = false, onEstadoCambiado }: CitaCar
     }
   }
 
-  // Acciones disponibles según estado
+  // Acciones disponibles según rol y estado
   const acciones: { icon: React.ElementType; label: string; estado: MockCita['estado']; danger?: boolean }[] = []
-  if (estadoLocal === 'confirmada' || estadoLocal === 'pendiente') {
-    acciones.push({ icon: PlayCircle, label: 'Iniciar consulta', estado: 'en_consulta' })
-    acciones.push({ icon: XCircle, label: 'Cancelar cita', estado: 'cancelada', danger: true })
-  }
-  if (estadoLocal === 'en_consulta') {
-    acciones.push({ icon: CheckCircle2, label: 'Marcar completada', estado: 'completada' })
-    acciones.push({ icon: XCircle, label: 'Cancelar cita', estado: 'cancelada', danger: true })
+
+  if (esDoctor) {
+    // Doctor: puede iniciar y completar consultas
+    if (estadoLocal === 'confirmada' || estadoLocal === 'pendiente') {
+      acciones.push({ icon: PlayCircle, label: 'Iniciar consulta', estado: 'en_consulta' })
+      acciones.push({ icon: XCircle, label: 'Cancelar cita', estado: 'cancelada', danger: true })
+    }
+    if (estadoLocal === 'en_consulta') {
+      acciones.push({ icon: CheckCircle2, label: 'Marcar completada', estado: 'completada' })
+    }
+  } else {
+    // Secretaria: solo puede confirmar y cancelar
+    if (estadoLocal === 'pendiente') {
+      acciones.push({ icon: CheckCheck, label: 'Confirmar cita', estado: 'confirmada' })
+      acciones.push({ icon: XCircle, label: 'Cancelar cita', estado: 'cancelada', danger: true })
+    }
+    if (estadoLocal === 'confirmada') {
+      acciones.push({ icon: XCircle, label: 'Cancelar cita', estado: 'cancelada', danger: true })
+    }
   }
 
   return (
@@ -141,6 +155,17 @@ export function CitaCard({ cita, showMedico = false, onEstadoCambiado }: CitaCar
         {/* Acción rápida + menú */}
         <div className="relative flex-shrink-0 flex items-center gap-1">
           {loading && <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />}
+
+          {/* Link a historia clínica — solo médico, citas no canceladas */}
+          {esDoctor && !isCancelada && (
+            <Link
+              href={`/medico/pacientes/${cita.pacienteId}?cita=${cita.id}`}
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+              title="Abrir historia clínica"
+            >
+              <FileText className="w-4 h-4" />
+            </Link>
+          )}
 
           {acciones.length > 0 && !loading && (
             <>
