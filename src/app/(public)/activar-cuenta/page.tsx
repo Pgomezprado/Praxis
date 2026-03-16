@@ -31,46 +31,59 @@ export default function ActivarCuentaPage() {
 
   useEffect(() => {
     async function init() {
-      // Usar el hash capturado al inicio (antes de que Supabase lo limpie)
+      // Flujo 1: PKCE — código en query param (?code=xxx)
+      const queryParams = new URLSearchParams(window.location.search)
+      const code = queryParams.get('code')
+
+      // Flujo 2: Implícito — token en hash (#access_token=xxx)
       const hash = hashCapturado.current.substring(1)
-      const params = new URLSearchParams(hash)
-      const accessToken = params.get('access_token')
-      const refreshToken = params.get('refresh_token')
+      const hashParams = new URLSearchParams(hash)
+      const accessToken = hashParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token')
 
-      setDebugInfo(`Hash: ${hash.slice(0, 50)} | Token: ${accessToken ? accessToken.slice(0, 20) + '...' : 'NULO'}`)
+      setDebugInfo(`code: ${code ? code.slice(0, 20) + '...' : 'nulo'} | hash token: ${accessToken ? 'sí' : 'nulo'}`)
 
-      if (accessToken) {
-        const { data: { session }, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken ?? '',
-        })
-        if (sessionError || !session) {
-          setDebugInfo(prev => prev + ` | Error: ${sessionError?.message ?? 'sin sesión'}`)
+      let session = null
+
+      if (code) {
+        // PKCE flow
+        const { data, error: codeError } = await supabase.auth.exchangeCodeForSession(code)
+        if (codeError || !data.session) {
+          setDebugInfo(prev => prev + ` | Error PKCE: ${codeError?.message ?? 'sin sesión'}`)
           setTokenValido(false)
           return
         }
-        setTokenValido(true)
-        const { data: u } = await supabase
-          .from('usuarios')
-          .select('nombre')
-          .eq('id', session.user.id)
-          .single()
-        if (u?.nombre) setNombreUsuario(u.nombre.split(' ')[0])
-      } else {
-        // Sin hash — verificar sesión activa (recarga de página)
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
-          setTokenValido(true)
-          const { data: u } = await supabase
-            .from('usuarios')
-            .select('nombre')
-            .eq('id', session.user.id)
-            .single()
-          if (u?.nombre) setNombreUsuario(u.nombre.split(' ')[0])
-        } else {
+        session = data.session
+      } else if (accessToken) {
+        // Implicit flow
+        const { data, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken ?? '',
+        })
+        if (sessionError || !data.session) {
+          setDebugInfo(prev => prev + ` | Error implícito: ${sessionError?.message ?? 'sin sesión'}`)
           setTokenValido(false)
+          return
         }
+        session = data.session
+      } else {
+        // Sin código ni hash — verificar sesión activa
+        const { data } = await supabase.auth.getSession()
+        session = data.session ?? null
       }
+
+      if (!session) {
+        setTokenValido(false)
+        return
+      }
+
+      setTokenValido(true)
+      const { data: u } = await supabase
+        .from('usuarios')
+        .select('nombre')
+        .eq('id', session.user.id)
+        .single()
+      if (u?.nombre) setNombreUsuario(u.nombre.split(' ')[0])
     }
     init()
   // eslint-disable-next-line react-hooks/exhaustive-deps
