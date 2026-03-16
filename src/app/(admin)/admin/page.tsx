@@ -30,8 +30,9 @@ function getEstadoHoy(citasDoctor: { estado: string }[]): EstadoMedicoHoy {
 
 export default async function AdminInicioPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) return null
+  const user = session.user
 
   const { data: me } = await supabase
     .from('usuarios')
@@ -39,7 +40,17 @@ export default async function AdminInicioPage() {
     .eq('id', user.id)
     .single()
 
-  if (!me) return null
+  if (!me?.clinica_id) {
+    return (
+      <div className="max-w-6xl mx-auto">
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-amber-800">
+          <p className="font-medium">Configuración pendiente</p>
+          <p className="text-sm mt-1">No se encontró la clínica asociada a tu cuenta. Contacta al administrador del sistema.</p>
+          <p className="text-xs mt-2 font-mono text-amber-600">user_id: {user.id}</p>
+        </div>
+      </div>
+    )
+  }
   const clinicaId = me.clinica_id
 
   const today = new Date().toISOString().split('T')[0]

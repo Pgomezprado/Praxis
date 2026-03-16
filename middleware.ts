@@ -57,9 +57,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/medico/inicio', request.url))
     } else if (rol === 'admin_clinica') {
       return NextResponse.redirect(new URL('/admin', request.url))
-    } else {
+    } else if (rol) {
       return NextResponse.redirect(new URL('/inicio', request.url))
     }
+    // Si no se pudo determinar el rol, dejar pasar al login para que el usuario se autentique
   }
 
   return supabaseResponse

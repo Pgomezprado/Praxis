@@ -29,6 +29,7 @@ function ActivarCuentaContent() {
   const [listo, setListo] = useState(false)
   const [tokenValido, setTokenValido] = useState<boolean | null>(null)
   const [nombreUsuario, setNombreUsuario] = useState('')
+  const [emailUsuario, setEmailUsuario] = useState('')
   const [debugError, setDebugError] = useState('')
 
   const supabase = createBrowserClient(
@@ -51,6 +52,7 @@ function ActivarCuentaContent() {
         setTokenValido(false)
         return
       }
+      setEmailUsuario(user.email ?? '')
       const { data: u } = await supabase
         .from('usuarios')
         .select('nombre')
@@ -88,10 +90,28 @@ function ActivarCuentaContent() {
       return
     }
 
+    // Iniciar sesión real con la nueva contraseña para establecer cookies válidas
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: emailUsuario,
+      password,
+    })
+
     setListo(true)
     setTimeout(() => {
-      window.location.href = 'https://www.praxisapp.cl'
-    }, 2000)
+      if (signInError) {
+        // Si el login falla, ir al login manual
+        window.location.href = '/login'
+        return
+      }
+      const rol = data.rol
+      if (rol === 'admin_clinica') {
+        window.location.href = '/admin'
+      } else if (rol === 'doctor') {
+        window.location.href = '/medico/inicio'
+      } else {
+        window.location.href = '/inicio'
+      }
+    }, 1500)
   }
 
   if (tokenValido === null) {
@@ -132,7 +152,7 @@ function ActivarCuentaContent() {
             <CheckCircle2 className="w-6 h-6 text-emerald-500" />
           </div>
           <h1 className="text-lg font-semibold text-slate-900 mb-2">¡Cuenta activada!</h1>
-          <p className="text-sm text-slate-500">Redirigiendo al sistema…</p>
+          <p className="text-sm text-slate-500">Ingresando al sistema…</p>
         </div>
       </div>
     )
