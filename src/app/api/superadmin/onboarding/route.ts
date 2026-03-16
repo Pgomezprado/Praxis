@@ -32,12 +32,10 @@ export async function POST(req: Request) {
     if (clinicaError) throw clinicaError
 
     // 2. Invitar al admin vía Supabase Auth (o buscar si ya existe)
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://praxisapp.cl'
     let adminUserId: string
 
     const { data: authData, error: authError } = await admin.auth.admin.inviteUserByEmail(adminEmail, {
       data: { nombre: adminNombre, rol: 'admin_clinica' },
-      redirectTo: `${appUrl}/activar-cuenta`,
     })
 
     if (authError) {
