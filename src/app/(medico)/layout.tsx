@@ -5,9 +5,9 @@ const DEMO_MEDICO = mockMedicosAdmin.find((m) => m.id === 'm1')!
 
 export default function MedicoLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-slate-50">
       <MedicoSidebar />
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header estático con datos del médico demo */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
           <div />
@@ -20,7 +20,7 @@ export default function MedicoLayout({ children }: { children: React.ReactNode }
             </span>
           </div>
         </header>
-        <main className="flex-1 p-6">
+        <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>
       </div>
