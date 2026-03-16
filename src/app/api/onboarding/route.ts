@@ -29,7 +29,12 @@ export async function POST(req: Request) {
       .select()
       .single()
 
-    if (clinicaError) throw clinicaError
+    if (clinicaError) {
+      if (clinicaError.code === '23505') {
+        return Response.json({ error: 'El slug ya está en uso. Elige uno diferente.' }, { status: 409 })
+      }
+      throw clinicaError
+    }
 
     // 2. Invitar al admin vía Supabase Auth (o buscar si ya existe)
     let adminUserId: string
