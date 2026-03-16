@@ -71,18 +71,8 @@ export default function ActivarCuentaPage() {
     }
 
     setListo(true)
-    setTimeout(async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      const { data: usuario } = await supabase
-        .from('usuarios')
-        .select('rol')
-        .eq('id', session!.user.id)
-        .single()
-
-      const rol = usuario?.rol
-      if (rol === 'doctor') router.push('/medico/inicio')
-      else if (rol === 'admin_clinica') router.push('/admin')
-      else router.push('/inicio')
+    setTimeout(() => {
+      router.push('/login')
     }, 2000)
   }
 
