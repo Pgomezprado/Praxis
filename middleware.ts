@@ -39,7 +39,21 @@ export async function middleware(request: NextRequest) {
   }
 
   if (session && isLoginPage) {
-    return NextResponse.redirect(new URL('/agenda', request.url))
+    // Consultar rol del usuario para redirigir al dashboard correcto
+    const { data: usuario } = await supabase
+      .from('usuarios')
+      .select('rol')
+      .eq('id', session.user.id)
+      .single()
+
+    const rol = usuario?.rol
+    if (rol === 'doctor') {
+      return NextResponse.redirect(new URL('/medico/inicio', request.url))
+    } else if (rol === 'admin_clinica') {
+      return NextResponse.redirect(new URL('/admin', request.url))
+    } else {
+      return NextResponse.redirect(new URL('/inicio', request.url))
+    }
   }
 
   return supabaseResponse

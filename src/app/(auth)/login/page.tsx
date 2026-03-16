@@ -19,18 +19,32 @@ export default function LoginPage() {
     setError(null)
 
     const supabase = createClient()
-    const { error: authError } = await supabase.auth.signInWithPassword({
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
 
-    if (authError) {
+    if (authError || !data.user) {
       setError('Credenciales incorrectas. Verifica tu email y contraseña.')
       setLoading(false)
       return
     }
 
-    router.push('/agenda')
+    // Redirigir según rol del usuario
+    const { data: usuario } = await supabase
+      .from('usuarios')
+      .select('rol')
+      .eq('id', data.user.id)
+      .single()
+
+    const rol = usuario?.rol
+    if (rol === 'doctor') {
+      router.push('/medico/inicio')
+    } else if (rol === 'admin_clinica') {
+      router.push('/admin')
+    } else {
+      router.push('/inicio')
+    }
     router.refresh()
   }
 
