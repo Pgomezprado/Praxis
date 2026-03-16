@@ -20,6 +20,7 @@ export default function ActivarCuentaPage() {
   const [listo, setListo] = useState(false)
   const [tokenValido, setTokenValido] = useState<boolean | null>(null)
   const [nombreUsuario, setNombreUsuario] = useState('')
+  const [debugInfo, setDebugInfo] = useState('')
 
   // Deshabilitar detección automática para evitar que consuma el hash
   const supabase = createBrowserClient(
@@ -36,12 +37,15 @@ export default function ActivarCuentaPage() {
       const accessToken = params.get('access_token')
       const refreshToken = params.get('refresh_token')
 
+      setDebugInfo(`Hash: ${hash.slice(0, 50)} | Token: ${accessToken ? accessToken.slice(0, 20) + '...' : 'NULO'}`)
+
       if (accessToken) {
         const { data: { session }, error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken ?? '',
         })
         if (sessionError || !session) {
+          setDebugInfo(prev => prev + ` | Error: ${sessionError?.message ?? 'sin sesión'}`)
           setTokenValido(false)
           return
         }
@@ -129,6 +133,9 @@ export default function ActivarCuentaPage() {
           <p className="text-sm text-slate-500">
             Este link ya no es válido. Pide al administrador que te envíe una nueva invitación.
           </p>
+          {debugInfo && (
+            <p className="text-xs text-slate-400 mt-4 break-all">{debugInfo}</p>
+          )}
         </div>
       </div>
     )
