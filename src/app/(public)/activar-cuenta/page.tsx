@@ -75,23 +75,23 @@ export default function ActivarCuentaPage() {
     setGuardando(true)
     setError('')
 
-    const { error: updateError } = await supabase.auth.updateUser({ password })
-    if (updateError) {
-      setError('No se pudo crear la contraseña. Intenta solicitar una nueva invitación.')
+    const res = await fetch('/api/activar-cuenta', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    })
+
+    const data = await res.json()
+
+    if (!res.ok) {
+      setError(data.error ?? 'No se pudo crear la contraseña. Intenta solicitar una nueva invitación.')
       setGuardando(false)
       return
     }
 
     setListo(true)
-    setTimeout(async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
-      const { data: u } = await supabase
-        .from('usuarios')
-        .select('rol')
-        .eq('id', session.user.id)
-        .single()
-      const rol = u?.rol
+    setTimeout(() => {
+      const rol = data.rol
       if (rol === 'doctor') router.push('/medico/inicio')
       else if (rol === 'admin_clinica') router.push('/admin')
       else router.push('/inicio')
