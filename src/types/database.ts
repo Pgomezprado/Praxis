@@ -31,6 +31,11 @@ export interface Paciente {
   condiciones: string[]
   activo: boolean
   created_at: string
+  // Campos agregados en migración 004
+  prevision: string | null
+  email: string | null
+  telefono: string | null
+  sexo: 'M' | 'F' | 'otro' | null
   consultas?: Consulta[]
 }
 
@@ -63,7 +68,7 @@ export type Database = {
     Tables: {
       clinicas: { Row: Clinica; Insert: Omit<Clinica, 'id' | 'created_at'>; Update: Partial<Omit<Clinica, 'id'>> }
       usuarios: { Row: Usuario; Insert: Omit<Usuario, 'created_at'>; Update: Partial<Omit<Usuario, 'id'>> }
-      pacientes: { Row: Paciente; Insert: Omit<Paciente, 'id' | 'created_at' | 'consultas'>; Update: Partial<Omit<Paciente, 'id' | 'clinica_id'>> }
+      pacientes: { Row: Paciente; Insert: Omit<Paciente, 'id' | 'created_at' | 'consultas'> & { prevision?: string | null; email?: string | null; telefono?: string | null; sexo?: 'M' | 'F' | 'otro' | null }; Update: Partial<Omit<Paciente, 'id' | 'clinica_id'>> }
       consultas: { Row: Consulta; Insert: Omit<Consulta, 'id' | 'created_at' | 'doctor'>; Update: Partial<Omit<Consulta, 'id'>> }
       audit_log: { Row: AuditLog; Insert: Omit<AuditLog, 'id' | 'created_at'>; Update: never }
     }

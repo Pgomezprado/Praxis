@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { AlertTriangle, ChevronLeft, Bot, CheckCircle2, Clock } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, CheckCircle2, Clock } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
+import { ResumenIA } from '@/components/paciente/ResumenIA'
 import type { MockConsulta } from '@/lib/mock-data'
 
 // ── types ─────────────────────────────────────────────────────────────────────
@@ -38,7 +39,6 @@ type CitaContext = {
 type Props = {
   paciente: Paciente
   consultas: MockConsulta[]
-  resumenIA: string
   citaContext: CitaContext
 }
 
@@ -64,7 +64,7 @@ function formatFecha(iso: string): string {
 
 // ── component ─────────────────────────────────────────────────────────────────
 
-export function PacienteConsultaClient({ paciente, consultas, resumenIA, citaContext }: Props) {
+export function PacienteConsultaClient({ paciente, consultas, citaContext }: Props) {
   const router = useRouter()
   const [consultasLocales, setConsultasLocales] = useState<MockConsulta[]>(consultas)
   const [saved, setSaved] = useState(false)
@@ -82,28 +82,43 @@ export function PacienteConsultaClient({ paciente, consultas, resumenIA, citaCon
 
   async function onSubmit(data: FormData) {
     setSaving(true)
-    // Simulate async save
-    await new Promise((r) => setTimeout(r, 600))
 
-    const nuevaConsulta: MockConsulta = {
-      id: `c-new-${Date.now()}`,
-      paciente_id: paciente.id,
-      fecha: new Date().toISOString().split('T')[0],
-      medicoNombre: 'Dr. Alejandro Muñoz',
-      especialidad: 'Cardiología',
-      motivo: data.motivo,
-      diagnostico: data.diagnostico || null,
-      notas: [data.notas, data.plan].filter(Boolean).join('\n\nPlan: ') || null,
-      medicamentos: data.medicamentos
-        ? data.medicamentos.split(',').map((m) => m.trim()).filter(Boolean)
-        : [],
+    const notasCompletas = [data.notas, data.plan].filter(Boolean).join('\n\nPlan: ') || null
+    const medicamentosArr = data.medicamentos
+      ? data.medicamentos.split(',').map((m) => m.trim()).filter(Boolean)
+      : []
+
+    const res = await fetch('/api/consultas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        paciente_id: paciente.id,
+        motivo: data.motivo,
+        diagnostico: data.diagnostico || null,
+        notas: notasCompletas,
+        medicamentos: medicamentosArr,
+      }),
+    })
+
+    if (res.ok) {
+      const nuevaConsulta: MockConsulta = {
+        id: `c-new-${Date.now()}`,
+        paciente_id: paciente.id,
+        fecha: new Date().toISOString(),
+        medicoNombre: '',
+        especialidad: '',
+        motivo: data.motivo,
+        diagnostico: data.diagnostico || null,
+        notas: notasCompletas,
+        medicamentos: medicamentosArr,
+      }
+      setConsultasLocales((prev) => [nuevaConsulta, ...prev])
+      setSaved(true)
+      reset()
+      setTimeout(() => router.push('/medico/inicio'), 1500)
     }
 
-    setConsultasLocales((prev) => [nuevaConsulta, ...prev])
-    setSaved(true)
-    reset()
     setSaving(false)
-    setTimeout(() => router.push('/medico/inicio'), 1500)
   }
 
   return (
@@ -216,14 +231,8 @@ export function PacienteConsultaClient({ paciente, consultas, resumenIA, citaCon
         {/* ── CENTER — resumen IA + historial ── */}
         <div className="space-y-5 min-w-0">
 
-          {/* Resumen IA */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <Bot className="w-5 h-5 text-blue-600" />
-              <h3 className="text-base font-semibold text-blue-900">Resumen clínico — IA</h3>
-            </div>
-            <p className="text-blue-900 text-sm leading-relaxed whitespace-pre-line">{resumenIA}</p>
-          </div>
+          {/* Resumen IA — generado dinámicamente */}
+          <ResumenIA pacienteId={paciente.id} />
 
           {/* Historial */}
           <div>
