@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X, Send, Check } from 'lucide-react'
+import { X, Check, Mail } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { type MockSecretaria, type MockMedicoAdmin } from '@/lib/mock-data'
 import { validarRut, formatearRut } from '@/lib/agendamiento'
@@ -12,7 +12,6 @@ type FormData = {
   email: string
   telefono: string
   medicosAsignados: string[]
-  emailAcceso: string
 }
 
 type Props = {
@@ -32,14 +31,12 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
     email: '',
     telefono: '',
     medicosAsignados: [],
-    emailAcceso: '',
   }
 
   const [form, setForm] = useState<FormData>(defaultForm)
   const [rutError, setRutError] = useState('')
   const [guardando, setGuardando] = useState(false)
-  const [invitando, setInvitando] = useState(false)
-  const [invitadoOk, setInvitadoOk] = useState(false)
+  const [errorGuardar, setErrorGuardar] = useState('')
 
   useEffect(() => {
     if (secretariaEditar) {
@@ -49,13 +46,12 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
         email: secretariaEditar.email,
         telefono: secretariaEditar.telefono,
         medicosAsignados: [...secretariaEditar.medicosAsignados],
-        emailAcceso: secretariaEditar.email,
       })
     } else {
       setForm(defaultForm)
     }
     setRutError('')
-    setInvitadoOk(false)
+    setErrorGuardar('')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secretariaEditar, open])
 
@@ -74,7 +70,7 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
   }
 
   function handleEmailChange(value: string) {
-    setForm(prev => ({ ...prev, email: value, emailAcceso: value }))
+    setForm(prev => ({ ...prev, email: value }))
   }
 
   function toggleMedico(id: string) {
@@ -115,7 +111,11 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
     })
 
     setGuardando(false)
-    if (!res.ok) return
+    if (!res.ok) {
+      const data = await res.json()
+      setErrorGuardar(data.error ?? 'Error al guardar')
+      return
+    }
 
     const data = await res.json()
     const u = data.usuario
@@ -131,15 +131,6 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
       estado: u.activo ? 'activo' : 'inactivo',
     }
     onGuardar(sec)
-  }
-
-  async function handleInvitar() {
-    if (!form.emailAcceso.trim()) return
-    setInvitando(true)
-    await new Promise(r => setTimeout(r, 800))
-    setInvitando(false)
-    setInvitadoOk(true)
-    setTimeout(() => setInvitadoOk(false), 4000)
   }
 
   if (!open) return null
@@ -286,60 +277,24 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">
               Acceso al sistema
             </h3>
-            <div className="space-y-4">
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Email de acceso
-                </label>
-                <input
-                  type="email"
-                  value={form.emailAcceso}
-                  onChange={e => setForm(prev => ({ ...prev, emailAcceso: e.target.value }))}
-                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
-                />
-              </div>
+            <div className="space-y-3">
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Rol</label>
                 <div className="px-3 py-2.5 text-sm rounded-xl border border-slate-100 bg-slate-50 text-slate-500 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-violet-500" />
-                  Secretaria — solo lectura
+                  Secretaria / Recepcionista
                 </div>
               </div>
 
-              {/* Preview */}
-              {form.nombre && (
-                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <Avatar nombre={form.nombre} size="sm" />
-                  <div>
-                    <p className="text-sm font-medium text-slate-800">{form.nombre}</p>
-                    <p className="text-xs text-slate-500">
-                      {form.medicosAsignados.length > 0
-                        ? `Gestiona ${form.medicosAsignados.length} médico${form.medicosAsignados.length !== 1 ? 's' : ''}`
-                        : 'Sin médicos asignados'}
-                    </p>
-                  </div>
+              {!esEdicion && form.email.trim() && (
+                <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                  <Mail className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-blue-700 leading-relaxed">
+                    Al guardar se enviará una invitación a <strong>{form.email.trim()}</strong> para que la secretaria cree su contraseña y acceda al sistema.
+                  </p>
                 </div>
               )}
-
-              <button
-                type="button"
-                onClick={handleInvitar}
-                disabled={!form.emailAcceso.trim() || invitando}
-                className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                  invitadoOk
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed'
-                }`}
-              >
-                {invitando ? (
-                  <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-                {invitadoOk ? 'Invitación enviada ✓' : 'Enviar invitación por email'}
-              </button>
 
             </div>
           </section>
@@ -347,6 +302,11 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
         </div>
 
         {/* Footer */}
+        {errorGuardar && (
+          <div className="px-6 py-2 bg-red-50 border-t border-red-100">
+            <p className="text-xs text-red-600">{errorGuardar}</p>
+          </div>
+        )}
         <div className="px-6 py-4 border-t border-slate-200 flex items-center gap-3 bg-white">
           <button
             type="button"
