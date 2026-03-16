@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import {
   LayoutDashboard,
@@ -14,7 +15,6 @@ import {
   LogOut,
   ShieldCheck,
 } from 'lucide-react'
-import { mockClinica } from '@/lib/mock-data'
 
 const navItems = [
   { href: '/admin',              label: 'Inicio',          icon: LayoutDashboard, exact: true },
@@ -30,6 +30,28 @@ export function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+
+  const [clinicaNombre, setClinicaNombre] = useState('')
+  const [userEmail, setUserEmail] = useState('')
+
+  useEffect(() => {
+    async function loadData() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      setUserEmail(user.email ?? '')
+      const { data: me } = await supabase
+        .from('usuarios')
+        .select('clinica_id, clinicas(nombre)')
+        .eq('id', user.id)
+        .single()
+      if (me?.clinicas) {
+        const c = me.clinicas as { nombre: string } | { nombre: string }[]
+        setClinicaNombre(Array.isArray(c) ? c[0]?.nombre : c.nombre)
+      }
+    }
+    loadData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -61,7 +83,7 @@ export function AdminSidebar() {
       <div className="px-4 pt-4 pb-2">
         <div className="flex items-center gap-2 px-3 py-2 bg-slate-800/60 rounded-xl">
           <div className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
-          <span className="text-xs font-medium text-slate-300 truncate">{mockClinica.nombre}</span>
+          <span className="text-xs font-medium text-slate-300 truncate">{clinicaNombre || '…'}</span>
         </div>
       </div>
 
@@ -95,7 +117,7 @@ export function AdminSidebar() {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-white truncate">Administrador</p>
-            <p className="text-xs text-slate-400 truncate">{mockClinica.email}</p>
+            <p className="text-xs text-slate-400 truncate">{userEmail || '…'}</p>
           </div>
         </div>
         <button
