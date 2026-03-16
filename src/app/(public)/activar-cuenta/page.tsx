@@ -38,27 +38,50 @@ function ActivarCuentaContent() {
 
   useEffect(() => {
     async function init() {
-      // Flujo PKCE: ?code= en query params (Supabase lo envía así por defecto)
-      const code = searchParams.get('code')
+      const fullSearch = window.location.search
+      const fullHash = window.location.hash
+
+      // Flujo PKCE: ?code= en query params
+      const code = new URLSearchParams(fullSearch).get('code')
+
+      // Flujo implícito: #access_token= en hash
+      const hashParams = new URLSearchParams(fullHash.substring(1))
+      const accessToken = hashParams.get('access_token')
+      const refreshToken = hashParams.get('refresh_token')
 
       if (code) {
         const { data, error: exchError } = await supabase.auth.exchangeCodeForSession(code)
         if (exchError || !data.session) {
-          setDebugError(exchError?.message ?? 'sin sesión tras exchange')
+          setDebugError(`PKCE error: ${exchError?.message ?? 'sin sesión'}`)
           setTokenValido(false)
           return
         }
-        // Sesión establecida — limpiar code de la URL
         window.history.replaceState({}, '', '/activar-cuenta')
         await cargarNombre(data.session.user.id)
         setTokenValido(true)
         return
       }
 
-      // Sin code: verificar si ya hay sesión activa (ej: recarga de página)
+      if (accessToken) {
+        const { data, error: sessError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken ?? '',
+        })
+        if (sessError || !data.session) {
+          setDebugError(`Implicit error: ${sessError?.message ?? 'sin sesión'}`)
+          setTokenValido(false)
+          return
+        }
+        window.history.replaceState({}, '', '/activar-cuenta')
+        await cargarNombre(data.session.user.id)
+        setTokenValido(true)
+        return
+      }
+
+      // Sin code ni hash: verificar sesión activa
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        setDebugError('Sin code y sin sesión activa')
+        setDebugError(`URL: ${fullSearch || '(sin query)'} | hash: ${fullHash || '(sin hash)'}`)
         setTokenValido(false)
         return
       }
