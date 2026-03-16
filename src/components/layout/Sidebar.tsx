@@ -4,11 +4,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { CalendarDays, Settings, LogOut, Stethoscope } from 'lucide-react'
+import { LayoutDashboard, CalendarDays, LogOut, Stethoscope } from 'lucide-react'
 
 const navItems = [
-  { href: '/agenda', label: 'Agenda del día', icon: CalendarDays },
-  { href: '/admin', label: 'Administración', icon: Settings },
+  { href: '/inicio',  label: 'Inicio',        icon: LayoutDashboard, exact: true },
+  { href: '/agenda',  label: 'Agenda del día', icon: CalendarDays },
 ]
 
 export function Sidebar() {
@@ -38,7 +38,7 @@ export function Sidebar() {
 
       <nav className="flex-1 p-3 space-y-0.5">
         {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href)
+          const isActive = item.exact ? pathname === item.href : pathname.startsWith(item.href)
           const Icon = item.icon
           return (
             <Link
