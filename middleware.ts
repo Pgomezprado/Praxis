@@ -34,10 +34,9 @@ export async function middleware(request: NextRequest) {
   const isLoginPage = pathname.startsWith('/login')
   const isPublicPage = pathname === '/' || pathname.startsWith('/agendar')
 
-  // TEMP: comentado para navegar sin login en local
-  // if (!session && !isLoginPage && !isPublicPage) {
-  //   return NextResponse.redirect(new URL('/login', request.url))
-  // }
+  if (!session && !isLoginPage && !isPublicPage) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
 
   if (session && isLoginPage) {
     return NextResponse.redirect(new URL('/agenda', request.url))
