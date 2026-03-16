@@ -39,13 +39,12 @@ export default function LoginPage() {
 
     const rol = usuario?.rol
     if (rol === 'doctor') {
-      router.push('/medico/inicio')
+      window.location.href = '/medico/inicio'
     } else if (rol === 'admin_clinica') {
-      router.push('/admin')
+      window.location.href = '/admin'
     } else {
-      router.push('/inicio')
+      window.location.href = '/inicio'
     }
-    router.refresh()
   }
 
   return (
