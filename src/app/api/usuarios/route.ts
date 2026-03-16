@@ -59,22 +59,56 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Solo el admin puede crear usuarios' }, { status: 403 })
     }
 
-    // Crear usuario en Supabase Auth (envía email de invitación automáticamente)
     const admin = createAdminClient()
+
+    // Verificar si el email ya existe en la tabla usuarios de esta clínica
+    const { data: existente } = await supabase
+      .from('usuarios')
+      .select('id')
+      .eq('clinica_id', me.clinica_id)
+      .eq('email', email)
+      .single()
+
+    if (existente) {
+      return Response.json({ error: 'Este email ya está registrado en la clínica' }, { status: 409 })
+    }
+
+    // Intentar invitar al usuario en Supabase Auth
+    let authUserId: string
     const { data: authData, error: authError } = await admin.auth.admin.inviteUserByEmail(email, {
       data: { nombre, rol },
     })
 
-    if (authError || !authData.user) {
-      console.error('Error creando auth user:', authError)
-      return Response.json({ error: authError?.message ?? 'Error al invitar usuario' }, { status: 400 })
+    if (authError) {
+      // Si el email ya existe en auth, buscar su UUID via listUsers
+      const isAlreadyRegistered =
+        authError.message.toLowerCase().includes('already') ||
+        authError.message.toLowerCase().includes('registered') ||
+        authError.message.toLowerCase().includes('exist')
+
+      if (!isAlreadyRegistered) {
+        return Response.json({ error: authError.message }, { status: 400 })
+      }
+
+      // Buscar el usuario existente en auth
+      const { data: list } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+      const existing = list?.users?.find(u => u.email === email)
+      if (!existing) {
+        return Response.json({ error: 'Error al recuperar el usuario existente' }, { status: 400 })
+      }
+      authUserId = existing.id
+    } else {
+      if (!authData?.user) {
+        return Response.json({ error: 'Error al crear el usuario' }, { status: 400 })
+      }
+      authUserId = authData.user.id
     }
 
     // Insertar en tabla usuarios
     const { data: nuevo, error: dbError } = await supabase
       .from('usuarios')
       .insert({
-        id: authData.user.id,
+        id: authUserId,
         clinica_id: me.clinica_id,
         nombre,
         email,
