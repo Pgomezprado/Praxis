@@ -90,10 +90,7 @@ function ActivarCuentaContent() {
 
     setListo(true)
     setTimeout(() => {
-      const rol = data.rol
-      if (rol === 'doctor') router.push('/medico/inicio')
-      else if (rol === 'admin_clinica') router.push('/admin')
-      else router.push('/inicio')
+      router.push('/login')
     }, 2000)
   }
 
