@@ -88,7 +88,10 @@ export async function POST(req: Request) {
     })
   } catch (error) {
     console.error('Error en onboarding:', error)
-    const msg = error instanceof Error ? error.message : 'Error interno'
+    const msg =
+      error instanceof Error ? error.message :
+      (error && typeof error === 'object' && 'message' in error) ? String((error as { message: unknown }).message) :
+      JSON.stringify(error)
     return Response.json({ error: msg }, { status: 500 })
   }
 }
