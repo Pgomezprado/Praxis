@@ -1,7 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Clock, Users, Zap, MessageCircle } from 'lucide-react'
+
+const WA_URL = 'https://wa.me/+56993589027'
+
+const BENEFICIOS = [
+  { icon: Clock, text: 'Demo de 30 minutos en vivo' },
+  { icon: Users, text: 'Con datos reales de tu especialidad' },
+  { icon: Zap,   text: 'Setup y capacitación incluidos' },
+  { icon: CheckCircle2, text: 'Sin compromiso ni tarjeta de crédito' },
+]
 
 export function CtaDemo() {
   const [form, setForm] = useState({ nombre: '', clinica: '', email: '', telefono: '' })
@@ -17,7 +26,6 @@ export function CtaDemo() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-
     try {
       const res = await fetch('/api/demo-request', {
         method: 'POST',
@@ -38,52 +46,106 @@ export function CtaDemo() {
   }
 
   return (
-    <section id="cta-demo" className="py-16 sm:py-24 bg-blue-700">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 text-center">
-        <h2 className="text-3xl font-bold text-white">Agenda una demo gratuita de 30 minutos</h2>
-        <p className="text-blue-200 mt-3 text-base">
-          Te mostramos Praxis en acción con datos de tu clínica
-        </p>
+    <section id="cta-demo" className="py-20 sm:py-28 bg-slate-900 relative overflow-hidden">
+      {/* Fondo decorativo */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-950 via-slate-900 to-slate-900" />
+      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
 
-        {enviado ? (
-          <div className="mt-10 bg-white/10 rounded-2xl p-8 flex flex-col items-center gap-3">
-            <CheckCircle2 className="w-12 h-12 text-emerald-400" strokeWidth={1.5} />
-            <p className="text-white font-semibold text-lg">¡Solicitud enviada!</p>
-            <p className="text-blue-200 text-sm">Te contactaremos en menos de 24 horas hábiles.</p>
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+
+          {/* Izquierda — texto y beneficios */}
+          <div className="pt-2">
+            <span className="inline-block text-xs font-semibold text-blue-400 uppercase tracking-widest mb-4">
+              Demo gratuita
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight leading-tight">
+              Agenda tu demo de 30 minutos
+            </h2>
+            <p className="text-slate-400 mt-4 text-base leading-relaxed">
+              Te mostramos Praxis en acción con datos de tu clínica. Sin presión, solo resultados.
+            </p>
+
+            <ul className="mt-8 space-y-4">
+              {BENEFICIOS.map(({ icon: Icon, text }) => (
+                <li key={text} className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <span className="text-slate-300 text-sm font-medium">{text}</span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-10 pt-8 border-t border-slate-800">
+              <p className="text-sm text-slate-500 mb-3">¿Prefieres hablar directamente?</p>
+              <a
+                href={WA_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-sm font-medium text-green-400 hover:text-green-300 transition-colors"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Escríbenos por WhatsApp
+              </a>
+            </div>
           </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="mt-10 space-y-3 text-left">
-            {[
-              { name: 'nombre', placeholder: 'Tu nombre completo', label: 'Nombre', type: 'text' },
-              { name: 'clinica', placeholder: 'Nombre de tu clínica o consultorio', label: 'Clínica / Consultorio', type: 'text' },
-              { name: 'email', placeholder: 'tucorreo@clinica.cl', label: 'Email', type: 'email' },
-              { name: 'telefono', placeholder: '+56 9 1234 5678', label: 'Teléfono', type: 'tel' },
-            ].map((field) => (
-              <div key={field.name}>
-                <label className="text-sm font-medium text-blue-100 block mb-1">{field.label}</label>
-                <input
-                  name={field.name}
-                  type={field.type}
-                  placeholder={field.placeholder}
-                  value={form[field.name as keyof typeof form]}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-white/40 text-base"
-                />
+
+          {/* Derecha — formulario */}
+          <div className="bg-white rounded-2xl p-7 shadow-2xl">
+            {enviado ? (
+              <div className="py-8 flex flex-col items-center gap-4 text-center">
+                <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-600" strokeWidth={1.5} />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-slate-900">¡Solicitud enviada!</p>
+                  <p className="text-slate-500 text-sm mt-1">Te contactaremos en menos de 24 horas hábiles.</p>
+                </div>
               </div>
-            ))}
+            ) : (
+              <>
+                <h3 className="text-lg font-bold text-slate-900 mb-5">Reserva tu lugar</h3>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {[
+                    { name: 'nombre',   placeholder: 'Dr. Juan Pérez',              label: 'Nombre completo', type: 'text' },
+                    { name: 'clinica',  placeholder: 'Clínica o consultorio',        label: 'Clínica / Consultorio', type: 'text' },
+                    { name: 'email',    placeholder: 'juan@clinica.cl',              label: 'Email profesional', type: 'email' },
+                    { name: 'telefono', placeholder: '+56 9 1234 5678',              label: 'Teléfono', type: 'tel' },
+                  ].map((field) => (
+                    <div key={field.name}>
+                      <label className="text-sm font-medium text-slate-700 block mb-1.5">{field.label}</label>
+                      <input
+                        name={field.name}
+                        type={field.type}
+                        placeholder={field.placeholder}
+                        value={form[field.name as keyof typeof form]}
+                        onChange={handleChange}
+                        required
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm transition-colors"
+                      />
+                    </div>
+                  ))}
 
-            {error && <p className="text-red-300 text-sm">{error}</p>}
+                  {error && <p className="text-red-500 text-sm">{error}</p>}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full mt-2 py-3 px-6 bg-white text-blue-700 font-bold rounded-xl hover:bg-blue-50 transition-colors disabled:opacity-60 text-base"
-            >
-              {loading ? 'Enviando...' : 'Solicitar demo gratuita'}
-            </button>
-          </form>
-        )}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors disabled:opacity-60 text-sm shadow-sm mt-1"
+                  >
+                    {loading ? 'Enviando...' : 'Solicitar demo gratuita →'}
+                  </button>
+
+                  <p className="text-center text-xs text-slate-400">
+                    Sin compromiso. Te respondemos en menos de 24 h.
+                  </p>
+                </form>
+              </>
+            )}
+          </div>
+
+        </div>
       </div>
     </section>
   )

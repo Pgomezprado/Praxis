@@ -6,44 +6,64 @@ const PASOS = [
     icon: UserPlus,
     titulo: 'Registra al paciente',
     descripcion: 'Ficha clínica completa con antecedentes, alergias, condiciones crónicas y grupo sanguíneo.',
-    color: 'bg-blue-100 text-blue-700',
+    accent: 'from-blue-500 to-blue-600',
+    soft: 'bg-blue-50',
+    text: 'text-blue-600',
   },
   {
     num: '02',
     icon: CalendarCheck,
     titulo: 'El paciente agenda su hora',
     descripcion: 'Portal de autoservicio 24/7. El paciente busca médico, elige horario y confirma desde su celular.',
-    color: 'bg-emerald-100 text-emerald-700',
+    accent: 'from-emerald-500 to-emerald-600',
+    soft: 'bg-emerald-50',
+    text: 'text-emerald-600',
   },
   {
     num: '03',
     icon: FileText,
     titulo: 'Registra la evolución',
     descripcion: 'Notas SOAP, diagnóstico, tratamiento y resumen IA generado automáticamente antes de la consulta.',
-    color: 'bg-violet-100 text-violet-700',
+    accent: 'from-violet-500 to-violet-600',
+    soft: 'bg-violet-50',
+    text: 'text-violet-600',
   },
 ]
 
 export function ComoFunciona() {
   return (
-    <section className="py-16 sm:py-24 bg-white">
+    <section className="py-20 sm:py-28 bg-white">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-slate-900">Tres pasos para modernizar tu consulta</h2>
-          <p className="text-slate-500 mt-3 text-base max-w-xl mx-auto">
+        <div className="text-center mb-16">
+          <span className="inline-block text-xs font-semibold text-blue-600 uppercase tracking-widest mb-3">
+            Cómo funciona
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
+            Tres pasos para modernizar tu consulta
+          </h2>
+          <p className="text-slate-500 mt-4 text-base max-w-xl mx-auto leading-relaxed">
             Praxis se adapta a tu flujo de trabajo actual. Sin curva de aprendizaje, sin migraciones complejas.
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-8">
+        <div className="relative grid sm:grid-cols-3 gap-8">
+          {/* Línea conectora (solo desktop) */}
+          <div className="hidden sm:block absolute top-7 left-[calc(16.66%+1rem)] right-[calc(16.66%+1rem)] h-px bg-gradient-to-r from-blue-200 via-emerald-200 to-violet-200" />
+
           {PASOS.map((paso) => {
             const Icon = paso.icon
             return (
-              <div key={paso.num} className="relative">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${paso.color}`}>
-                  <Icon className="w-5 h-5" />
+              <div key={paso.num} className="relative flex flex-col items-center text-center sm:items-start sm:text-left">
+                {/* Ícono con número */}
+                <div className="relative mb-5">
+                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${paso.accent} flex items-center justify-center shadow-lg`}>
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                  <span className={`absolute -top-2 -right-2 w-6 h-6 rounded-full ${paso.soft} ${paso.text} text-[11px] font-black flex items-center justify-center border-2 border-white`}>
+                    {paso.num.replace('0', '')}
+                  </span>
                 </div>
-                <span className="text-4xl font-black text-slate-100 absolute top-0 right-0 leading-none">{paso.num}</span>
+
                 <h3 className="text-base font-bold text-slate-900 mb-2">{paso.titulo}</h3>
                 <p className="text-slate-500 text-sm leading-relaxed">{paso.descripcion}</p>
               </div>
