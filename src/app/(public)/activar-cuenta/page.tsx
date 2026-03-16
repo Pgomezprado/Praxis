@@ -22,9 +22,22 @@ export default function ActivarCuentaPage() {
   )
 
   useEffect(() => {
-    // onAuthStateChange captura el token del hash de la URL automáticamente
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session?.user) {
+    async function init() {
+      // Leer tokens directamente del hash de la URL
+      const hash = window.location.hash.substring(1)
+      const params = new URLSearchParams(hash)
+      const accessToken = params.get('access_token')
+      const refreshToken = params.get('refresh_token')
+
+      if (accessToken) {
+        const { data: { session }, error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken ?? '',
+        })
+        if (error || !session) {
+          setTokenValido(false)
+          return
+        }
         setTokenValido(true)
         const { data: u } = await supabase
           .from('usuarios')
@@ -32,24 +45,23 @@ export default function ActivarCuentaPage() {
           .eq('id', session.user.id)
           .single()
         if (u?.nombre) setNombreUsuario(u.nombre.split(' ')[0])
-      }
-    })
-
-    // Por si ya hay sesión activa al cargar (ej: recarga de página)
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setTokenValido(true)
-        supabase.from('usuarios').select('nombre').eq('id', session.user.id).single()
-          .then(({ data: u }) => { if (u?.nombre) setNombreUsuario(u.nombre.split(' ')[0]) })
       } else {
-        // Si después de 3 segundos no hay sesión, el link es inválido
-        setTimeout(() => {
-          setTokenValido(prev => prev === null ? false : prev)
-        }, 3000)
+        // Sin hash — verificar si hay sesión activa (recarga de página)
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.user) {
+          setTokenValido(true)
+          const { data: u } = await supabase
+            .from('usuarios')
+            .select('nombre')
+            .eq('id', session.user.id)
+            .single()
+          if (u?.nombre) setNombreUsuario(u.nombre.split(' ')[0])
+        } else {
+          setTokenValido(false)
+        }
       }
-    })
-
-    return () => subscription.unsubscribe()
+    }
+    init()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
