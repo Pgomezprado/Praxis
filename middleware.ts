@@ -32,7 +32,12 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
   const isLoginPage = pathname.startsWith('/login')
-  const isPublicPage = pathname === '/' || pathname.startsWith('/agendar') || pathname.startsWith('/activar-cuenta') || pathname.startsWith('/superadmin')
+  const isPublicPage =
+    pathname === '/' ||
+    pathname.startsWith('/agendar') ||
+    pathname.startsWith('/activar-cuenta') ||
+    pathname.startsWith('/superadmin') ||
+    pathname.startsWith('/api/')
 
   if (!session && !isLoginPage && !isPublicPage) {
     return NextResponse.redirect(new URL('/login', request.url))
