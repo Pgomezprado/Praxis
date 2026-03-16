@@ -37,8 +37,6 @@ function ActivarCuentaContent() {
   )
 
   useEffect(() => {
-    let settled = false
-
     async function cargarNombre(userId: string) {
       const { data: u } = await supabase
         .from('usuarios')
@@ -48,36 +46,40 @@ function ActivarCuentaContent() {
       if (u?.nombre) setNombreUsuario(u.nombre.split(' ')[0])
     }
 
-    // detectSessionInUrl:true (default) procesa automáticamente ?code= y #access_token=
-    // Escuchamos el resultado vía onAuthStateChange
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (settled) return
+    async function init() {
+      const hashParams = new URLSearchParams(window.location.hash.substring(1))
+      const tokenHash = hashParams.get('access_token')
+      const type = hashParams.get('type') ?? 'invite'
 
-      if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
-        settled = true
+      if (tokenHash) {
+        // Supabase envía un token hash corto (no JWT) — verificar con verifyOtp
+        const { data, error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: type as 'invite' | 'recovery' | 'email' | 'signup',
+        })
+        if (error || !data.session) {
+          setDebugError(`verifyOtp error: ${error?.message ?? 'sin sesión'}`)
+          setTokenValido(false)
+          return
+        }
         window.history.replaceState({}, '', '/activar-cuenta')
-        await cargarNombre(session.user.id)
+        await cargarNombre(data.session.user.id)
         setTokenValido(true)
-        subscription.unsubscribe()
+        return
       }
-    })
 
-    // Si en 6 segundos no hay evento SIGNED_IN, mostrar error
-    const timeout = setTimeout(() => {
-      if (!settled) {
-        settled = true
-        const h = window.location.hash
-        const s = window.location.search
-        setDebugError(`hash: ${h ? h.substring(0, 80) : '(vacío)'} | query: ${s || '(vacío)'}`)
+      // Sin hash: verificar sesión activa (ej: recarga de página)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        setDebugError(`Sin token en URL | hash: ${window.location.hash || '(vacío)'}`)
         setTokenValido(false)
-        subscription.unsubscribe()
+        return
       }
-    }, 6000)
-
-    return () => {
-      clearTimeout(timeout)
-      subscription.unsubscribe()
+      await cargarNombre(user.id)
+      setTokenValido(true)
     }
+
+    init()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
