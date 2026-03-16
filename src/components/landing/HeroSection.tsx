@@ -35,7 +35,7 @@ export function HeroSection() {
             <div>
               <div className="inline-flex items-center gap-2 bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs font-semibold px-3 py-1.5 rounded-full mb-7">
                 <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
-                Piloto activo en UC Christus
+                Disponible para clínicas chilenas
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-bold text-white leading-[1.1] tracking-tight">

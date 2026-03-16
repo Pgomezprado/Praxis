@@ -1,9 +1,35 @@
 import { ConfiguracionClient } from '@/components/admin/ConfiguracionClient'
-import { mockClinica } from '@/lib/mock-data'
+import { getClinicsId } from '@/lib/queries/agenda'
+import { createClient } from '@/lib/supabase/server'
 
 export const metadata = { title: 'Configuración — Praxis Admin' }
 
-export default function AdminConfiguracionPage() {
+export default async function AdminConfiguracionPage() {
+  const me = await getClinicsId()
+  if (!me) return null
+
+  const supabase = await createClient()
+  const { data: clinicaDb } = await supabase
+    .from('clinicas')
+    .select('id, nombre, rut, direccion, ciudad, telefono, email, logo_url, timezone, dias_agenda_adelante, hora_apertura, hora_cierre')
+    .eq('id', me.clinica_id)
+    .single()
+
+  const clinicaInicial = {
+    id: clinicaDb?.id ?? '',
+    nombre: clinicaDb?.nombre ?? '',
+    rut: (clinicaDb as { rut?: string } | null)?.rut ?? '',
+    direccion: (clinicaDb as { direccion?: string } | null)?.direccion ?? '',
+    ciudad: (clinicaDb as { ciudad?: string } | null)?.ciudad ?? '',
+    telefono: (clinicaDb as { telefono?: string } | null)?.telefono ?? '',
+    email: (clinicaDb as { email?: string } | null)?.email ?? '',
+    logo: (clinicaDb as { logo_url?: string } | null)?.logo_url ?? null,
+    timezone: (clinicaDb as { timezone?: string } | null)?.timezone ?? 'America/Santiago',
+    diasAgendaAdelante: (clinicaDb as { dias_agenda_adelante?: number } | null)?.dias_agenda_adelante ?? 60,
+    horaApertura: (clinicaDb as { hora_apertura?: string } | null)?.hora_apertura ?? '08:00',
+    horaCierre: (clinicaDb as { hora_cierre?: string } | null)?.hora_cierre ?? '18:00',
+  }
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
@@ -13,7 +39,7 @@ export default function AdminConfiguracionPage() {
         </p>
       </div>
 
-      <ConfiguracionClient clinicaInicial={mockClinica} />
+      <ConfiguracionClient clinicaInicial={clinicaInicial} />
     </div>
   )
 }

@@ -15,6 +15,9 @@ function ExitoContent() {
   const fecha = params.get('fecha') ?? ''
   const hora = params.get('hora') ?? ''
   const email = params.get('email') ?? ''
+  const clinicaNombre = params.get('clinicaNombre') ?? ''
+  const clinicaDireccion = params.get('clinicaDireccion') ?? ''
+  const clinicaCiudad = params.get('clinicaCiudad') ?? ''
 
   const fechaFormateada = fecha
     ? new Date(fecha + 'T12:00:00').toLocaleDateString('es-CL', {
@@ -26,7 +29,7 @@ function ExitoContent() {
     const inicio = `${fecha.replace(/-/g, '')}T${hora.replace(':', '')}00`
     const [h, m] = hora.split(':').map(Number)
     const fin = `${fecha.replace(/-/g, '')}T${String(h + 1).padStart(2, '0')}${String(m).padStart(2, '0')}00`
-    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Consulta ${medico}`)}&dates=${inicio}/${fin}&details=${encodeURIComponent(`Folio: ${folio}`)}&location=${encodeURIComponent('UC Christus')}`
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`Consulta ${medico}`)}&dates=${inicio}/${fin}&details=${encodeURIComponent(`Folio: ${folio}`)}`
     window.open(url, '_blank')
   }
 
@@ -73,16 +76,18 @@ function ExitoContent() {
             </div>
           </div>
 
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
-              <MapPin className="w-4 h-4 text-blue-600" />
+          {(clinicaNombre || clinicaDireccion) && (
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                <MapPin className="w-4 h-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Lugar</p>
+                {clinicaNombre && <p className="text-sm font-semibold text-slate-800">{clinicaNombre}</p>}
+                {clinicaDireccion && <p className="text-sm text-slate-500">{clinicaDireccion}{clinicaCiudad ? `, ${clinicaCiudad}` : ''}</p>}
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-slate-500">Lugar</p>
-              <p className="text-sm font-semibold text-slate-800">UC Christus</p>
-              <p className="text-sm text-slate-500">Clínica UC San Carlos de Apoquindo</p>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 

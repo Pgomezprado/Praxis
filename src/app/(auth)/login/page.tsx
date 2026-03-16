@@ -96,7 +96,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-sm text-slate-400 mt-6">
-          UC Christus — Piloto Praxis v1.0 · praxisapp.cl
+          Piloto Praxis v1.0 · praxisapp.cl
         </p>
       </div>
     </div>

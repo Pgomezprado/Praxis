@@ -11,13 +11,13 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
 
-    const slug = process.env.CLINICA_SLUG ?? 'uc-christus'
+    const slug = process.env.CLINICA_SLUG ?? 'demo'
     const supabase = createAdminClient()
 
     // Obtener clinica_id
     const { data: clinica } = await supabase
       .from('clinicas')
-      .select('id')
+      .select('id, nombre, direccion, ciudad')
       .eq('slug', slug)
       .single()
 
@@ -110,6 +110,9 @@ export async function POST(req: Request) {
       medico: doctor.nombre,
       fecha,
       hora,
+      clinicaNombre: (clinica as { nombre?: string }).nombre ?? '',
+      clinicaDireccion: (clinica as { direccion?: string; ciudad?: string }).direccion ?? '',
+      clinicaCiudad: (clinica as { ciudad?: string }).ciudad ?? '',
     }, { status: 201 })
   } catch (error) {
     console.error('Error en POST /api/public/confirmar:', error)

@@ -21,7 +21,7 @@ export default function AgendarLayout({ children }: { children: React.ReactNode 
       </main>
 
       <footer className="text-center text-xs text-slate-400 py-6">
-        UC Christus — Piloto Praxis v1.0 · praxisapp.cl
+        Praxis v1.0 · praxisapp.cl
       </footer>
     </div>
   )

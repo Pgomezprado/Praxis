@@ -13,6 +13,7 @@ type Clinica = {
   nombre: string
   rut: string
   direccion: string
+  ciudad: string
   telefono: string
   email: string
   logo: string | null
@@ -102,6 +103,52 @@ export function ConfiguracionClient({ clinicaInicial }: Props) {
     await new Promise(r => setTimeout(r, 600))
     setter(false)
     mostrarToast(mensaje)
+  }
+
+  async function guardarClinica() {
+    setGuardandoClinica(true)
+    try {
+      const res = await fetch('/api/clinica', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: clinica.nombre,
+          rut: clinica.rut,
+          direccion: clinica.direccion,
+          ciudad: clinica.ciudad,
+          telefono: clinica.telefono,
+          email: clinica.email,
+        }),
+      })
+      if (!res.ok) throw new Error('Error al guardar')
+      mostrarToast('Datos de la clínica guardados')
+    } catch {
+      mostrarToast('Error al guardar los datos')
+    } finally {
+      setGuardandoClinica(false)
+    }
+  }
+
+  async function guardarSistema() {
+    setGuardandoSistema(true)
+    try {
+      const res = await fetch('/api/clinica', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          timezone: clinica.timezone,
+          dias_agenda_adelante: clinica.diasAgendaAdelante,
+          hora_apertura: clinica.horaApertura,
+          hora_cierre: clinica.horaCierre,
+        }),
+      })
+      if (!res.ok) throw new Error('Error al guardar')
+      mostrarToast('Configuración del sistema guardada')
+    } catch {
+      mostrarToast('Error al guardar la configuración')
+    } finally {
+      setGuardandoSistema(false)
+    }
   }
 
   async function exportarCSV() {
@@ -199,7 +246,17 @@ export function ConfiguracionClient({ clinicaInicial }: Props) {
               />
             </div>
 
-            <div className="sm:col-span-2">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Ciudad</label>
+              <input
+                type="text"
+                value={clinica.ciudad}
+                onChange={e => setField('ciudad', e.target.value)}
+                className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
+              />
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">Email de contacto</label>
               <input
                 type="email"
@@ -212,7 +269,7 @@ export function ConfiguracionClient({ clinicaInicial }: Props) {
 
           <div className="flex justify-end pt-1">
             <button
-              onClick={() => guardar(setGuardandoClinica, 'Datos de la clínica guardados')}
+              onClick={guardarClinica}
               disabled={guardandoClinica}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
@@ -305,7 +362,7 @@ export function ConfiguracionClient({ clinicaInicial }: Props) {
 
           <div className="flex justify-end pt-1">
             <button
-              onClick={() => guardar(setGuardandoSistema, 'Configuración del sistema guardada')}
+              onClick={guardarSistema}
               disabled={guardandoSistema}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >

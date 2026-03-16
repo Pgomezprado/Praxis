@@ -72,7 +72,17 @@ function ConfirmarForm() {
         setErrores({ general: data.error ?? 'Error al confirmar la cita' })
         return
       }
-      const q = new URLSearchParams({ folio: data.folio, medico, especialidad, fecha, hora, email })
+      const q = new URLSearchParams({
+        folio: data.folio,
+        medico,
+        especialidad,
+        fecha,
+        hora,
+        email,
+        clinicaNombre: data.clinicaNombre ?? '',
+        clinicaDireccion: data.clinicaDireccion ?? '',
+        clinicaCiudad: data.clinicaCiudad ?? '',
+      })
       router.push(`/agendar/exito?${q.toString()}`)
     } finally {
       setLoading(false)

@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 // Devuelve médicos activos de la clínica configurada en CLINICA_SLUG
 export async function GET() {
   try {
-    const slug = process.env.CLINICA_SLUG ?? 'uc-christus'
+    const slug = process.env.CLINICA_SLUG ?? 'demo'
     const supabase = createAdminClient()
 
     const { data: clinica } = await supabase

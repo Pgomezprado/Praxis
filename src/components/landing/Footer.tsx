@@ -19,7 +19,7 @@ export function Footer() {
                 <span className="text-base font-bold">Praxis</span>
               </div>
               <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
-                Sistema de historia clínica electrónica diseñado para médicos y clínicas chilenas. Piloto activo en UC Christus.
+                Sistema de historia clínica electrónica diseñado para médicos y clínicas chilenas.
               </p>
               <div className="flex items-center gap-3 mt-5">
                 <a

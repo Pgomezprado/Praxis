@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 export const metadata = { title: 'Agendar hora — Praxis' }
 
 async function getMedicosPublicos() {
-  const slug = process.env.CLINICA_SLUG ?? 'uc-christus'
+  const slug = process.env.CLINICA_SLUG ?? 'demo'
   const supabase = createAdminClient()
 
   const { data: clinica } = await supabase

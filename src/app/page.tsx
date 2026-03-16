@@ -8,7 +8,7 @@ import { Footer } from '@/components/landing/Footer'
 
 export const metadata: Metadata = {
   title: 'Praxis — Sistema clínico inteligente para médicos chilenos',
-  description: 'Historia clínica electrónica, agenda online y resúmenes IA. Diseñado para médicos y clínicas en Chile. Piloto activo en UC Christus.',
+  description: 'Historia clínica electrónica, agenda online y resúmenes IA. Diseñado para médicos y clínicas en Chile.',
 }
 
 export default function LandingPage() {

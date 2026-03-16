@@ -1,7 +1,7 @@
 # Praxis — Contexto del Proyecto para Claude Code
 
 ## ¿Qué es Praxis?
-Sistema de Historia Clínica Electrónica (HCE) en etapa MVP. Actualmente en piloto con UC Christus bajo el dominio praxisapp.cl.
+Sistema de Historia Clínica Electrónica (HCE) en etapa MVP bajo el dominio praxisapp.cl.
 
 ## Stack Tecnológico
 - **Framework:** Next.js (App Router)
@@ -169,9 +169,8 @@ export const mockPacientes = [
 
 ## Contexto del Piloto
 
-- Cliente actual: **UC Christus**
 - Versión: **Praxis v1.0**
-- Badge discreto en UI: `"UC Christus — Piloto Praxis v1.0"`
+- Badge discreto en UI: `"Piloto Praxis v1.0"`
 - No mostrar este badge en pantallas internas, solo en login
 
 ---
