@@ -90,7 +90,7 @@ function ActivarCuentaContent() {
 
     setListo(true)
     setTimeout(() => {
-      router.push('/login')
+      window.location.href = 'https://www.praxisapp.cl/login'
     }, 2000)
   }
 
