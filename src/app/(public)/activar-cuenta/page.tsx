@@ -1,16 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { Eye, EyeOff, CheckCircle2, Lock } from 'lucide-react'
 
 export default function ActivarCuentaPage() {
   const router = useRouter()
-  // Capturar el hash ANTES de que Supabase lo procese/limpie
-  const hashCapturado = useRef<string>(
-    typeof window !== 'undefined' ? window.location.hash : ''
-  )
+  const searchParams = useSearchParams()
 
   const [password, setPassword] = useState('')
   const [confirmar, setConfirmar] = useState('')
@@ -20,59 +17,23 @@ export default function ActivarCuentaPage() {
   const [listo, setListo] = useState(false)
   const [tokenValido, setTokenValido] = useState<boolean | null>(null)
   const [nombreUsuario, setNombreUsuario] = useState('')
-  const [debugInfo, setDebugInfo] = useState('')
 
-  // Deshabilitar detección automática para evitar que consuma el hash
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { detectSessionInUrl: false, persistSession: true } }
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
   useEffect(() => {
+    // Si viene con ?error=link_invalido desde /auth/callback
+    if (searchParams.get('error') === 'link_invalido') {
+      setTokenValido(false)
+      return
+    }
+
     async function init() {
-      // Flujo 1: PKCE — código en query param (?code=xxx)
-      const queryParams = new URLSearchParams(window.location.search)
-      const code = queryParams.get('code')
+      const { data: { user } } = await supabase.auth.getUser()
 
-      // Flujo 2: Implícito — token en hash (#access_token=xxx)
-      const hash = hashCapturado.current.substring(1)
-      const hashParams = new URLSearchParams(hash)
-      const accessToken = hashParams.get('access_token')
-      const refreshToken = hashParams.get('refresh_token')
-
-      setDebugInfo(`code: ${code ? code.slice(0, 20) + '...' : 'nulo'} | hash token: ${accessToken ? 'sí' : 'nulo'}`)
-
-      let session = null
-
-      if (code) {
-        // PKCE flow
-        const { data, error: codeError } = await supabase.auth.exchangeCodeForSession(code)
-        if (codeError || !data.session) {
-          setDebugInfo(prev => prev + ` | Error PKCE: ${codeError?.message ?? 'sin sesión'}`)
-          setTokenValido(false)
-          return
-        }
-        session = data.session
-      } else if (accessToken) {
-        // Implicit flow
-        const { data, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken ?? '',
-        })
-        if (sessionError || !data.session) {
-          setDebugInfo(prev => prev + ` | Error implícito: ${sessionError?.message ?? 'sin sesión'}`)
-          setTokenValido(false)
-          return
-        }
-        session = data.session
-      } else {
-        // Sin código ni hash — verificar sesión activa
-        const { data } = await supabase.auth.getSession()
-        session = data.session ?? null
-      }
-
-      if (!session) {
+      if (!user) {
         setTokenValido(false)
         return
       }
@@ -81,7 +42,7 @@ export default function ActivarCuentaPage() {
       const { data: u } = await supabase
         .from('usuarios')
         .select('nombre')
-        .eq('id', session.user.id)
+        .eq('id', user.id)
         .single()
       if (u?.nombre) setNombreUsuario(u.nombre.split(' ')[0])
     }
@@ -146,9 +107,6 @@ export default function ActivarCuentaPage() {
           <p className="text-sm text-slate-500">
             Este link ya no es válido. Pide al administrador que te envíe una nueva invitación.
           </p>
-          {debugInfo && (
-            <p className="text-xs text-slate-400 mt-4 break-all">{debugInfo}</p>
-          )}
         </div>
       </div>
     )
