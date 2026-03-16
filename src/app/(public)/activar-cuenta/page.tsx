@@ -90,7 +90,7 @@ function ActivarCuentaContent() {
 
     setListo(true)
     setTimeout(() => {
-      window.location.href = 'https://www.praxisapp.cl/login'
+      window.location.href = 'https://www.praxisapp.cl'
     }, 2000)
   }
 
