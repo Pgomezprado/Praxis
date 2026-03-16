@@ -37,45 +37,26 @@ function ActivarCuentaContent() {
   )
 
   useEffect(() => {
-    async function cargarNombre(userId: string) {
-      const { data: u } = await supabase
-        .from('usuarios')
-        .select('nombre')
-        .eq('id', userId)
-        .single()
-      if (u?.nombre) setNombreUsuario(u.nombre.split(' ')[0])
+    const errorParam = searchParams.get('error')
+    if (errorParam) {
+      setDebugError(errorParam)
+      setTokenValido(false)
+      return
     }
 
     async function init() {
-      const hashParams = new URLSearchParams(window.location.hash.substring(1))
-      const tokenHash = hashParams.get('access_token')
-      const type = hashParams.get('type') ?? 'invite'
-
-      if (tokenHash) {
-        // Supabase envía un token hash corto (no JWT) — verificar con verifyOtp
-        const { data, error } = await supabase.auth.verifyOtp({
-          token_hash: tokenHash,
-          type: type as 'invite' | 'recovery' | 'email' | 'signup',
-        })
-        if (error || !data.session) {
-          setDebugError(`verifyOtp error: ${error?.message ?? 'sin sesión'}`)
-          setTokenValido(false)
-          return
-        }
-        window.history.replaceState({}, '', '/activar-cuenta')
-        await cargarNombre(data.session.user.id)
-        setTokenValido(true)
-        return
-      }
-
-      // Sin hash: verificar sesión activa (ej: recarga de página)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        setDebugError(`Sin token en URL | hash: ${window.location.hash || '(vacío)'}`)
+        setDebugError('Sin sesión activa')
         setTokenValido(false)
         return
       }
-      await cargarNombre(user.id)
+      const { data: u } = await supabase
+        .from('usuarios')
+        .select('nombre')
+        .eq('id', user.id)
+        .single()
+      if (u?.nombre) setNombreUsuario(u.nombre.split(' ')[0])
       setTokenValido(true)
     }
 
@@ -102,7 +83,7 @@ function ActivarCuentaContent() {
     const data = await res.json()
 
     if (!res.ok) {
-      setError(data.error ?? 'No se pudo crear la contraseña. Intenta solicitar una nueva invitación.')
+      setError(data.error ?? 'No se pudo crear la contraseña.')
       setGuardando(false)
       return
     }
@@ -116,7 +97,6 @@ function ActivarCuentaContent() {
     }, 2000)
   }
 
-  // Cargando
   if (tokenValido === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -128,7 +108,6 @@ function ActivarCuentaContent() {
     )
   }
 
-  // Token inválido o expirado
   if (tokenValido === false) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
@@ -148,7 +127,6 @@ function ActivarCuentaContent() {
     )
   }
 
-  // Éxito
   if (listo) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
@@ -163,11 +141,9 @@ function ActivarCuentaContent() {
     )
   }
 
-  // Formulario
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 max-w-sm w-full">
-
         <div className="text-center mb-7">
           <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
             <Lock className="w-6 h-6 text-white" />

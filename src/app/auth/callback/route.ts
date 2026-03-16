@@ -4,18 +4,31 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const token_hash = searchParams.get('token_hash')
+  const type = searchParams.get('type') ?? 'invite'
 
+  const supabase = await createClient()
+
+  // PKCE flow: ?code=
   if (code) {
-    const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) {
-      return NextResponse.redirect(`${origin}/activar-cuenta`)
-    }
-    // Redirigir con el mensaje de error real para debug
+    if (!error) return NextResponse.redirect(`${origin}/activar-cuenta`)
     return NextResponse.redirect(
       `${origin}/activar-cuenta?error=${encodeURIComponent(error.message)}`
     )
   }
 
-  return NextResponse.redirect(`${origin}/activar-cuenta?error=sin_codigo`)
+  // Token hash flow: ?token_hash=&type=
+  if (token_hash) {
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash,
+      type: type as 'invite' | 'recovery' | 'email' | 'signup',
+    })
+    if (!error) return NextResponse.redirect(`${origin}/activar-cuenta`)
+    return NextResponse.redirect(
+      `${origin}/activar-cuenta?error=${encodeURIComponent(error.message)}`
+    )
+  }
+
+  return NextResponse.redirect(`${origin}/activar-cuenta?error=sin_token`)
 }
