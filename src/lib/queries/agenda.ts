@@ -71,7 +71,7 @@ export async function getMedicos(clinicaId: string): Promise<MedicoAgenda[]> {
     .from('usuarios')
     .select('id, nombre, especialidad')
     .eq('clinica_id', clinicaId)
-    .eq('rol', 'doctor')
+    .or('rol.eq.doctor,es_doctor.eq.true')
     .eq('activo', true)
     .order('nombre')
 

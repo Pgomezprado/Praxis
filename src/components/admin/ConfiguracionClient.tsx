@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import {
   Building2, Clock, Bell, AlertTriangle, Save, Upload,
-  Download, Trash2, ChevronDown, CheckCircle2,
+  Download, Trash2, ChevronDown, CheckCircle2, Stethoscope,
 } from 'lucide-react'
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
@@ -34,6 +34,9 @@ type NotifConfig = {
 
 type Props = {
   clinicaInicial: Clinica
+  adminId: string
+  adminEsDoctor: boolean
+  adminEspecialidad: string
 }
 
 const TIMEZONES = [
@@ -51,7 +54,7 @@ const HORAS_ANTES_OPCIONES = [1, 2, 4, 6, 12, 24, 48]
 
 // ── Componente ───────────────────────────────────────────────────────────────
 
-export function ConfiguracionClient({ clinicaInicial }: Props) {
+export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, adminEspecialidad }: Props) {
   const logoRef = useRef<HTMLInputElement>(null)
 
   // — Estado formularios —
@@ -65,6 +68,11 @@ export function ConfiguracionClient({ clinicaInicial }: Props) {
     cancelacionCita:   true,
     resumenDiario:     false,
   })
+
+  // — Perfil médico admin —
+  const [esDoctor,          setEsDoctor]          = useState(adminEsDoctor)
+  const [especialidadAdmin, setEspecialidadAdmin] = useState(adminEspecialidad)
+  const [guardandoDoctor,   setGuardandoDoctor]   = useState(false)
 
   // — Estado UI —
   const [guardandoClinica,  setGuardandoClinica]  = useState(false)
@@ -148,6 +156,23 @@ export function ConfiguracionClient({ clinicaInicial }: Props) {
       mostrarToast('Error al guardar la configuración')
     } finally {
       setGuardandoSistema(false)
+    }
+  }
+
+  async function guardarPerfilDoctor() {
+    setGuardandoDoctor(true)
+    try {
+      const res = await fetch(`/api/usuarios/${adminId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ es_doctor: esDoctor, especialidad: especialidadAdmin }),
+      })
+      if (!res.ok) throw new Error()
+      mostrarToast('Perfil médico guardado')
+    } catch {
+      mostrarToast('Error al guardar el perfil médico')
+    } finally {
+      setGuardandoDoctor(false)
     }
   }
 
@@ -457,7 +482,70 @@ export function ConfiguracionClient({ clinicaInicial }: Props) {
         </div>
       </section>
 
-      {/* ── Sección 4: Danger zone ── */}
+      {/* ── Sección 4: Perfil médico del admin ── */}
+      <section className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/60">
+          <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
+            <Stethoscope className="w-4 h-4 text-teal-600" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-800">Mi perfil médico</h2>
+            <p className="text-xs text-slate-500">Activa esto si también atiendes pacientes</p>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          {/* Toggle es_doctor */}
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-sm font-medium text-slate-700">También soy médico</div>
+              <div className="text-xs text-slate-400 mt-0.5">
+                Aparecerás en la agenda, horarios y portal de agendamiento
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setEsDoctor(prev => !prev)}
+              className={`relative w-10 h-[22px] rounded-full transition-colors flex-shrink-0 focus:outline-none overflow-hidden ${
+                esDoctor ? 'bg-teal-600' : 'bg-slate-300'
+              }`}
+            >
+              <span className={`absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                esDoctor ? 'translate-x-5' : 'translate-x-0'
+              }`} />
+            </button>
+          </div>
+
+          {/* Especialidad — solo si es doctor */}
+          {esDoctor && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Mi especialidad</label>
+              <input
+                type="text"
+                value={especialidadAdmin}
+                onChange={e => setEspecialidadAdmin(e.target.value)}
+                placeholder="Ej: Medicina General, Pediatría..."
+                className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-500/30 focus:border-teal-500 transition-colors"
+              />
+            </div>
+          )}
+
+          <div className="flex justify-end pt-1">
+            <button
+              onClick={guardarPerfilDoctor}
+              disabled={guardandoDoctor}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 transition-colors"
+            >
+              {guardandoDoctor
+                ? <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                : <Save className="w-4 h-4" />}
+              Guardar
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Sección 5: Danger zone ── */}
       <section className="bg-white border border-red-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="flex items-center gap-3 px-6 py-4 border-b border-red-100 bg-red-50/60">
           <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">

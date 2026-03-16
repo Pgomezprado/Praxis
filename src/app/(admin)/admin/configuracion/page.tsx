@@ -9,11 +9,19 @@ export default async function AdminConfiguracionPage() {
   if (!me) return null
 
   const supabase = await createClient()
-  const { data: clinicaDb } = await supabase
+
+  const [{ data: clinicaDb }, { data: adminDb }] = await Promise.all([
+    supabase
     .from('clinicas')
     .select('id, nombre, rut, direccion, ciudad, telefono, email, logo_url, timezone, dias_agenda_adelante, hora_apertura, hora_cierre')
     .eq('id', me.clinica_id)
-    .single()
+    .single(),
+    supabase
+      .from('usuarios')
+      .select('id, nombre, especialidad, es_doctor')
+      .eq('id', me.id)
+      .single(),
+  ])
 
   const clinicaInicial = {
     id: clinicaDb?.id ?? '',
@@ -39,7 +47,12 @@ export default async function AdminConfiguracionPage() {
         </p>
       </div>
 
-      <ConfiguracionClient clinicaInicial={clinicaInicial} />
+      <ConfiguracionClient
+        clinicaInicial={clinicaInicial}
+        adminId={me.id}
+        adminEsDoctor={(adminDb as { es_doctor?: boolean } | null)?.es_doctor ?? false}
+        adminEspecialidad={(adminDb as { especialidad?: string } | null)?.especialidad ?? ''}
+      />
     </div>
   )
 }

@@ -21,7 +21,7 @@ export async function GET() {
       .from('usuarios')
       .select('id, nombre, especialidad')
       .eq('clinica_id', clinica.id)
-      .eq('rol', 'doctor')
+      .or('rol.eq.doctor,es_doctor.eq.true')
       .eq('activo', true)
       .order('nombre')
 

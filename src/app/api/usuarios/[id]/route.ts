@@ -23,7 +23,7 @@ export async function PATCH(
     }
 
     // Campos actualizables (filtra los que lleguen en el body)
-    const allowed = ['nombre', 'email', 'especialidad', 'rut', 'telefono', 'duracion_consulta', 'medicos_asignados', 'activo']
+    const allowed = ['nombre', 'email', 'especialidad', 'rut', 'telefono', 'duracion_consulta', 'medicos_asignados', 'activo', 'es_doctor']
     const updates: Record<string, unknown> = {}
     for (const key of allowed) {
       if (key in body) updates[key] = body[key]

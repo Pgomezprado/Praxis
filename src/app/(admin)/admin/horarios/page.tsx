@@ -16,7 +16,7 @@ export default async function AdminHorariosPage() {
   const [medicosAgenda, { data: horariosDb }, { data: usuariosDb }] = await Promise.all([
     getMedicos(me.clinica_id),
     supabase.from('horarios').select('doctor_id, configuracion').eq('clinica_id', me.clinica_id),
-    supabase.from('usuarios').select('id, rut, email, telefono, duracion_consulta').eq('clinica_id', me.clinica_id).eq('rol', 'doctor').eq('activo', true),
+    supabase.from('usuarios').select('id, rut, email, telefono, duracion_consulta').eq('clinica_id', me.clinica_id).or('rol.eq.doctor,es_doctor.eq.true').eq('activo', true),
   ])
 
   // Construir MockMedicoAdmin desde los datos disponibles

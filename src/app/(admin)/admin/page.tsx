@@ -57,11 +57,11 @@ export default async function AdminInicioPage() {
     { data: citasHoy },
   ] = await Promise.all([
     supabase.from('clinicas').select('nombre').eq('id', clinicaId).single(),
-    supabase.from('usuarios').select('*', { count: 'exact', head: true }).eq('clinica_id', clinicaId).eq('rol', 'doctor').eq('activo', true),
+    supabase.from('usuarios').select('*', { count: 'exact', head: true }).eq('clinica_id', clinicaId).or('rol.eq.doctor,es_doctor.eq.true').eq('activo', true),
     supabase.from('pacientes').select('*', { count: 'exact', head: true }).eq('clinica_id', clinicaId).eq('activo', true),
     supabase.from('citas').select('*', { count: 'exact', head: true }).eq('clinica_id', clinicaId).eq('fecha', today),
     supabase.from('citas').select('*', { count: 'exact', head: true }).eq('clinica_id', clinicaId).gte('fecha', inicioMesStr),
-    supabase.from('usuarios').select('id, nombre, especialidad').eq('clinica_id', clinicaId).eq('rol', 'doctor').eq('activo', true).order('nombre'),
+    supabase.from('usuarios').select('id, nombre, especialidad').eq('clinica_id', clinicaId).or('rol.eq.doctor,es_doctor.eq.true').eq('activo', true).order('nombre'),
     supabase.from('citas').select('doctor_id, estado').eq('clinica_id', clinicaId).eq('fecha', today),
   ])
 

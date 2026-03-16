@@ -28,7 +28,7 @@ export default async function AdminSecretariasPage() {
       .from('usuarios')
       .select('id, nombre, email, especialidad, activo, rut, telefono, duracion_consulta')
       .eq('clinica_id', clinicaId)
-      .eq('rol', 'doctor')
+      .or('rol.eq.doctor,es_doctor.eq.true')
       .order('nombre'),
   ])
 

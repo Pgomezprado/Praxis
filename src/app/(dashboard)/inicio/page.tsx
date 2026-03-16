@@ -20,7 +20,7 @@ export default async function InicioPage() {
 
   const [citasHoy, { data: medicos }, { data: clinica }] = await Promise.all([
     getCitasByFecha(me.clinica_id, today),
-    supabase.from('usuarios').select('id, nombre, especialidad, rut, email, telefono, duracion_consulta').eq('clinica_id', me.clinica_id).eq('rol', 'doctor').eq('activo', true).order('nombre'),
+    supabase.from('usuarios').select('id, nombre, especialidad, rut, email, telefono, duracion_consulta').eq('clinica_id', me.clinica_id).or('rol.eq.doctor,es_doctor.eq.true').eq('activo', true).order('nombre'),
     supabase.from('clinicas').select('nombre').eq('id', me.clinica_id).single(),
   ])
 
