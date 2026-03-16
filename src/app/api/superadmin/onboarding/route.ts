@@ -2,12 +2,11 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function POST(req: Request) {
   try {
-    const secret = req.headers.get('x-superadmin-secret')
+    const { secret, clinicaNombre, clinicaCiudad, clinicaSlug, adminNombre, adminEmail } = await req.json()
+
     if (secret !== process.env.SUPERADMIN_SECRET) {
       return Response.json({ error: 'No autorizado' }, { status: 401 })
     }
-
-    const { clinicaNombre, clinicaCiudad, clinicaSlug, adminNombre, adminEmail } = await req.json()
 
     if (!clinicaNombre || !adminNombre || !adminEmail || !clinicaSlug) {
       return Response.json({ error: 'Faltan campos requeridos' }, { status: 400 })
