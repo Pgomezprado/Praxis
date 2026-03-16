@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
-import { mockCitas, mockMedicos } from '@/lib/mock-data'
 import { AgendaSemanaClient } from '@/components/secretaria/AgendaSemanaClient'
+import { getClinicsId, getCitasByRango, getMedicos } from '@/lib/queries/agenda'
 
 export const metadata = { title: 'Agenda semanal — Praxis' }
 
@@ -14,12 +14,31 @@ export default async function AgendaSemanaPage({
   const fecha = params.fecha ?? today
   const medicoId = params.medico ?? ''
 
+  // Calcular inicio y fin de la semana (lunes a domingo)
+  const base = new Date(fecha)
+  const diaSemana = base.getDay() === 0 ? 6 : base.getDay() - 1 // 0=lun
+  const lunes = new Date(base)
+  lunes.setDate(base.getDate() - diaSemana)
+  const domingo = new Date(lunes)
+  domingo.setDate(lunes.getDate() + 6)
+
+  const desde = lunes.toISOString().split('T')[0]
+  const hasta = domingo.toISOString().split('T')[0]
+
+  const me = await getClinicsId()
+  if (!me) return null
+
+  const [citas, medicos] = await Promise.all([
+    getCitasByRango(me.clinica_id, desde, hasta, medicoId || undefined),
+    getMedicos(me.clinica_id),
+  ])
+
   return (
     <div className="-m-6">
       <Suspense>
         <AgendaSemanaClient
-          allCitas={mockCitas}
-          medicos={mockMedicos}
+          allCitas={citas}
+          medicos={medicos}
           fecha={fecha}
           medicoId={medicoId}
         />

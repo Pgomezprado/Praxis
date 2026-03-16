@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react'
 import { Search, UserPlus, X } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { formatearRut, validarRut } from '@/lib/agendamiento'
-import { mockPacientes } from '@/lib/mock-data'
 
 export type PacienteSeleccionado = {
   id: string
@@ -33,6 +32,7 @@ export function BuscadorPaciente({ value, onChange }: BuscadorPacienteProps) {
   const [creandoNuevo, setCreandoNuevo] = useState(false)
   const [nuevo, setNuevo] = useState<NuevoPacienteForm>({ nombre: '', rut: '', email: '', telefono: '' })
   const [rutError, setRutError] = useState('')
+  const [resultados, setResultados] = useState<PacienteSeleccionado[]>([])
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -46,15 +46,29 @@ export function BuscadorPaciente({ value, onChange }: BuscadorPacienteProps) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  const resultados = query.length >= 2
-    ? mockPacientes.filter((p) =>
-        p.nombre.toLowerCase().includes(query.toLowerCase()) ||
-        p.rut.replace(/\./g, '').includes(query.replace(/\./g, ''))
-      )
-    : []
+  // Búsqueda real contra /api/pacientes
+  useEffect(() => {
+    if (query.length < 2) { setResultados([]); return }
+    const controller = new AbortController()
+    fetch(`/api/pacientes?q=${encodeURIComponent(query)}`, { signal: controller.signal })
+      .then((r) => r.json())
+      .then((data) => {
+        setResultados(
+          (data.pacientes ?? []).map((p: { id: string; nombre: string; rut: string; email?: string; telefono?: string }) => ({
+            id: p.id,
+            nombre: p.nombre,
+            rut: p.rut,
+            email: p.email ?? '',
+            telefono: p.telefono ?? '',
+          }))
+        )
+      })
+      .catch(() => {})
+    return () => controller.abort()
+  }, [query])
 
-  function handleSelectPaciente(p: typeof mockPacientes[0]) {
-    onChange({ id: p.id, nombre: p.nombre, rut: p.rut, email: p.email, telefono: p.telefono })
+  function handleSelectPaciente(p: PacienteSeleccionado) {
+    onChange(p)
     setQuery('')
     setOpen(false)
   }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { X, Send, Check } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
-import { mockMedicosAdmin, type MockSecretaria } from '@/lib/mock-data'
+import { type MockSecretaria, type MockMedicoAdmin } from '@/lib/mock-data'
 import { validarRut, formatearRut } from '@/lib/agendamiento'
 
 type FormData = {
@@ -20,9 +20,10 @@ type Props = {
   onClose: () => void
   onGuardar: (secretaria: MockSecretaria) => void
   secretariaEditar?: MockSecretaria | null
+  medicos: MockMedicoAdmin[]
 }
 
-export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar }: Props) {
+export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, medicos }: Props) {
   const esEdicion = !!secretariaEditar
 
   const defaultForm: FormData = {
@@ -85,7 +86,7 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar }:
     }))
   }
 
-  const medicosActivos = mockMedicosAdmin.filter(m => m.estado === 'activo')
+  const medicosActivos = medicos.filter(m => m.estado === 'activo')
 
   const canGuardar =
     form.nombre.trim() &&
@@ -96,20 +97,40 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar }:
   async function handleGuardar() {
     if (!canGuardar) return
     setGuardando(true)
-    await new Promise(r => setTimeout(r, 600))
 
-    const nueva: MockSecretaria = {
-      id: secretariaEditar?.id ?? `s${Date.now()}`,
-      clinicaId: 'cl1',
-      nombre: form.nombre.trim(),
-      rut: form.rut,
-      email: form.email.trim(),
-      telefono: form.telefono.trim(),
-      medicosAsignados: form.medicosAsignados,
-      estado: secretariaEditar?.estado ?? 'activo',
-    }
-    onGuardar(nueva)
+    const url = secretariaEditar ? `/api/usuarios/${secretariaEditar.id}` : '/api/usuarios'
+    const method = secretariaEditar ? 'PATCH' : 'POST'
+
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre: form.nombre.trim(),
+        email: form.email.trim(),
+        rut: form.rut,
+        telefono: form.telefono.trim(),
+        medicos_asignados: form.medicosAsignados,
+        rol: 'recepcionista',
+      }),
+    })
+
     setGuardando(false)
+    if (!res.ok) return
+
+    const data = await res.json()
+    const u = data.usuario
+
+    const sec: MockSecretaria = {
+      id: u.id,
+      clinicaId: u.clinica_id ?? '',
+      nombre: u.nombre,
+      rut: u.rut ?? form.rut,
+      email: u.email,
+      telefono: u.telefono ?? form.telefono.trim(),
+      medicosAsignados: (u.medicos_asignados as string[] | null) ?? form.medicosAsignados,
+      estado: u.activo ? 'activo' : 'inactivo',
+    }
+    onGuardar(sec)
   }
 
   async function handleInvitar() {

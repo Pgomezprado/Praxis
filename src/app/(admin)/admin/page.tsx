@@ -11,40 +11,68 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
-import {
-  mockClinica,
-  mockMedicosAdmin,
-  mockPacientes,
-  mockCitas,
-  mockEstadoEquipoHoy,
-} from '@/lib/mock-data'
+import { createClient } from '@/lib/supabase/server'
+import type { EstadoMedicoHoy } from '@/lib/mock-data'
 
 export const metadata = { title: 'Panel de administración — Praxis' }
 
-function diasDesdeHoy(dias: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() + dias)
-  return d.toISOString().split('T')[0]
-}
-
-const hoy = diasDesdeHoy(0)
-const inicioMes = new Date()
-inicioMes.setDate(1)
-const inicioMesStr = inicioMes.toISOString().split('T')[0]
-
-// KPIs calculados desde mock
-const totalMedicosActivos = mockMedicosAdmin.filter(m => m.estado === 'activo').length
-const totalPacientes = mockPacientes.length
-const citasHoy = mockCitas.filter(c => c.fecha === hoy).length
-const citasMes = mockCitas.filter(c => c.fecha >= inicioMesStr).length
-
-const estadoBadge: Record<string, { label: string; classes: string }> = {
+const estadoBadge: Record<EstadoMedicoHoy, { label: string; classes: string }> = {
   en_consulta: { label: 'En consulta', classes: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   disponible:  { label: 'Disponible',  classes: 'bg-blue-100 text-blue-700 border-blue-200' },
   sin_agenda:  { label: 'Sin agenda hoy', classes: 'bg-slate-100 text-slate-500 border-slate-200' },
 }
 
-export default function AdminInicioPage() {
+function getEstadoHoy(citasDoctor: { estado: string }[]): EstadoMedicoHoy {
+  if (citasDoctor.some(c => c.estado === 'en_consulta')) return 'en_consulta'
+  if (citasDoctor.some(c => c.estado !== 'cancelada')) return 'disponible'
+  return 'sin_agenda'
+}
+
+export default async function AdminInicioPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data: me } = await supabase
+    .from('usuarios')
+    .select('clinica_id')
+    .eq('id', user.id)
+    .single()
+
+  if (!me) return null
+  const clinicaId = me.clinica_id
+
+  const today = new Date().toISOString().split('T')[0]
+  const inicioMes = new Date()
+  inicioMes.setDate(1)
+  const inicioMesStr = inicioMes.toISOString().split('T')[0]
+
+  const [
+    { data: clinica },
+    { count: totalMedicosActivos },
+    { count: totalPacientes },
+    { count: citasHoyCount },
+    { count: citasMesCount },
+    { data: medicos },
+    { data: citasHoy },
+  ] = await Promise.all([
+    supabase.from('clinicas').select('nombre').eq('id', clinicaId).single(),
+    supabase.from('usuarios').select('*', { count: 'exact', head: true }).eq('clinica_id', clinicaId).eq('rol', 'doctor').eq('activo', true),
+    supabase.from('pacientes').select('*', { count: 'exact', head: true }).eq('clinica_id', clinicaId).eq('activo', true),
+    supabase.from('citas').select('*', { count: 'exact', head: true }).eq('clinica_id', clinicaId).eq('fecha', today),
+    supabase.from('citas').select('*', { count: 'exact', head: true }).eq('clinica_id', clinicaId).gte('fecha', inicioMesStr),
+    supabase.from('usuarios').select('id, nombre, especialidad').eq('clinica_id', clinicaId).eq('rol', 'doctor').eq('activo', true).order('nombre'),
+    supabase.from('citas').select('doctor_id, estado').eq('clinica_id', clinicaId).eq('fecha', today),
+  ])
+
+  const equipo = (medicos ?? []).map((m) => {
+    const citasDoctor = (citasHoy ?? []).filter(c => c.doctor_id === m.id)
+    const estadoHoy = citasDoctor.length === 0 ? 'sin_agenda' as EstadoMedicoHoy : getEstadoHoy(citasDoctor)
+    const citasTotal = citasDoctor.filter(c => c.estado !== 'cancelada').length
+    const citasAtendidas = citasDoctor.filter(c => c.estado === 'completada').length
+    return { ...m, especialidad: m.especialidad ?? '', estadoHoy, citasTotal, citasAtendidas }
+  })
+
   return (
     <div className="max-w-6xl mx-auto space-y-8">
 
@@ -54,7 +82,7 @@ export default function AdminInicioPage() {
           Panel de administración
         </h1>
         <p className="text-slate-500 mt-1">
-          {mockClinica.nombre} · {mockClinica.direccion}
+          {clinica?.nombre ?? ''}
         </p>
       </div>
 
@@ -62,25 +90,25 @@ export default function AdminInicioPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           label="Médicos activos"
-          value={totalMedicosActivos}
+          value={totalMedicosActivos ?? 0}
           icon={<Stethoscope className="w-5 h-5 text-blue-600" />}
           bg="bg-blue-50"
         />
         <KpiCard
           label="Pacientes registrados"
-          value={totalPacientes}
+          value={totalPacientes ?? 0}
           icon={<Users className="w-5 h-5 text-violet-600" />}
           bg="bg-violet-50"
         />
         <KpiCard
           label="Citas hoy"
-          value={citasHoy}
+          value={citasHoyCount ?? 0}
           icon={<CalendarDays className="w-5 h-5 text-emerald-600" />}
           bg="bg-emerald-50"
         />
         <KpiCard
           label="Citas este mes"
-          value={citasMes}
+          value={citasMesCount ?? 0}
           icon={<TrendingUp className="w-5 h-5 text-amber-600" />}
           bg="bg-amber-50"
         />
@@ -98,9 +126,10 @@ export default function AdminInicioPage() {
             <span className="w-24" />
           </div>
 
-          {mockMedicosAdmin.map((medico) => {
-            const eq = mockEstadoEquipoHoy[medico.id]
-            const badge = estadoBadge[eq.estado]
+          {equipo.length === 0 ? (
+            <p className="px-5 py-6 text-sm text-slate-400 text-center">Sin médicos registrados</p>
+          ) : equipo.map((medico) => {
+            const badge = estadoBadge[medico.estadoHoy]
             return (
               <div
                 key={medico.id}
@@ -118,7 +147,7 @@ export default function AdminInicioPage() {
                 {/* Estado badge */}
                 <div className="w-36 flex justify-center">
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${badge.classes}`}>
-                    {eq.estado === 'en_consulta' && (
+                    {medico.estadoHoy === 'en_consulta' && (
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                     )}
                     {badge.label}
@@ -127,10 +156,10 @@ export default function AdminInicioPage() {
 
                 {/* Citas */}
                 <div className="w-28 text-center">
-                  {eq.citasTotal > 0 ? (
+                  {medico.citasTotal > 0 ? (
                     <span className="text-sm text-slate-700">
-                      <span className="font-semibold">{eq.citasAtendidas}</span>
-                      <span className="text-slate-400"> / {eq.citasTotal}</span>
+                      <span className="font-semibold">{medico.citasAtendidas}</span>
+                      <span className="text-slate-400"> / {medico.citasTotal}</span>
                       <span className="text-slate-400 text-xs ml-1">atendidas</span>
                     </span>
                   ) : (

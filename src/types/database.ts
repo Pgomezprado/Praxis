@@ -18,6 +18,11 @@ export interface Usuario {
   rol: UserRole
   activo: boolean
   created_at: string
+  // Campos agregados en migración 005
+  rut: string | null
+  telefono: string | null
+  duracion_consulta: number
+  medicos_asignados: string[]
 }
 
 export interface Paciente {

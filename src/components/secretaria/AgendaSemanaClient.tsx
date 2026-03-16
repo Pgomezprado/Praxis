@@ -405,6 +405,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCrear={handleCrearCita}
+        medicos={medicos}
         fechaInicial={fecha}
         medicoIdInicial={filtroMedico || undefined}
       />

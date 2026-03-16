@@ -1,9 +1,67 @@
+import { createClient } from '@/lib/supabase/server'
 import { SecretariasClient } from '@/components/admin/SecretariasClient'
-import { mockSecretarias } from '@/lib/mock-data'
+import { type MockSecretaria, type MockMedicoAdmin, mockEspecialidades } from '@/lib/mock-data'
 
 export const metadata = { title: 'Secretarias — Praxis Admin' }
 
-export default function AdminSecretariasPage() {
+export default async function AdminSecretariasPage() {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: me } = await supabase
+    .from('usuarios')
+    .select('clinica_id')
+    .eq('id', user!.id)
+    .single()
+
+  const clinicaId = me!.clinica_id
+
+  // Cargar secretarias y médicos en paralelo
+  const [{ data: secDb }, { data: docDb }] = await Promise.all([
+    supabase
+      .from('usuarios')
+      .select('id, nombre, email, activo, rut, telefono, medicos_asignados')
+      .eq('clinica_id', clinicaId)
+      .eq('rol', 'recepcionista')
+      .order('nombre'),
+    supabase
+      .from('usuarios')
+      .select('id, nombre, email, especialidad, activo, rut, telefono, duracion_consulta')
+      .eq('clinica_id', clinicaId)
+      .eq('rol', 'doctor')
+      .order('nombre'),
+  ])
+
+  const secretarias: MockSecretaria[] = (secDb ?? []).map((s) => ({
+    id: s.id,
+    clinicaId: clinicaId,
+    nombre: s.nombre,
+    rut: s.rut ?? '',
+    email: s.email,
+    telefono: s.telefono ?? '',
+    medicosAsignados: (s.medicos_asignados as string[] | null) ?? [],
+    estado: s.activo ? 'activo' : 'inactivo',
+  }))
+
+  const medicos: MockMedicoAdmin[] = (docDb ?? []).map((d) => {
+    const espId = mockEspecialidades.find(
+      (e) => e.nombre.toLowerCase() === (d.especialidad ?? '').toLowerCase()
+    )?.id ?? 'e1'
+    return {
+      id: d.id,
+      clinicaId: clinicaId,
+      nombre: d.nombre,
+      rut: d.rut ?? '',
+      especialidadId: espId,
+      especialidad: d.especialidad ?? '',
+      email: d.email,
+      telefono: d.telefono ?? '',
+      duracionConsulta: d.duracion_consulta ?? 30,
+      estado: d.activo ? 'activo' : 'inactivo',
+      citasMes: 0,
+    }
+  })
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-6">
@@ -13,7 +71,7 @@ export default function AdminSecretariasPage() {
         </p>
       </div>
 
-      <SecretariasClient secretariasIniciales={mockSecretarias} />
+      <SecretariasClient secretariasIniciales={secretarias} medicosDisponibles={medicos} />
     </div>
   )
 }

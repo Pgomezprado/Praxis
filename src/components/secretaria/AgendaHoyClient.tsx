@@ -67,6 +67,7 @@ export function AgendaHoyClient({
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCrear={handleCrearCita}
+        medicos={medicos}
         fechaInicial={fecha}
         medicoIdInicial={medicoId || undefined}
       />

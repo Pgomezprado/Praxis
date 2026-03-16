@@ -54,12 +54,25 @@ export function MedicosClient({ medicosIniciales }: Props) {
     mostrarToast(medicoEditar ? `${medico.nombre} actualizado` : `${medico.nombre} agregado`)
   }
 
-  function toggleEstado(id: string) {
+  async function toggleEstado(id: string) {
+    const medico = medicos.find(m => m.id === id)
+    if (!medico) return
+    const nuevoActivo = medico.estado !== 'activo'
+    // Optimistic update
     setMedicos(prev =>
-      prev.map(m =>
-        m.id === id ? { ...m, estado: m.estado === 'activo' ? 'inactivo' : 'activo' } : m
-      )
+      prev.map(m => m.id === id ? { ...m, estado: nuevoActivo ? 'activo' : 'inactivo' } : m)
     )
+    const res = await fetch(`/api/usuarios/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activo: nuevoActivo }),
+    })
+    if (!res.ok) {
+      // Revertir si falla
+      setMedicos(prev =>
+        prev.map(m => m.id === id ? { ...m, estado: medico.estado } : m)
+      )
+    }
   }
 
   const especialidadesEnUso = mockEspecialidades.filter(e =>

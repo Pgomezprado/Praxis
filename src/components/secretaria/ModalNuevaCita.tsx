@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react'
 import { X, User, Stethoscope, CalendarDays, FileText, Loader2 } from 'lucide-react'
 import { BuscadorPaciente, type PacienteSeleccionado } from './BuscadorPaciente'
 import { Avatar } from '@/components/ui/Avatar'
-import { generarFolio, generarSlots } from '@/lib/agendamiento'
-import { mockMedicos, mockSlotsBase, mockCitas, type MockCita } from '@/lib/mock-data'
+import { generarSlots } from '@/lib/agendamiento'
+import { mockSlotsBase, type MockCita } from '@/lib/mock-data'
 
 interface ModalNuevaCitaProps {
   open: boolean
   onClose: () => void
   onCrear: (cita: MockCita) => void
+  medicos: { id: string; nombre: string; especialidad: string }[]
   /** Fecha y médico preseleccionados (desde click en slot del toolbar) */
   fechaInicial?: string
   medicoIdInicial?: string
@@ -30,6 +31,7 @@ export function ModalNuevaCita({
   open,
   onClose,
   onCrear,
+  medicos,
   fechaInicial,
   medicoIdInicial,
 }: ModalNuevaCitaProps) {
@@ -64,21 +66,32 @@ export function ModalNuevaCita({
     setSlot('')
   }, [medicoId, fecha])
 
-  // Calcular slots disponibles
+  // Slots ocupados desde la API (se cargan cuando cambia médico/fecha)
+  const [slotsOcupados, setSlotsOcupados] = useState<string[]>([])
+  useEffect(() => {
+    if (!medicoId || !fecha) { setSlotsOcupados([]); return }
+    fetch(`/api/citas?fecha=${fecha}&doctor_id=${medicoId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        setSlotsOcupados(
+          (data.citas ?? [])
+            .filter((c: { estado: string }) => c.estado !== 'cancelada')
+            .map((c: { hora_inicio: string }) => c.hora_inicio)
+        )
+      })
+      .catch(() => {})
+  }, [medicoId, fecha])
+
+  // Calcular slots disponibles (usando mockSlotsBase mientras horarios no está conectado)
   const slotsDisponibles = medicoId && fecha
     ? (() => {
-        const horasBase = mockSlotsBase[medicoId] ?? []
+        const horasBase = mockSlotsBase[medicoId] ?? ['09:00', '13:00']
         if (horasBase.length === 0) return []
-        const horaInicio = horasBase[0]
-        const horaFin = horasBase[horasBase.length - 1]
-        const ocupados = mockCitas
-          .filter((c) => c.medicoId === medicoId && c.fecha === fecha && c.estado !== 'cancelada')
-          .map((c) => c.horaInicio)
-        return generarSlots(fecha, horaInicio, horaFin, ocupados)
+        return generarSlots(fecha, horasBase[0], horasBase[horasBase.length - 1], slotsOcupados)
       })()
     : []
 
-  const medico = mockMedicos.find((m) => m.id === medicoId)
+  const medico = medicos.find((m) => m.id === medicoId)
 
   // Calcular hora fin según slot + duración
   function calcularHoraFin(horaInicio: string, minutos: number): string {
@@ -90,33 +103,52 @@ export function ModalNuevaCita({
   const canSubmit = paciente && medicoId && fecha && slot
 
   async function handleCrear() {
-    if (!canSubmit || !medico) return
+    if (!canSubmit || !medico || !paciente) return
     setLoading(true)
 
-    // Simular latencia de API
-    await new Promise((r) => setTimeout(r, 600))
+    const res = await fetch('/api/citas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        doctor_id: medicoId,
+        paciente_id: paciente.id,
+        fecha,
+        hora_inicio: slot,
+        hora_fin: calcularHoraFin(slot, duracion),
+        motivo: motivo || 'Sin motivo especificado',
+        tipo,
+      }),
+    })
+
+    setLoading(false)
+
+    if (!res.ok) return
+
+    const data = await res.json()
+    const c = data.cita
+    const doc = Array.isArray(c.doctor) ? c.doctor[0] : c.doctor
+    const pac = Array.isArray(c.paciente) ? c.paciente[0] : c.paciente
 
     const nuevaCita: MockCita = {
-      id: `cita-${Date.now()}`,
-      folio: generarFolio(),
+      id: c.id,
+      folio: c.folio,
       medicoId,
-      medicoNombre: medico.nombre,
-      pacienteId: paciente.id,
-      pacienteNombre: paciente.nombre,
-      pacienteRut: paciente.rut,
-      pacienteEmail: paciente.email,
-      pacienteTelefono: paciente.telefono,
+      medicoNombre: doc?.nombre ?? medico.nombre,
+      pacienteId: pac?.id ?? paciente.id,
+      pacienteNombre: pac?.nombre ?? paciente.nombre,
+      pacienteRut: pac?.rut ?? paciente.rut,
+      pacienteEmail: pac?.email ?? paciente.email,
+      pacienteTelefono: pac?.telefono ?? paciente.telefono,
       fecha,
-      horaInicio: slot,
-      horaFin: calcularHoraFin(slot, duracion),
-      motivo: motivo || 'Sin motivo especificado',
-      tipo,
-      estado: 'confirmada',
+      horaInicio: c.hora_inicio,
+      horaFin: c.hora_fin,
+      motivo: c.motivo ?? '',
+      tipo: c.tipo,
+      estado: c.estado,
       creadaEn: new Date().toISOString(),
       creadaPor: 'secretaria',
     }
 
-    setLoading(false)
     onCrear(nuevaCita)
     onClose()
   }
@@ -162,7 +194,7 @@ export function ModalNuevaCita({
               className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               <option value="">Selecciona un médico</option>
-              {mockMedicos.map((m) => (
+              {medicos.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.nombre} — {m.especialidad}
                 </option>

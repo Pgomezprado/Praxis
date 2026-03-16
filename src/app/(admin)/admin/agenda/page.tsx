@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
-import { mockCitas, mockMedicos } from '@/lib/mock-data'
 import { AgendaHoyClient } from '@/components/secretaria/AgendaHoyClient'
+import { getClinicsId, getCitasByFecha, getMedicos } from '@/lib/queries/agenda'
 
 export const metadata = { title: 'Agenda del equipo — Praxis Admin' }
 
@@ -14,18 +14,21 @@ export default async function AdminAgendaPage({
   const fecha = params.fecha ?? today
   const medicoId = params.medico ?? ''
 
-  const citasFiltradas = mockCitas.filter((c) => {
-    if (medicoId && c.medicoId !== medicoId) return false
-    return c.fecha === fecha
-  })
+  const me = await getClinicsId()
+  if (!me) return null
+
+  const [citas, medicos] = await Promise.all([
+    getCitasByFecha(me.clinica_id, fecha, medicoId || undefined),
+    getMedicos(me.clinica_id),
+  ])
 
   return (
     <div className="-m-6">
       <Suspense>
         <AgendaHoyClient
-          citasIniciales={citasFiltradas}
-          allCitas={mockCitas}
-          medicos={mockMedicos}
+          citasIniciales={citas}
+          allCitas={citas}
+          medicos={medicos}
           fecha={fecha}
           medicoId={medicoId}
         />

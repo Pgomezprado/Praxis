@@ -4,13 +4,14 @@ import { useState } from 'react'
 import { Search, Plus, Pencil, PowerOff } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { DrawerSecretaria } from './DrawerSecretaria'
-import { mockMedicosAdmin, type MockSecretaria } from '@/lib/mock-data'
+import { type MockSecretaria, type MockMedicoAdmin } from '@/lib/mock-data'
 
 type Props = {
   secretariasIniciales: MockSecretaria[]
+  medicosDisponibles: MockMedicoAdmin[]
 }
 
-export function SecretariasClient({ secretariasIniciales }: Props) {
+export function SecretariasClient({ secretariasIniciales, medicosDisponibles }: Props) {
   const [secretarias, setSecretarias] = useState<MockSecretaria[]>(secretariasIniciales)
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState('')
@@ -50,18 +51,27 @@ export function SecretariasClient({ secretariasIniciales }: Props) {
     mostrarToast(secretariaEditar ? `${secretaria.nombre} actualizada` : `${secretaria.nombre} agregada`)
   }
 
-  function toggleEstado(id: string) {
+  async function toggleEstado(id: string) {
+    const sec = secretarias.find(s => s.id === id)
+    if (!sec) return
+    const nuevoActivo = sec.estado !== 'activo'
     setSecretarias(prev =>
-      prev.map(s =>
-        s.id === id ? { ...s, estado: s.estado === 'activo' ? 'inactivo' : 'activo' } : s
-      )
+      prev.map(s => s.id === id ? { ...s, estado: nuevoActivo ? 'activo' : 'inactivo' } : s)
     )
+    const res = await fetch(`/api/usuarios/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activo: nuevoActivo }),
+    })
+    if (!res.ok) {
+      setSecretarias(prev =>
+        prev.map(s => s.id === id ? { ...s, estado: sec.estado } : s)
+      )
+    }
   }
 
-  // Mapear IDs de médicos a nombres
   function nombresMedicos(ids: string[]): string[] {
-    return ids
-      .map(id => mockMedicosAdmin.find(m => m.id === id)?.nombre ?? id)
+    return ids.map(id => medicosDisponibles.find(m => m.id === id)?.nombre ?? id)
   }
 
   return (
@@ -206,6 +216,7 @@ export function SecretariasClient({ secretariasIniciales }: Props) {
         onClose={() => setDrawerOpen(false)}
         onGuardar={handleGuardar}
         secretariaEditar={secretariaEditar}
+        medicos={medicosDisponibles}
       />
 
       {toast && (

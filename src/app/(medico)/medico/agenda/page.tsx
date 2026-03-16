@@ -1,10 +1,9 @@
 import { Suspense } from 'react'
-import { mockCitas, mockMedicos } from '@/lib/mock-data'
+import { createClient } from '@/lib/supabase/server'
 import { AgendaHoyClient } from '@/components/secretaria/AgendaHoyClient'
+import { getCitasByFecha, getMedicos } from '@/lib/queries/agenda'
 
 export const metadata = { title: 'Mi agenda — Praxis Médico' }
-
-const DEMO_MEDICO_ID = 'm1'
 
 export default async function MedicoAgendaPage({
   searchParams,
@@ -15,19 +14,31 @@ export default async function MedicoAgendaPage({
   const today = new Date().toISOString().split('T')[0]
   const fecha = params.fecha ?? today
 
-  const citasFiltradas = mockCitas.filter(
-    (c) => c.medicoId === DEMO_MEDICO_ID && c.fecha === fecha,
-  )
+  // Obtener el ID y clinica_id del médico logueado
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: me } = await supabase
+    .from('usuarios')
+    .select('id, clinica_id')
+    .eq('id', user!.id)
+    .single()
+
+  if (!me) return null
+
+  const [citas, medicos] = await Promise.all([
+    getCitasByFecha(me.clinica_id, fecha, me.id),
+    getMedicos(me.clinica_id),
+  ])
 
   return (
     <div className="-m-6">
       <Suspense>
         <AgendaHoyClient
-          citasIniciales={citasFiltradas}
-          allCitas={mockCitas}
-          medicos={mockMedicos}
+          citasIniciales={citas}
+          allCitas={citas}
+          medicos={medicos}
           fecha={fecha}
-          medicoId={DEMO_MEDICO_ID}
+          medicoId={me.id}
           listPath="/medico/agenda"
           semanaPath="/medico/agenda/semana"
           hideMedicoFilter

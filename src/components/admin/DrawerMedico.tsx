@@ -100,23 +100,45 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar }: Props) 
   async function handleGuardar() {
     if (!canGuardar) return
     setGuardando(true)
-    await new Promise(r => setTimeout(r, 600))
 
-    const nuevo: MockMedicoAdmin = {
-      id: medicoEditar?.id ?? `m${Date.now()}`,
-      clinicaId: 'cl1',
-      nombre: form.nombre.trim(),
-      rut: form.rut,
+    const url = medicoEditar ? `/api/usuarios/${medicoEditar.id}` : '/api/usuarios'
+    const method = medicoEditar ? 'PATCH' : 'POST'
+
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre: form.nombre.trim(),
+        email: form.email.trim(),
+        rut: form.rut,
+        telefono: form.telefono.trim(),
+        especialidad: especialidadNombre,
+        duracion_consulta: form.duracionConsulta,
+        rol: 'doctor',
+      }),
+    })
+
+    setGuardando(false)
+
+    if (!res.ok) return
+
+    const data = await res.json()
+    const u = data.usuario
+
+    const medico: MockMedicoAdmin = {
+      id: u.id,
+      clinicaId: u.clinica_id ?? '',
+      nombre: u.nombre,
+      rut: u.rut ?? form.rut,
       especialidadId: form.especialidadId,
-      especialidad: especialidadNombre,
-      email: form.email.trim(),
-      telefono: form.telefono.trim(),
-      duracionConsulta: form.duracionConsulta,
-      estado: medicoEditar?.estado ?? 'activo',
+      especialidad: u.especialidad ?? especialidadNombre,
+      email: u.email,
+      telefono: u.telefono ?? form.telefono.trim(),
+      duracionConsulta: u.duracion_consulta ?? form.duracionConsulta,
+      estado: u.activo ? 'activo' : 'inactivo',
       citasMes: medicoEditar?.citasMes ?? 0,
     }
-    onGuardar(nuevo)
-    setGuardando(false)
+    onGuardar(medico)
   }
 
   async function handleInvitar() {
