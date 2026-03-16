@@ -5,10 +5,7 @@ export async function POST(req: Request) {
     const { secret, clinicaNombre, clinicaCiudad, clinicaSlug, adminNombre, adminEmail } = await req.json()
 
     if (secret !== process.env.SUPERADMIN_SECRET) {
-      return Response.json({
-        error: 'No autorizado',
-        debug: `Recibido: "${secret}" (${secret?.length ?? 0} chars) | Env: ${process.env.SUPERADMIN_SECRET?.length ?? 'NO DEFINIDA'} chars`
-      }, { status: 401 })
+      return Response.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     if (!clinicaNombre || !adminNombre || !adminEmail || !clinicaSlug) {
@@ -37,8 +34,10 @@ export async function POST(req: Request) {
     // 2. Invitar al admin vía Supabase Auth (o buscar si ya existe)
     let adminUserId: string
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://praxisapp.cl'
     const { data: authData, error: authError } = await admin.auth.admin.inviteUserByEmail(adminEmail, {
       data: { nombre: adminNombre, rol: 'admin_clinica' },
+      redirectTo: `${appUrl}/activar-cuenta`,
     })
 
     if (authError) {
