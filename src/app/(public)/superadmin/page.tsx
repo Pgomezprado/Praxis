@@ -84,7 +84,8 @@ export default function SuperAdminPage() {
         setAutenticado(false)
         setSecretError(true)
       }
-      setError(`[${res.status}] ${data.error ?? 'Error al crear la clínica'}`)
+      const debugInfo = data.debug ? ` | ${data.debug}` : ''
+      setError(`[${res.status}] ${data.error ?? 'Error al crear la clínica'}${debugInfo}`)
       return
     }
 
@@ -109,7 +110,7 @@ export default function SuperAdminPage() {
               className="w-full px-3 py-2.5 text-sm rounded-xl bg-slate-700 border border-slate-600 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
             />
             {secretError && (
-              <p className="text-xs text-red-400">Clave incorrecta</p>
+              <p className="text-xs text-red-400 break-all">{error || 'Clave incorrecta'}</p>
             )}
             <button
               type="submit"

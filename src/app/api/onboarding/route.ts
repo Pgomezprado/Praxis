@@ -5,7 +5,10 @@ export async function POST(req: Request) {
     const { secret, clinicaNombre, clinicaCiudad, clinicaSlug, adminNombre, adminEmail } = await req.json()
 
     if (secret !== process.env.SUPERADMIN_SECRET) {
-      return Response.json({ error: 'No autorizado' }, { status: 401 })
+      return Response.json({
+        error: 'No autorizado',
+        debug: `Recibido: "${secret}" (${secret?.length ?? 0} chars) | Env: ${process.env.SUPERADMIN_SECRET?.length ?? 'NO DEFINIDA'} chars`
+      }, { status: 401 })
     }
 
     if (!clinicaNombre || !adminNombre || !adminEmail || !clinicaSlug) {
