@@ -37,58 +37,7 @@ function ActivarCuentaContent() {
   )
 
   useEffect(() => {
-    async function init() {
-      const fullSearch = window.location.search
-      const fullHash = window.location.hash
-
-      // Flujo PKCE: ?code= en query params
-      const code = new URLSearchParams(fullSearch).get('code')
-
-      // Flujo implícito: #access_token= en hash
-      const hashParams = new URLSearchParams(fullHash.substring(1))
-      const accessToken = hashParams.get('access_token')
-      const refreshToken = hashParams.get('refresh_token')
-
-      if (code) {
-        const { data, error: exchError } = await supabase.auth.exchangeCodeForSession(code)
-        if (exchError || !data.session) {
-          setDebugError(`PKCE error: ${exchError?.message ?? 'sin sesión'}`)
-          setTokenValido(false)
-          return
-        }
-        window.history.replaceState({}, '', '/activar-cuenta')
-        await cargarNombre(data.session.user.id)
-        setTokenValido(true)
-        return
-      }
-
-      if (accessToken) {
-        const { data, error: sessError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken ?? '',
-        })
-        if (sessError || !data.session) {
-          setDebugError(`Implicit error: ${sessError?.message ?? 'sin sesión'}`)
-          setTokenValido(false)
-          return
-        }
-        window.history.replaceState({}, '', '/activar-cuenta')
-        await cargarNombre(data.session.user.id)
-        setTokenValido(true)
-        return
-      }
-
-      // Sin code ni hash: verificar sesión activa
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        setDebugError(`URL: ${fullSearch || '(sin query)'} | hash: ${fullHash || '(sin hash)'}`)
-        setTokenValido(false)
-        return
-      }
-
-      await cargarNombre(user.id)
-      setTokenValido(true)
-    }
+    let settled = false
 
     async function cargarNombre(userId: string) {
       const { data: u } = await supabase
@@ -99,7 +48,36 @@ function ActivarCuentaContent() {
       if (u?.nombre) setNombreUsuario(u.nombre.split(' ')[0])
     }
 
-    init()
+    // detectSessionInUrl:true (default) procesa automáticamente ?code= y #access_token=
+    // Escuchamos el resultado vía onAuthStateChange
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (settled) return
+
+      if (session && (event === 'SIGNED_IN' || event === 'INITIAL_SESSION')) {
+        settled = true
+        window.history.replaceState({}, '', '/activar-cuenta')
+        await cargarNombre(session.user.id)
+        setTokenValido(true)
+        subscription.unsubscribe()
+      }
+    })
+
+    // Si en 6 segundos no hay evento SIGNED_IN, mostrar error
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true
+        const h = window.location.hash
+        const s = window.location.search
+        setDebugError(`hash: ${h ? h.substring(0, 80) : '(vacío)'} | query: ${s || '(vacío)'}`)
+        setTokenValido(false)
+        subscription.unsubscribe()
+      }
+    }, 6000)
+
+    return () => {
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
