@@ -29,6 +29,7 @@ function ActivarCuentaContent() {
   const [listo, setListo] = useState(false)
   const [tokenValido, setTokenValido] = useState<boolean | null>(null)
   const [nombreUsuario, setNombreUsuario] = useState('')
+  const [debugError, setDebugError] = useState('')
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,28 +37,45 @@ function ActivarCuentaContent() {
   )
 
   useEffect(() => {
-    // Si viene con ?error=link_invalido desde /auth/callback
-    if (searchParams.get('error') === 'link_invalido') {
-      setTokenValido(false)
-      return
-    }
-
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
+      // Flujo PKCE: ?code= en query params (Supabase lo envía así por defecto)
+      const code = searchParams.get('code')
 
+      if (code) {
+        const { data, error: exchError } = await supabase.auth.exchangeCodeForSession(code)
+        if (exchError || !data.session) {
+          setDebugError(exchError?.message ?? 'sin sesión tras exchange')
+          setTokenValido(false)
+          return
+        }
+        // Sesión establecida — limpiar code de la URL
+        window.history.replaceState({}, '', '/activar-cuenta')
+        await cargarNombre(data.session.user.id)
+        setTokenValido(true)
+        return
+      }
+
+      // Sin code: verificar si ya hay sesión activa (ej: recarga de página)
+      const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
+        setDebugError('Sin code y sin sesión activa')
         setTokenValido(false)
         return
       }
 
+      await cargarNombre(user.id)
       setTokenValido(true)
+    }
+
+    async function cargarNombre(userId: string) {
       const { data: u } = await supabase
         .from('usuarios')
         .select('nombre')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single()
       if (u?.nombre) setNombreUsuario(u.nombre.split(' ')[0])
     }
+
     init()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -109,7 +127,6 @@ function ActivarCuentaContent() {
 
   // Token inválido o expirado
   if (tokenValido === false) {
-    const errorMsg = searchParams.get('error')
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 max-w-sm w-full text-center">
@@ -120,8 +137,8 @@ function ActivarCuentaContent() {
           <p className="text-sm text-slate-500">
             Este link ya no es válido. Pide al administrador que te envíe una nueva invitación.
           </p>
-          {errorMsg && (
-            <p className="text-xs text-slate-400 mt-4 break-all font-mono">{errorMsg}</p>
+          {debugError && (
+            <p className="text-xs text-slate-400 mt-4 break-all font-mono">{debugError}</p>
           )}
         </div>
       </div>
