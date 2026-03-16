@@ -53,16 +53,27 @@ export default function SuperAdminPage() {
     let res: Response
     let data: Record<string, unknown>
 
+    // Paso 1: fetch
     try {
-      res = await fetch('/api/superadmin/onboarding', {
+      res = await fetch(window.location.origin + '/api/superadmin/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ secret, ...form }),
       })
-      data = await res.json()
     } catch (err) {
       setCargando(false)
-      setError(`Error de red: ${err instanceof Error ? err.message : String(err)}`)
+      setError(`Error fetch: ${err instanceof Error ? err.message : String(err)}`)
+      return
+    }
+
+    // Paso 2: leer respuesta
+    let rawText = ''
+    try {
+      rawText = await res.text()
+      data = JSON.parse(rawText)
+    } catch (err) {
+      setCargando(false)
+      setError(`Error JSON [${res.status}]: ${rawText.slice(0, 200)}`)
       return
     }
 
