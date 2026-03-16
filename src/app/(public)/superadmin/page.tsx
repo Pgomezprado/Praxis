@@ -50,16 +50,25 @@ export default function SuperAdminPage() {
     setCargando(true)
     setError('')
 
-    const res = await fetch('/api/superadmin/onboarding', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-superadmin-secret': secret,
-      },
-      body: JSON.stringify(form),
-    })
+    let res: Response
+    let data: Record<string, unknown>
 
-    const data = await res.json()
+    try {
+      res = await fetch('/api/superadmin/onboarding', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-superadmin-secret': secret,
+        },
+        body: JSON.stringify(form),
+      })
+      data = await res.json()
+    } catch (err) {
+      setCargando(false)
+      setError(`Error de red: ${err instanceof Error ? err.message : String(err)}`)
+      return
+    }
+
     setCargando(false)
 
     if (!res.ok) {
@@ -67,11 +76,11 @@ export default function SuperAdminPage() {
         setAutenticado(false)
         setSecretError(true)
       }
-      setError(data.error ?? 'Error al crear la clínica')
+      setError(`[${res.status}] ${data.error ?? 'Error al crear la clínica'}`)
       return
     }
 
-    setResultado(data)
+    setResultado(data as unknown as Resultado)
   }
 
   // Pantalla de clave secreta
