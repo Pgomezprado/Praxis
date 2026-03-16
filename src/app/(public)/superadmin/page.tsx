@@ -55,7 +55,7 @@ export default function SuperAdminPage() {
 
     // Paso 1: fetch
     try {
-      res = await fetch(window.location.origin + '/api/superadmin/onboarding', {
+      res = await fetch(window.location.origin + '/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ secret, ...form }),
