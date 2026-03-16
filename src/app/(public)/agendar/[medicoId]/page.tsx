@@ -1,102 +1,66 @@
-'use client'
+import { Suspense } from 'react'
+import { notFound } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { ElegirHoraClient } from '@/components/agendamiento/ElegirHoraClient'
+import type { HorarioSemanal } from '@/lib/mock-data'
 
-import { useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
-import { StepIndicator } from '@/components/agendamiento/StepIndicator'
-import { CalendarioDisponibilidad } from '@/components/agendamiento/CalendarioDisponibilidad'
-import { ResumenCita } from '@/components/agendamiento/ResumenCita'
-import { Avatar } from '@/components/ui/Avatar'
-import { Button } from '@/components/ui/Button'
-import { mockMedicos, mockFechasDisponibles, mockSlotsBase } from '@/lib/mock-data'
-import { ArrowLeft } from 'lucide-react'
-import Link from 'next/link'
+export default async function ElegirHoraPage({
+  params,
+}: {
+  params: Promise<{ medicoId: string }>
+}) {
+  const { medicoId } = await params
+  const supabase = createAdminClient()
 
-export default function ElegirHoraPage() {
-  const { medicoId } = useParams<{ medicoId: string }>()
-  const router = useRouter()
-  const medico = mockMedicos.find((m) => m.id === medicoId)
+  const { data: medico } = await supabase
+    .from('usuarios')
+    .select('id, nombre, especialidad')
+    .eq('id', medicoId)
+    .eq('activo', true)
+    .single()
 
-  const [fechaSeleccionada, setFechaSeleccionada] = useState<string | null>(null)
-  const [horaSeleccionada, setHoraSeleccionada] = useState<string | null>(null)
+  if (!medico) notFound()
 
-  if (!medico) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-slate-500">Médico no encontrado.</p>
-        <Link href="/agendar" className="text-blue-600 text-sm mt-2 inline-block">← Volver</Link>
-      </div>
-    )
+  // Obtener horario del médico para calcular días disponibles
+  const { data: horarioDb } = await supabase
+    .from('horarios')
+    .select('configuracion')
+    .eq('doctor_id', medicoId)
+    .single()
+
+  const horario = horarioDb?.configuracion as HorarioSemanal | null
+
+  // Calcular fechas disponibles en los próximos 60 días
+  const DIA_KEYS: (keyof HorarioSemanal)[] = [
+    'domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado',
+  ]
+  const hoy = new Date()
+  const fechasDisponibles: string[] = []
+  for (let i = 1; i <= 60; i++) {
+    const d = new Date(hoy)
+    d.setDate(hoy.getDate() + i)
+    const diaKey = DIA_KEYS[d.getDay()]
+    if (horario?.[diaKey]?.activo) {
+      fechasDisponibles.push(d.toISOString().split('T')[0])
+    }
   }
 
-  const fechasDisponibles = mockFechasDisponibles[medicoId] ?? []
-  const slots: Record<string, string[]> = {}
-  fechasDisponibles.forEach((f) => { slots[f] = mockSlotsBase[medicoId] ?? [] })
-
-  function handleSeleccionar(fecha: string, hora: string) {
-    setFechaSeleccionada(fecha)
-    if (hora) setHoraSeleccionada(hora)
-    else setHoraSeleccionada(null)
-  }
-
-  function handleContinuar() {
-    if (!fechaSeleccionada || !horaSeleccionada) return
-    const params = new URLSearchParams({
-      medicoId: medico!.id,
-      medico: medico!.nombre,
-      especialidad: medico!.especialidad,
-      fecha: fechaSeleccionada,
-      hora: horaSeleccionada,
-    })
-    router.push(`/agendar/confirmar?${params.toString()}`)
-  }
+  // Si no tiene horario configurado, mostrar los próximos 30 días hábiles
+  const diasParaMostrar = fechasDisponibles.length > 0
+    ? fechasDisponibles
+    : Array.from({ length: 30 }, (_, i) => {
+        const d = new Date(hoy)
+        d.setDate(hoy.getDate() + i + 1)
+        const day = d.getDay()
+        return day !== 0 && day !== 6 ? d.toISOString().split('T')[0] : null
+      }).filter(Boolean) as string[]
 
   return (
-    <div>
-      <StepIndicator pasoActual={2} />
-
-      <Link href="/agendar" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-5 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Volver
-      </Link>
-
-      {/* Médico seleccionado */}
-      <div className="flex items-center gap-3 mb-6 p-4 bg-white rounded-xl border border-slate-200">
-        <Avatar nombre={medico.nombre} size="md" />
-        <div>
-          <p className="text-base font-semibold text-slate-900">{medico.nombre}</p>
-          <p className="text-sm text-slate-500">{medico.especialidad}</p>
-        </div>
-      </div>
-
-      <div className="lg:grid lg:grid-cols-3 lg:gap-6">
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl border border-slate-200 p-5">
-            <CalendarioDisponibilidad
-              fechasDisponibles={fechasDisponibles}
-              slots={slots}
-              onSeleccionar={handleSeleccionar}
-              fechaSeleccionada={fechaSeleccionada}
-              horaSeleccionada={horaSeleccionada}
-            />
-          </div>
-        </div>
-
-        <div className="mt-4 lg:mt-0 space-y-4">
-          <ResumenCita
-            medico={medico.nombre}
-            especialidad={medico.especialidad}
-            fecha={fechaSeleccionada}
-            hora={horaSeleccionada}
-          />
-
-          <Button
-            className="w-full"
-            disabled={!fechaSeleccionada || !horaSeleccionada}
-            onClick={handleContinuar}
-          >
-            Continuar →
-          </Button>
-        </div>
-      </div>
-    </div>
+    <Suspense>
+      <ElegirHoraClient
+        medico={{ id: medico.id, nombre: medico.nombre, especialidad: medico.especialidad ?? '' }}
+        fechasDisponibles={diasParaMostrar}
+      />
+    </Suspense>
   )
 }

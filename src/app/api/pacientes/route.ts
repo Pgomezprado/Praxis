@@ -11,7 +11,7 @@ export async function GET(req: Request) {
 
     let query = supabase
       .from('pacientes')
-      .select('id, nombre, rut, alergias, condiciones, fecha_nac, grupo_sang, created_at')
+      .select('id, nombre, rut, email, telefono, alergias, condiciones, fecha_nac, grupo_sang, created_at')
       .eq('activo', true)
       .order('nombre')
 

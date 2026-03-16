@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
-import { validarRut, formatearRut, generarFolio } from '@/lib/agendamiento'
+import { validarRut, formatearRut } from '@/lib/agendamiento'
 
 function ConfirmarForm() {
   const params = useSearchParams()
@@ -51,11 +51,32 @@ function ConfirmarForm() {
     if (!validar()) return
 
     setLoading(true)
-    await new Promise((r) => setTimeout(r, 800))
-
-    const folio = generarFolio()
-    const q = new URLSearchParams({ folio, medico, especialidad, fecha, hora, email })
-    router.push(`/agendar/exito?${q.toString()}`)
+    try {
+      const res = await fetch('/api/public/confirmar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          medicoId,
+          fecha,
+          hora,
+          nombre,
+          rut,
+          email,
+          telefono,
+          motivo,
+          tipo: primeraConsulta ? 'primera_consulta' : 'control',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setErrores({ general: data.error ?? 'Error al confirmar la cita' })
+        return
+      }
+      const q = new URLSearchParams({ folio: data.folio, medico, especialidad, fecha, hora, email })
+      router.push(`/agendar/exito?${q.toString()}`)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -145,6 +166,12 @@ function ConfirmarForm() {
             <span className="text-sm text-slate-700">Acepto recibir recordatorio por SMS</span>
           </label>
         </div>
+
+        {errores.general && (
+          <p className="text-sm text-red-600 text-center bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
+            {errores.general}
+          </p>
+        )}
 
         <Button type="submit" loading={loading} className="w-full mt-2">
           Confirmar cita

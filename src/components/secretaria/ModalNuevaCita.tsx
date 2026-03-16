@@ -5,7 +5,7 @@ import { X, User, Stethoscope, CalendarDays, FileText, Loader2 } from 'lucide-re
 import { BuscadorPaciente, type PacienteSeleccionado } from './BuscadorPaciente'
 import { Avatar } from '@/components/ui/Avatar'
 import { generarSlots } from '@/lib/agendamiento'
-import { mockSlotsBase, type MockCita } from '@/lib/mock-data'
+import type { MockCita, HorarioSemanal } from '@/lib/mock-data'
 
 interface ModalNuevaCitaProps {
   open: boolean
@@ -66,6 +66,16 @@ export function ModalNuevaCita({
     setSlot('')
   }, [medicoId, fecha])
 
+  // Horario real del médico (cargado al cambiar médico)
+  const [horarioMedico, setHorarioMedico] = useState<HorarioSemanal | null>(null)
+  useEffect(() => {
+    if (!medicoId) { setHorarioMedico(null); return }
+    fetch('/api/horarios')
+      .then(r => r.json())
+      .then(data => setHorarioMedico((data.horarios?.[medicoId] as HorarioSemanal) ?? null))
+      .catch(() => {})
+  }, [medicoId])
+
   // Slots ocupados desde la API (se cargan cuando cambia médico/fecha)
   const [slotsOcupados, setSlotsOcupados] = useState<string[]>([])
   useEffect(() => {
@@ -82,12 +92,26 @@ export function ModalNuevaCita({
       .catch(() => {})
   }, [medicoId, fecha])
 
-  // Calcular slots disponibles (usando mockSlotsBase mientras horarios no está conectado)
+  // Obtener config del día de la semana seleccionado
+  function getDiaKey(f: string): keyof HorarioSemanal {
+    const dias: (keyof HorarioSemanal)[] = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
+    const [y, m, d] = f.split('-').map(Number)
+    return dias[new Date(y, m - 1, d).getDay()]
+  }
+
+  // Calcular slots disponibles desde horario real (o fallback 09:00–18:00)
   const slotsDisponibles = medicoId && fecha
     ? (() => {
-        const horasBase = mockSlotsBase[medicoId] ?? ['09:00', '13:00']
-        if (horasBase.length === 0) return []
-        return generarSlots(fecha, horasBase[0], horasBase[horasBase.length - 1], slotsOcupados)
+        const diaKey = getDiaKey(fecha)
+        const configDia = horarioMedico?.[diaKey]
+        if (configDia && !configDia.activo) return []
+        const horaInicio = configDia?.horaInicio ?? '09:00'
+        const horaFin = configDia?.horaFin ?? '18:00'
+        // Slots de colación se marcan como ocupados
+        const colacionOcupados = configDia?.tieneColacion
+          ? generarSlots(fecha, configDia.colacionInicio, configDia.colacionFin, []).map(s => s.hora)
+          : []
+        return generarSlots(fecha, horaInicio, horaFin, [...slotsOcupados, ...colacionOcupados])
       })()
     : []
 

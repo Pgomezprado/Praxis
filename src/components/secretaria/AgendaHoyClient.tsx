@@ -45,6 +45,12 @@ export function AgendaHoyClient({
     setTimeout(() => setToast(null), 4000)
   }
 
+  function handleEstadoCambiado(id: string, nuevoEstado: MockCita['estado']) {
+    setCitasLocales((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, estado: nuevoEstado } : c))
+    )
+  }
+
   // Para el toolbar, necesitamos todas las citas (incluyendo las locales nuevas)
   const todasCitas = [...allCitas.filter((c) => !citasLocales.find((l) => l.id === c.id)), ...citasLocales]
 
@@ -60,7 +66,7 @@ export function AgendaHoyClient({
       />
 
       <div className="max-w-[720px] mx-auto px-4 py-6">
-        <ListaDia citas={citasLocales} showMedico={!medicoId} />
+        <ListaDia citas={citasLocales} showMedico={!medicoId} onEstadoCambiado={handleEstadoCambiado} />
       </div>
 
       <ModalNuevaCita

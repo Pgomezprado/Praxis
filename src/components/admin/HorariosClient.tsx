@@ -3,12 +3,7 @@
 import { useState } from 'react'
 import { Copy, Save, ChevronDown } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
-import {
-  mockMedicosAdmin,
-  mockHorarios,
-  type HorarioSemanal,
-  type ConfigDia,
-} from '@/lib/mock-data'
+import type { HorarioSemanal, ConfigDia, MockMedicoAdmin } from '@/lib/mock-data'
 
 const DIAS = [
   { key: 'lunes',     label: 'Lunes',     short: 'Lun' },
@@ -25,7 +20,6 @@ type DiaKey = typeof DIAS[number]['key']
 const DURACIONES = [15, 20, 30, 45, 60]
 const BUFFERS = [0, 5, 10, 15]
 
-// Genera un horario base para médicos sin horario definido
 function horarioDefault(): HorarioSemanal {
   const activo: ConfigDia = {
     activo: true, horaInicio: '09:00', horaFin: '18:00',
@@ -40,15 +34,19 @@ function horarioDefault(): HorarioSemanal {
   }
 }
 
-export function HorariosClient() {
-  const [medicoId, setMedicoId] = useState(mockMedicosAdmin[0]?.id ?? 'm1')
+interface HorariosClientProps {
+  medicos: MockMedicoAdmin[]
+  horariosInicial: Record<string, HorarioSemanal>
+}
 
-  // Estado de horarios editables por médico
+export function HorariosClient({ medicos, horariosInicial }: HorariosClientProps) {
+  const [medicoId, setMedicoId] = useState(medicos[0]?.id ?? '')
+
   const [horariosState, setHorariosState] = useState<Record<string, HorarioSemanal>>(() => {
     const init: Record<string, HorarioSemanal> = {}
-    for (const m of mockMedicosAdmin) {
-      init[m.id] = mockHorarios[m.id]
-        ? JSON.parse(JSON.stringify(mockHorarios[m.id]))
+    for (const m of medicos) {
+      init[m.id] = horariosInicial[m.id]
+        ? JSON.parse(JSON.stringify(horariosInicial[m.id]))
         : horarioDefault()
     }
     return init
@@ -57,7 +55,7 @@ export function HorariosClient() {
   const [guardando, setGuardando] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
-  const medico = mockMedicosAdmin.find(m => m.id === medicoId)!
+  const medico = medicos.find(m => m.id === medicoId)
   const horario = horariosState[medicoId]
 
   function setDia(dia: DiaKey, campo: keyof ConfigDia, valor: ConfigDia[keyof ConfigDia]) {
@@ -71,7 +69,6 @@ export function HorariosClient() {
   }
 
   function copiarASemana() {
-    // Copia el primer día activo a todos los días (lun–vie), mantiene sáb/dom inactivos
     const primerActivo = DIAS.find(d => horario[d.key].activo)
     if (!primerActivo) return
     const base = { ...horario[primerActivo.key] }
@@ -90,14 +87,23 @@ export function HorariosClient() {
   }
 
   async function guardar() {
+    if (!medico) return
     setGuardando(true)
-    await new Promise(r => setTimeout(r, 700))
-    setGuardando(false)
-    setToast(`Horario de ${medico.nombre} guardado · slots generados para 60 días`)
-    setTimeout(() => setToast(null), 5000)
+    try {
+      const res = await fetch('/api/horarios', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doctor_id: medicoId, configuracion: horariosState[medicoId] }),
+      })
+      if (res.ok) {
+        setToast(`Horario de ${medico.nombre} guardado`)
+        setTimeout(() => setToast(null), 5000)
+      }
+    } finally {
+      setGuardando(false)
+    }
   }
 
-  // Resumen de slots por día activo
   function calcularSlots(dia: ConfigDia): number {
     if (!dia.activo) return 0
     const [hIni, mIni] = dia.horaInicio.split(':').map(Number)
@@ -110,6 +116,14 @@ export function HorariosClient() {
     }
     if (minutos <= 0) return 0
     return Math.floor(minutos / (dia.duracion + dia.buffer))
+  }
+
+  if (medicos.length === 0) {
+    return (
+      <div className="text-center py-16 text-slate-400 text-sm">
+        No hay médicos registrados en la clínica.
+      </div>
+    )
   }
 
   const diasActivos = DIAS.filter(d => horario[d.key].activo).length
@@ -131,7 +145,7 @@ export function HorariosClient() {
                 onChange={e => setMedicoId(e.target.value)}
                 className="w-full appearance-none pl-3 pr-10 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors bg-white font-medium text-slate-800"
               >
-                {mockMedicosAdmin.map(m => (
+                {medicos.map(m => (
                   <option key={m.id} value={m.id}>{m.nombre} — {m.especialidad}</option>
                 ))}
               </select>
@@ -149,14 +163,16 @@ export function HorariosClient() {
               <div className="text-xl font-bold text-blue-600">{totalSlotsSemanales}</div>
               <div className="text-xs text-slate-500">slots/semana</div>
             </div>
-            <div className="flex items-center gap-2">
-              <Avatar nombre={medico.nombre} size="sm" />
-            </div>
+            {medico && (
+              <div className="flex items-center gap-2">
+                <Avatar nombre={medico.nombre} size="sm" />
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Grid semanal — scroll horizontal en móvil */}
+      {/* Grid semanal */}
       <div className="overflow-x-auto -mx-6 px-6">
         <div className="grid grid-cols-7 gap-2 min-w-[700px]">
           {DIAS.map(({ key, label, short }) => {
@@ -189,10 +205,9 @@ export function HorariosClient() {
                     className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 focus:outline-none overflow-hidden ${
                       dia.activo ? 'bg-blue-600' : 'bg-slate-300'
                     }`}
-                    title={dia.activo ? 'Desactivar día' : 'Activar día'}
                   >
-                    <span className={`absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                      dia.activo ? 'translate-x-4' : 'translate-x-0'
+                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                      dia.activo ? 'translate-x-4' : 'translate-x-0.5'
                     }`} />
                   </button>
                 </div>

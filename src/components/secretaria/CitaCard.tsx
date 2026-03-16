@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { MoreVertical, Eye, Calendar, XCircle, Mail } from 'lucide-react'
+import { MoreVertical, Eye, XCircle, PlayCircle, CheckCircle2, Loader2 } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import type { MockCita } from '@/lib/mock-data'
@@ -9,6 +9,7 @@ import type { MockCita } from '@/lib/mock-data'
 interface CitaCardProps {
   cita: MockCita
   showMedico?: boolean
+  onEstadoCambiado?: (id: string, nuevoEstado: MockCita['estado']) => void
 }
 
 const ESTADO_BADGE: Record<
@@ -28,18 +29,49 @@ const TIPO_LABEL: Record<MockCita['tipo'], string> = {
   urgencia: 'Urgencia',
 }
 
-const MENU_ITEMS = [
-  { icon: Eye, label: 'Ver detalle', danger: false },
-  { icon: Calendar, label: 'Reagendar', danger: false },
-  { icon: XCircle, label: 'Cancelar', danger: true },
-  { icon: Mail, label: 'Enviar confirmación', danger: false },
-]
-
-export function CitaCard({ cita, showMedico = false }: CitaCardProps) {
+export function CitaCard({ cita, showMedico = false, onEstadoCambiado }: CitaCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const { label, variant } = ESTADO_BADGE[cita.estado]
-  const isCancelada = cita.estado === 'cancelada'
-  const isEnConsulta = cita.estado === 'en_consulta'
+  const [estadoLocal, setEstadoLocal] = useState(cita.estado)
+  const [loading, setLoading] = useState(false)
+
+  const { label, variant } = ESTADO_BADGE[estadoLocal]
+  const isCancelada = estadoLocal === 'cancelada'
+  const isEnConsulta = estadoLocal === 'en_consulta'
+  const isCompletada = estadoLocal === 'completada'
+
+  async function cambiarEstado(nuevoEstado: MockCita['estado']) {
+    setMenuOpen(false)
+    setLoading(true)
+    const prev = estadoLocal
+    setEstadoLocal(nuevoEstado)
+    try {
+      const res = await fetch(`/api/citas/${cita.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: nuevoEstado }),
+      })
+      if (!res.ok) {
+        setEstadoLocal(prev)
+      } else {
+        onEstadoCambiado?.(cita.id, nuevoEstado)
+      }
+    } catch {
+      setEstadoLocal(prev)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Acciones disponibles según estado
+  const acciones: { icon: React.ElementType; label: string; estado: MockCita['estado']; danger?: boolean }[] = []
+  if (estadoLocal === 'confirmada' || estadoLocal === 'pendiente') {
+    acciones.push({ icon: PlayCircle, label: 'Iniciar consulta', estado: 'en_consulta' })
+    acciones.push({ icon: XCircle, label: 'Cancelar cita', estado: 'cancelada', danger: true })
+  }
+  if (estadoLocal === 'en_consulta') {
+    acciones.push({ icon: CheckCircle2, label: 'Marcar completada', estado: 'completada' })
+    acciones.push({ icon: XCircle, label: 'Cancelar cita', estado: 'cancelada', danger: true })
+  }
 
   return (
     <div
@@ -48,6 +80,8 @@ export function CitaCard({ cita, showMedico = false }: CitaCardProps) {
           ? 'opacity-60 border-slate-200'
           : isEnConsulta
           ? 'border-emerald-300 ring-1 ring-emerald-200'
+          : isCompletada
+          ? 'border-slate-200 opacity-75'
           : 'border-slate-200 hover:border-blue-200 hover:shadow-sm'
       }`}
     >
@@ -104,35 +138,41 @@ export function CitaCard({ cita, showMedico = false }: CitaCardProps) {
           </div>
         </div>
 
-        {/* Menú 3 puntos */}
-        <div className="relative flex-shrink-0">
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-            aria-label="Acciones"
-          >
-            <MoreVertical className="w-4 h-4" />
-          </button>
+        {/* Acción rápida + menú */}
+        <div className="relative flex-shrink-0 flex items-center gap-1">
+          {loading && <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />}
 
-          {menuOpen && (
+          {acciones.length > 0 && !loading && (
             <>
-              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-8 z-20 w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden">
-                {MENU_ITEMS.map(({ icon: Icon, label: itemLabel, danger }) => (
-                  <button
-                    key={itemLabel}
-                    onClick={() => setMenuOpen(false)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${
-                      danger
-                        ? 'text-red-600 hover:bg-red-50'
-                        : 'text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    {itemLabel}
-                  </button>
-                ))}
-              </div>
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                aria-label="Acciones"
+              >
+                <MoreVertical className="w-4 h-4" />
+              </button>
+
+              {menuOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                  <div className="absolute right-0 top-8 z-20 w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden">
+                    {acciones.map(({ icon: Icon, label: itemLabel, estado, danger }) => (
+                      <button
+                        key={itemLabel}
+                        onClick={() => cambiarEstado(estado)}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${
+                          danger
+                            ? 'text-red-600 hover:bg-red-50'
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 flex-shrink-0" />
+                        {itemLabel}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>

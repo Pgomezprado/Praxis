@@ -33,6 +33,7 @@ export function BuscadorPaciente({ value, onChange }: BuscadorPacienteProps) {
   const [nuevo, setNuevo] = useState<NuevoPacienteForm>({ nombre: '', rut: '', email: '', telefono: '' })
   const [rutError, setRutError] = useState('')
   const [resultados, setResultados] = useState<PacienteSeleccionado[]>([])
+  const [guardando, setGuardando] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -83,20 +84,34 @@ export function BuscadorPaciente({ value, onChange }: BuscadorPacienteProps) {
     }
   }
 
-  function handleGuardarNuevo() {
+  async function handleGuardarNuevo() {
     if (!nuevo.nombre || !nuevo.rut || !nuevo.email) return
     if (rutError) return
-    onChange({
-      id: `nuevo-${Date.now()}`,
-      nombre: nuevo.nombre,
-      rut: nuevo.rut,
-      email: nuevo.email,
-      telefono: nuevo.telefono,
-      esNuevo: true,
-    })
-    setCreandoNuevo(false)
-    setOpen(false)
-    setNuevo({ nombre: '', rut: '', email: '', telefono: '' })
+    setGuardando(true)
+    try {
+      const res = await fetch('/api/pacientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre: nuevo.nombre, rut: nuevo.rut, email: nuevo.email, telefono: nuevo.telefono }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setRutError(data.error ?? 'Error al guardar')
+        return
+      }
+      onChange({
+        id: data.paciente.id,
+        nombre: data.paciente.nombre,
+        rut: data.paciente.rut,
+        email: data.paciente.email ?? nuevo.email,
+        telefono: data.paciente.telefono ?? nuevo.telefono,
+      })
+      setCreandoNuevo(false)
+      setOpen(false)
+      setNuevo({ nombre: '', rut: '', email: '', telefono: '' })
+    } finally {
+      setGuardando(false)
+    }
   }
 
   if (value) {
@@ -171,10 +186,10 @@ export function BuscadorPaciente({ value, onChange }: BuscadorPacienteProps) {
                 </button>
                 <button
                   onClick={handleGuardarNuevo}
-                  disabled={!nuevo.nombre || !nuevo.rut || !nuevo.email || !!rutError}
+                  disabled={!nuevo.nombre || !nuevo.rut || !nuevo.email || !!rutError || guardando}
                   className="flex-1 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
-                  Guardar
+                  {guardando ? 'Guardando…' : 'Guardar'}
                 </button>
               </div>
             </div>
