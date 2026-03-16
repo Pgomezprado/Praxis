@@ -43,6 +43,7 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar }: Props) 
   const [form, setForm] = useState<FormData>(defaultForm)
   const [rutError, setRutError] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [errorGuardar, setErrorGuardar] = useState<string | null>(null)
   const [invitando, setInvitando] = useState(false)
   const [invitadoOk, setInvitadoOk] = useState(false)
 
@@ -100,6 +101,7 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar }: Props) 
   async function handleGuardar() {
     if (!canGuardar) return
     setGuardando(true)
+    setErrorGuardar(null)
 
     const url = medicoEditar ? `/api/usuarios/${medicoEditar.id}` : '/api/usuarios'
     const method = medicoEditar ? 'PATCH' : 'POST'
@@ -120,7 +122,11 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar }: Props) 
 
     setGuardando(false)
 
-    if (!res.ok) return
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setErrorGuardar(data.error ?? 'Error al guardar el médico')
+      return
+    }
 
     const data = await res.json()
     const u = data.usuario
@@ -398,7 +404,13 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar }: Props) 
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 flex items-center gap-3 bg-white">
+        <div className="px-6 py-4 border-t border-slate-200 bg-white space-y-3">
+          {errorGuardar && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 text-center">
+              {errorGuardar}
+            </p>
+          )}
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={onClose}
@@ -417,6 +429,7 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar }: Props) 
             )}
             {esEdicion ? 'Guardar cambios' : 'Guardar médico'}
           </button>
+        </div>
         </div>
 
       </div>
