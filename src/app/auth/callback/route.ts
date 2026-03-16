@@ -4,15 +4,18 @@ import { NextResponse } from 'next/server'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/inicio'
 
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`)
+      return NextResponse.redirect(`${origin}/activar-cuenta`)
     }
+    // Redirigir con el mensaje de error real para debug
+    return NextResponse.redirect(
+      `${origin}/activar-cuenta?error=${encodeURIComponent(error.message)}`
+    )
   }
 
-  return NextResponse.redirect(`${origin}/activar-cuenta?error=link_invalido`)
+  return NextResponse.redirect(`${origin}/activar-cuenta?error=sin_codigo`)
 }

@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://praxisapp.cl'
     const { data: authData, error: authError } = await admin.auth.admin.inviteUserByEmail(adminEmail, {
       data: { nombre: adminNombre, rol: 'admin_clinica' },
-      redirectTo: `${appUrl}/auth/callback?next=/activar-cuenta`,
+      redirectTo: `${appUrl}/auth/callback`,
     })
 
     if (authError) {

@@ -109,6 +109,7 @@ function ActivarCuentaContent() {
 
   // Token inválido o expirado
   if (tokenValido === false) {
+    const errorMsg = searchParams.get('error')
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 max-w-sm w-full text-center">
@@ -119,6 +120,9 @@ function ActivarCuentaContent() {
           <p className="text-sm text-slate-500">
             Este link ya no es válido. Pide al administrador que te envíe una nueva invitación.
           </p>
+          {errorMsg && (
+            <p className="text-xs text-slate-400 mt-4 break-all font-mono">{errorMsg}</p>
+          )}
         </div>
       </div>
     )
