@@ -8,16 +8,24 @@ export const metadata = { title: 'Inicio — Praxis Médico' }
 
 export default async function MedicoInicioPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) return null
 
   const { data: me } = await supabase
     .from('usuarios')
     .select('id, clinica_id, nombre, especialidad, rut, email, telefono, duracion_consulta')
-    .eq('id', user.id)
+    .eq('id', session.user.id)
     .single()
 
-  if (!me) return null
+  if (!me) return (
+    <div className="max-w-3xl mx-auto px-4 py-12">
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-amber-800">
+        <p className="font-medium">Perfil no encontrado</p>
+        <p className="text-sm mt-1">No se encontró tu perfil de médico. Contacta al administrador.</p>
+        <p className="text-xs mt-2 font-mono text-amber-600">user_id: {session.user.id}</p>
+      </div>
+    </div>
+  )
 
   const { data: clinica } = await supabase
     .from('clinicas')
