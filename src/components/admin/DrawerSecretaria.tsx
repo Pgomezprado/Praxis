@@ -1,0 +1,353 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { X, Send, Check } from 'lucide-react'
+import { Avatar } from '@/components/ui/Avatar'
+import { mockMedicosAdmin, type MockSecretaria } from '@/lib/mock-data'
+import { validarRut, formatearRut } from '@/lib/agendamiento'
+
+type FormData = {
+  nombre: string
+  rut: string
+  email: string
+  telefono: string
+  medicosAsignados: string[]
+  emailAcceso: string
+}
+
+type Props = {
+  open: boolean
+  onClose: () => void
+  onGuardar: (secretaria: MockSecretaria) => void
+  secretariaEditar?: MockSecretaria | null
+}
+
+export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar }: Props) {
+  const esEdicion = !!secretariaEditar
+
+  const defaultForm: FormData = {
+    nombre: '',
+    rut: '',
+    email: '',
+    telefono: '',
+    medicosAsignados: [],
+    emailAcceso: '',
+  }
+
+  const [form, setForm] = useState<FormData>(defaultForm)
+  const [rutError, setRutError] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [invitando, setInvitando] = useState(false)
+  const [invitadoOk, setInvitadoOk] = useState(false)
+
+  useEffect(() => {
+    if (secretariaEditar) {
+      setForm({
+        nombre: secretariaEditar.nombre,
+        rut: secretariaEditar.rut,
+        email: secretariaEditar.email,
+        telefono: secretariaEditar.telefono,
+        medicosAsignados: [...secretariaEditar.medicosAsignados],
+        emailAcceso: secretariaEditar.email,
+      })
+    } else {
+      setForm(defaultForm)
+    }
+    setRutError('')
+    setInvitadoOk(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [secretariaEditar, open])
+
+  function set<K extends keyof FormData>(key: K, value: FormData[K]) {
+    setForm(prev => ({ ...prev, [key]: value }))
+  }
+
+  function handleRutChange(raw: string) {
+    const formateado = formatearRut(raw)
+    setForm(prev => ({ ...prev, rut: formateado }))
+    if (formateado.length > 3) {
+      setRutError(validarRut(formateado) ? '' : 'RUT inválido')
+    } else {
+      setRutError('')
+    }
+  }
+
+  function handleEmailChange(value: string) {
+    setForm(prev => ({ ...prev, email: value, emailAcceso: value }))
+  }
+
+  function toggleMedico(id: string) {
+    setForm(prev => ({
+      ...prev,
+      medicosAsignados: prev.medicosAsignados.includes(id)
+        ? prev.medicosAsignados.filter(m => m !== id)
+        : [...prev.medicosAsignados, id],
+    }))
+  }
+
+  const medicosActivos = mockMedicosAdmin.filter(m => m.estado === 'activo')
+
+  const canGuardar =
+    form.nombre.trim() &&
+    form.rut.trim() &&
+    !rutError &&
+    form.email.trim()
+
+  async function handleGuardar() {
+    if (!canGuardar) return
+    setGuardando(true)
+    await new Promise(r => setTimeout(r, 600))
+
+    const nueva: MockSecretaria = {
+      id: secretariaEditar?.id ?? `s${Date.now()}`,
+      clinicaId: 'cl1',
+      nombre: form.nombre.trim(),
+      rut: form.rut,
+      email: form.email.trim(),
+      telefono: form.telefono.trim(),
+      medicosAsignados: form.medicosAsignados,
+      estado: secretariaEditar?.estado ?? 'activo',
+    }
+    onGuardar(nueva)
+    setGuardando(false)
+  }
+
+  async function handleInvitar() {
+    if (!form.emailAcceso.trim()) return
+    setInvitando(true)
+    await new Promise(r => setTimeout(r, 800))
+    setInvitando(false)
+    setInvitadoOk(true)
+    setTimeout(() => setInvitadoOk(false), 4000)
+  }
+
+  if (!open) return null
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-slate-900/40 z-40 transition-opacity" onClick={onClose} />
+
+      <div className="fixed right-0 top-0 h-full w-[480px] bg-white shadow-2xl z-50 flex flex-col">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">
+              {esEdicion ? 'Editar secretaria' : 'Agregar secretaria'}
+            </h2>
+            <p className="text-sm text-slate-500 mt-0.5">
+              {esEdicion ? `Editando datos de ${secretariaEditar.nombre}` : 'Completa los datos de la nueva secretaria'}
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors"
+          >
+            <X className="w-4 h-4 text-slate-500" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-7">
+
+          {/* ── Datos personales ── */}
+          <section>
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">
+              Datos personales
+            </h3>
+            <div className="space-y-4">
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Nombre completo <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.nombre}
+                  onChange={e => set('nombre', e.target.value)}
+                  placeholder="Valentina Rojas"
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  RUT <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.rut}
+                  onChange={e => handleRutChange(e.target.value)}
+                  placeholder="16.789.012-3"
+                  className={`w-full px-3 py-2.5 text-sm rounded-xl border transition-colors focus:outline-none focus:ring-2 ${
+                    rutError
+                      ? 'border-red-400 focus:ring-red-500/30 focus:border-red-500'
+                      : 'border-slate-200 focus:ring-blue-500/30 focus:border-blue-500'
+                  }`}
+                />
+                {rutError && <p className="text-xs text-red-500 mt-1">{rutError}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={e => handleEmailChange(e.target.value)}
+                  placeholder="secretaria@clinica.cl"
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Teléfono</label>
+                <input
+                  type="tel"
+                  value={form.telefono}
+                  onChange={e => set('telefono', e.target.value)}
+                  placeholder="+56 9 1234 5678"
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
+                />
+              </div>
+
+            </div>
+          </section>
+
+          {/* ── Médicos asignados ── */}
+          <section>
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">
+              Médicos que gestiona
+            </h3>
+            <p className="text-xs text-slate-400 mb-4">
+              Selecciona uno o más médicos activos
+            </p>
+
+            <div className="space-y-2">
+              {medicosActivos.map(medico => {
+                const seleccionado = form.medicosAsignados.includes(medico.id)
+                return (
+                  <button
+                    key={medico.id}
+                    type="button"
+                    onClick={() => toggleMedico(medico.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border text-left transition-colors ${
+                      seleccionado
+                        ? 'border-blue-300 bg-blue-50'
+                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                  >
+                    <Avatar nombre={medico.nombre} size="sm" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">{medico.nombre}</p>
+                      <p className="text-xs text-slate-500">{medico.especialidad}</p>
+                    </div>
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                      seleccionado ? 'bg-blue-600 border-blue-600' : 'border-slate-300'
+                    }`}>
+                      {seleccionado && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            {form.medicosAsignados.length > 0 && (
+              <p className="text-xs text-blue-600 mt-2 font-medium">
+                {form.medicosAsignados.length} médico{form.medicosAsignados.length !== 1 ? 's' : ''} asignado{form.medicosAsignados.length !== 1 ? 's' : ''}
+              </p>
+            )}
+          </section>
+
+          {/* ── Acceso al sistema ── */}
+          <section>
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">
+              Acceso al sistema
+            </h3>
+            <div className="space-y-4">
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Email de acceso
+                </label>
+                <input
+                  type="email"
+                  value={form.emailAcceso}
+                  onChange={e => setForm(prev => ({ ...prev, emailAcceso: e.target.value }))}
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Rol</label>
+                <div className="px-3 py-2.5 text-sm rounded-xl border border-slate-100 bg-slate-50 text-slate-500 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-violet-500" />
+                  Secretaria — solo lectura
+                </div>
+              </div>
+
+              {/* Preview */}
+              {form.nombre && (
+                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <Avatar nombre={form.nombre} size="sm" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{form.nombre}</p>
+                    <p className="text-xs text-slate-500">
+                      {form.medicosAsignados.length > 0
+                        ? `Gestiona ${form.medicosAsignados.length} médico${form.medicosAsignados.length !== 1 ? 's' : ''}`
+                        : 'Sin médicos asignados'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleInvitar}
+                disabled={!form.emailAcceso.trim() || invitando}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                  invitadoOk
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed'
+                }`}
+              >
+                {invitando ? (
+                  <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
+                {invitadoOk ? 'Invitación enviada ✓' : 'Enviar invitación por email'}
+              </button>
+
+            </div>
+          </section>
+
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-slate-200 flex items-center gap-3 bg-white">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={handleGuardar}
+            disabled={!canGuardar || guardando}
+            className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+          >
+            {guardando && (
+              <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+            )}
+            {esEdicion ? 'Guardar cambios' : 'Guardar secretaria'}
+          </button>
+        </div>
+
+      </div>
+    </>
+  )
+}
