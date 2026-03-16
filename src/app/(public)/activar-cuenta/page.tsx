@@ -1,12 +1,17 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { Eye, EyeOff, CheckCircle2, Lock } from 'lucide-react'
 
 export default function ActivarCuentaPage() {
   const router = useRouter()
+  // Capturar el hash ANTES de que Supabase lo procese/limpie
+  const hashCapturado = useRef<string>(
+    typeof window !== 'undefined' ? window.location.hash : ''
+  )
+
   const [password, setPassword] = useState('')
   const [confirmar, setConfirmar] = useState('')
   const [showPass, setShowPass] = useState(false)
@@ -16,25 +21,27 @@ export default function ActivarCuentaPage() {
   const [tokenValido, setTokenValido] = useState<boolean | null>(null)
   const [nombreUsuario, setNombreUsuario] = useState('')
 
+  // Deshabilitar detección automática para evitar que consuma el hash
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { detectSessionInUrl: false, persistSession: true } }
   )
 
   useEffect(() => {
     async function init() {
-      // Leer tokens directamente del hash de la URL
-      const hash = window.location.hash.substring(1)
+      // Usar el hash capturado al inicio (antes de que Supabase lo limpie)
+      const hash = hashCapturado.current.substring(1)
       const params = new URLSearchParams(hash)
       const accessToken = params.get('access_token')
       const refreshToken = params.get('refresh_token')
 
       if (accessToken) {
-        const { data: { session }, error } = await supabase.auth.setSession({
+        const { data: { session }, error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken ?? '',
         })
-        if (error || !session) {
+        if (sessionError || !session) {
           setTokenValido(false)
           return
         }
@@ -46,7 +53,7 @@ export default function ActivarCuentaPage() {
           .single()
         if (u?.nombre) setNombreUsuario(u.nombre.split(' ')[0])
       } else {
-        // Sin hash — verificar si hay sesión activa (recarga de página)
+        // Sin hash — verificar sesión activa (recarga de página)
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
           setTokenValido(true)
@@ -152,7 +159,7 @@ export default function ActivarCuentaPage() {
             <Lock className="w-6 h-6 text-white" />
           </div>
           <h1 className="text-xl font-bold text-slate-900">
-            {nombreUsuario ? `Bienvenida, ${nombreUsuario}` : 'Activar cuenta'}
+            {nombreUsuario ? `Bienvenido, ${nombreUsuario}` : 'Activar cuenta'}
           </h1>
           <p className="text-sm text-slate-500 mt-1.5">
             Crea tu contraseña para acceder al sistema
@@ -160,7 +167,6 @@ export default function ActivarCuentaPage() {
         </div>
 
         <form onSubmit={handleGuardar} className="space-y-4">
-
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
               Nueva contraseña
@@ -226,7 +232,6 @@ export default function ActivarCuentaPage() {
             )}
             Crear contraseña y entrar
           </button>
-
         </form>
       </div>
     </div>
