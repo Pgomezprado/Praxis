@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { MedicosClient } from '@/components/admin/MedicosClient'
-import { type MockMedicoAdmin, mockEspecialidades } from '@/lib/mock-data'
+import { type MockMedicoAdmin } from '@/lib/mock-data'
+import { type Especialidad } from '@/types/database'
 
 export const metadata = { title: 'Médicos — Praxis Admin' }
 
@@ -14,30 +15,57 @@ export default async function AdminMedicosPage() {
     .eq('id', user!.id)
     .single()
 
-  const { data: doctoresDb } = await supabase
-    .from('usuarios')
-    .select('id, nombre, email, especialidad, activo, rut, telefono, duracion_consulta')
-    .eq('clinica_id', me!.clinica_id)
-    .or('rol.eq.doctor,es_doctor.eq.true')
-    .order('nombre')
+  const clinicaId = (me as { clinica_id: string } | null)?.clinica_id
 
-  // Mapea DB usuario → MockMedicoAdmin para el componente cliente existente
+  const inicioMes = new Date()
+  inicioMes.setDate(1)
+  const inicioMesStr = inicioMes.toISOString().split('T')[0]
+
+  const [{ data: doctoresDb }, { data: especialidadesDb }, { data: citasMesDb }] = await Promise.all([
+    supabase
+      .from('usuarios')
+      .select('id, nombre, email, especialidad, activo, rut, telefono, duracion_consulta')
+      .eq('clinica_id', clinicaId)
+      .or('rol.eq.doctor,es_doctor.eq.true')
+      .order('nombre'),
+    supabase
+      .from('especialidades')
+      .select('id, clinica_id, nombre, color, duracion_default, activo')
+      .eq('clinica_id', clinicaId)
+      .eq('activo', true)
+      .order('nombre'),
+    supabase
+      .from('citas')
+      .select('doctor_id')
+      .eq('clinica_id', clinicaId)
+      .gte('fecha', inicioMesStr)
+      .neq('estado', 'cancelada'),
+  ])
+
+  const especialidades = (especialidadesDb ?? []) as Especialidad[]
+
+  // Cuenta de citas del mes por doctor
+  const citasPorDoctor = new Map<string, number>()
+  for (const c of (citasMesDb ?? []) as { doctor_id: string }[]) {
+    citasPorDoctor.set(c.doctor_id, (citasPorDoctor.get(c.doctor_id) ?? 0) + 1)
+  }
+
   const medicos: MockMedicoAdmin[] = (doctoresDb ?? []).map((d) => {
-    const espId = mockEspecialidades.find(
+    const esp = especialidades.find(
       (e) => e.nombre.toLowerCase() === (d.especialidad ?? '').toLowerCase()
-    )?.id ?? 'e1'
+    )
     return {
       id: d.id,
-      clinicaId: me!.clinica_id,
+      clinicaId: clinicaId ?? '',
       nombre: d.nombre,
       rut: d.rut ?? '',
-      especialidadId: espId,
+      especialidadId: esp?.id ?? '',
       especialidad: d.especialidad ?? '',
       email: d.email,
       telefono: d.telefono ?? '',
       duracionConsulta: d.duracion_consulta ?? 30,
       estado: d.activo ? 'activo' : 'inactivo',
-      citasMes: 0, // se calculará cuando exista tabla citas
+      citasMes: citasPorDoctor.get(d.id) ?? 0,
     }
   })
 
@@ -50,7 +78,7 @@ export default async function AdminMedicosPage() {
         </p>
       </div>
 
-      <MedicosClient medicosIniciales={medicos} />
+      <MedicosClient medicosIniciales={medicos} especialidades={especialidades} />
     </div>
   )
 }

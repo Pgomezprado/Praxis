@@ -3,13 +3,15 @@
 import { useState } from 'react'
 import { Plus, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import { ModalEspecialidad, type Especialidad } from './ModalEspecialidad'
-import { mockMedicosAdmin } from '@/lib/mock-data'
+
+type MedicoSimple = { id: string; nombre: string; especialidad: string | null }
 
 type Props = {
   especialidadesIniciales: Especialidad[]
+  medicos: MedicoSimple[]
 }
 
-export function EspecialidadesClient({ especialidadesIniciales }: Props) {
+export function EspecialidadesClient({ especialidadesIniciales, medicos }: Props) {
   const [especialidades, setEspecialidades] = useState<Especialidad[]>(especialidadesIniciales)
   const [modalOpen, setModalOpen] = useState(false)
   const [editando, setEditando] = useState<Especialidad | null>(null)
@@ -21,8 +23,8 @@ export function EspecialidadesClient({ especialidadesIniciales }: Props) {
     setTimeout(() => setToast(null), 4000)
   }
 
-  function medicosDeEspecialidad(id: string) {
-    return mockMedicosAdmin.filter(m => m.especialidadId === id && m.estado === 'activo')
+  function medicosDeEspecialidad(nombre: string) {
+    return medicos.filter(m => m.especialidad?.toLowerCase() === nombre.toLowerCase())
   }
 
   function abrirCrear() {
@@ -75,8 +77,8 @@ export function EspecialidadesClient({ especialidadesIniciales }: Props) {
       {/* Lista */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {especialidades.map(esp => {
-          const medicos = medicosDeEspecialidad(esp.id)
-          const tieneMedicos = medicos.length > 0
+          const medicosEsp = medicosDeEspecialidad(esp.nombre)
+          const tieneMedicos = medicosEsp.length > 0
 
           return (
             <div
@@ -131,16 +133,16 @@ export function EspecialidadesClient({ especialidadesIniciales }: Props) {
 
               {/* Info */}
               <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>{esp.duracionDefault} min / consulta</span>
+                <span>{esp.duracion_default} min / consulta</span>
                 <span className={`font-medium ${tieneMedicos ? 'text-slate-700' : 'text-slate-400'}`}>
-                  {medicos.length} médico{medicos.length !== 1 ? 's' : ''}
+                  {medicosEsp.length} médico{medicosEsp.length !== 1 ? 's' : ''}
                 </span>
               </div>
 
               {/* Médicos asociados (si los hay) */}
               {tieneMedicos && (
                 <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-1">
-                  {medicos.slice(0, 3).map(m => (
+                  {medicosEsp.slice(0, 3).map(m => (
                     <span
                       key={m.id}
                       className="text-xs text-slate-500 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-full truncate max-w-[140px]"
@@ -148,9 +150,9 @@ export function EspecialidadesClient({ especialidadesIniciales }: Props) {
                       {m.nombre.split(' ').slice(0, 3).join(' ')}
                     </span>
                   ))}
-                  {medicos.length > 3 && (
+                  {medicosEsp.length > 3 && (
                     <span className="text-xs text-slate-400 px-2 py-0.5">
-                      +{medicos.length - 3} más
+                      +{medicosEsp.length - 3} más
                     </span>
                   )}
                 </div>

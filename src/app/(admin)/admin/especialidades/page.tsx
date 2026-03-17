@@ -1,9 +1,38 @@
+import { createClient } from '@/lib/supabase/server'
 import { EspecialidadesClient } from '@/components/admin/EspecialidadesClient'
-import { mockEspecialidades } from '@/lib/mock-data'
+import { type Especialidad } from '@/types/database'
 
 export const metadata = { title: 'Especialidades — Praxis Admin' }
 
-export default function AdminEspecialidadesPage() {
+export default async function AdminEspecialidadesPage() {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: me } = await supabase
+    .from('usuarios')
+    .select('clinica_id')
+    .eq('id', user!.id)
+    .single()
+
+  const clinicaId = (me as { clinica_id: string } | null)?.clinica_id ?? ''
+
+  const [{ data: especialidadesDb }, { data: medicosDb }] = await Promise.all([
+    supabase
+      .from('especialidades')
+      .select('id, clinica_id, nombre, color, duracion_default, activo')
+      .eq('clinica_id', clinicaId)
+      .order('nombre'),
+    supabase
+      .from('usuarios')
+      .select('id, nombre, especialidad')
+      .eq('clinica_id', clinicaId)
+      .or('rol.eq.doctor,es_doctor.eq.true')
+      .eq('activo', true),
+  ])
+
+  const especialidades = (especialidadesDb ?? []) as Especialidad[]
+  const medicos = (medicosDb ?? []) as { id: string; nombre: string; especialidad: string | null }[]
+
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-6">
@@ -13,7 +42,7 @@ export default function AdminEspecialidadesPage() {
         </p>
       </div>
 
-      <EspecialidadesClient especialidadesIniciales={mockEspecialidades} />
+      <EspecialidadesClient especialidadesIniciales={especialidades} medicos={medicos} />
     </div>
   )
 }

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { SecretariasClient } from '@/components/admin/SecretariasClient'
-import { type MockSecretaria, type MockMedicoAdmin, mockEspecialidades } from '@/lib/mock-data'
+import { type MockSecretaria, type MockMedicoAdmin } from '@/lib/mock-data'
 
 export const metadata = { title: 'Secretarias — Praxis Admin' }
 
@@ -14,9 +14,8 @@ export default async function AdminSecretariasPage() {
     .eq('id', user!.id)
     .single()
 
-  const clinicaId = me!.clinica_id
+  const clinicaId = (me as { clinica_id: string } | null)?.clinica_id ?? ''
 
-  // Cargar secretarias y médicos en paralelo
   const [{ data: secDb }, { data: docDb }] = await Promise.all([
     supabase
       .from('usuarios')
@@ -43,24 +42,19 @@ export default async function AdminSecretariasPage() {
     estado: s.activo ? 'activo' : 'inactivo',
   }))
 
-  const medicos: MockMedicoAdmin[] = (docDb ?? []).map((d) => {
-    const espId = mockEspecialidades.find(
-      (e) => e.nombre.toLowerCase() === (d.especialidad ?? '').toLowerCase()
-    )?.id ?? 'e1'
-    return {
-      id: d.id,
-      clinicaId: clinicaId,
-      nombre: d.nombre,
-      rut: d.rut ?? '',
-      especialidadId: espId,
-      especialidad: d.especialidad ?? '',
-      email: d.email,
-      telefono: d.telefono ?? '',
-      duracionConsulta: d.duracion_consulta ?? 30,
-      estado: d.activo ? 'activo' : 'inactivo',
-      citasMes: 0,
-    }
-  })
+  const medicos: MockMedicoAdmin[] = (docDb ?? []).map((d) => ({
+    id: d.id,
+    clinicaId: clinicaId,
+    nombre: d.nombre,
+    rut: d.rut ?? '',
+    especialidadId: '',
+    especialidad: d.especialidad ?? '',
+    email: d.email,
+    telefono: d.telefono ?? '',
+    duracionConsulta: d.duracion_consulta ?? 30,
+    estado: d.activo ? 'activo' : 'inactivo',
+    citasMes: 0,
+  }))
 
   return (
     <div className="max-w-7xl mx-auto">

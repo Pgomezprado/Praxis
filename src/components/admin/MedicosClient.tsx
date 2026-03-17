@@ -5,13 +5,15 @@ import Link from 'next/link'
 import { Search, ChevronDown, Plus, ArrowRight, Pencil, PowerOff } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { DrawerMedico } from './DrawerMedico'
-import { type MockMedicoAdmin, mockEspecialidades } from '@/lib/mock-data'
+import { type MockMedicoAdmin } from '@/lib/mock-data'
+import { type Especialidad } from '@/types/database'
 
 type Props = {
   medicosIniciales: MockMedicoAdmin[]
+  especialidades: Especialidad[]
 }
 
-export function MedicosClient({ medicosIniciales }: Props) {
+export function MedicosClient({ medicosIniciales, especialidades }: Props) {
   const [medicos, setMedicos] = useState<MockMedicoAdmin[]>(medicosIniciales)
   const [busqueda, setBusqueda] = useState('')
   const [filtroEsp, setFiltroEsp] = useState('')
@@ -75,7 +77,7 @@ export function MedicosClient({ medicosIniciales }: Props) {
     }
   }
 
-  const especialidadesEnUso = mockEspecialidades.filter(e =>
+  const especialidadesEnUso = especialidades.filter(e =>
     medicos.some(m => m.especialidadId === e.id)
   )
 
@@ -149,7 +151,7 @@ export function MedicosClient({ medicosIniciales }: Props) {
           </div>
         ) : (
           medicosFiltrados.map(medico => {
-            const esp = mockEspecialidades.find(e => e.id === medico.especialidadId)
+            const esp = especialidades.find(e => e.id === medico.especialidadId)
             const activo = medico.estado === 'activo'
             return (
               <div
@@ -242,6 +244,7 @@ export function MedicosClient({ medicosIniciales }: Props) {
         onClose={() => setDrawerOpen(false)}
         onGuardar={handleGuardar}
         medicoEditar={medicoEditar}
+        especialidades={especialidades}
       />
 
       {/* Toast */}

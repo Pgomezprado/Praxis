@@ -7,7 +7,7 @@ export type Especialidad = {
   id: string
   nombre: string
   color: string
-  duracionDefault: number
+  duracion_default: number
 }
 
 const COLORES_PRESET = [
@@ -38,7 +38,7 @@ export function ModalEspecialidad({ open, onClose, onGuardar, especialidadEditar
     if (especialidadEditar) {
       setNombre(especialidadEditar.nombre)
       setColor(especialidadEditar.color)
-      setDuracion(especialidadEditar.duracionDefault)
+      setDuracion(especialidadEditar.duracion_default)
     } else {
       setNombre('')
       setColor('#3B82F6')
@@ -54,7 +54,7 @@ export function ModalEspecialidad({ open, onClose, onGuardar, especialidadEditar
       id: especialidadEditar?.id ?? `e${Date.now()}`,
       nombre: nombre.trim(),
       color,
-      duracionDefault: duracion,
+      duracion_default: duracion,
     })
     setGuardando(false)
   }

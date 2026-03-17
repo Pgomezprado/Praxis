@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { X, Send, ChevronDown } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
-import { mockEspecialidades, type MockMedicoAdmin } from '@/lib/mock-data'
+import { type MockMedicoAdmin } from '@/lib/mock-data'
+import { type Especialidad } from '@/types/database'
 import { validarRut, formatearRut } from '@/lib/agendamiento'
 
 type FormData = {
@@ -24,9 +25,10 @@ type Props = {
   onClose: () => void
   onGuardar: (medico: MockMedicoAdmin) => void
   medicoEditar?: MockMedicoAdmin | null
+  especialidades: Especialidad[]
 }
 
-export function DrawerMedico({ open, onClose, onGuardar, medicoEditar }: Props) {
+export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especialidades }: Props) {
   const esEdicion = !!medicoEditar
 
   const defaultForm: FormData = {
@@ -89,7 +91,7 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar }: Props) 
     setForm(prev => ({ ...prev, email: value, emailAcceso: value }))
   }
 
-  const especialidadNombre = mockEspecialidades.find(e => e.id === form.especialidadId)?.nombre ?? ''
+  const especialidadNombre = especialidades.find(e => e.id === form.especialidadId)?.nombre ?? ''
 
   const canGuardar =
     form.nombre.trim() &&
@@ -279,7 +281,7 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar }: Props) 
                     onChange={e => set('especialidadId', e.target.value)}
                     className="w-full appearance-none px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors bg-white pr-9"
                   >
-                    {mockEspecialidades.map(e => (
+                    {especialidades.map(e => (
                       <option key={e.id} value={e.id}>{e.nombre}</option>
                     ))}
                   </select>
@@ -291,7 +293,7 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar }: Props) 
                   <div className="flex items-center gap-2 mt-2">
                     <div
                       className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: mockEspecialidades.find(e => e.id === form.especialidadId)?.color }}
+                      style={{ backgroundColor: especialidades.find(e => e.id === form.especialidadId)?.color }}
                     />
                     <span className="text-xs text-slate-500">{especialidadNombre}</span>
                   </div>

@@ -1,5 +1,14 @@
 export type UserRole = 'admin_clinica' | 'doctor' | 'recepcionista'
 
+export interface Especialidad {
+  id: string
+  clinica_id: string
+  nombre: string
+  color: string        // hex — e.g. '#3B82F6'
+  duracion_default: number
+  activo: boolean
+}
+
 export interface Clinica {
   id: string
   nombre: string

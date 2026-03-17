@@ -5,17 +5,19 @@ import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { LayoutDashboard, CalendarDays, LogOut, Stethoscope } from 'lucide-react'
-import { mockMedicosAdmin } from '@/lib/mock-data'
 import { Avatar } from '@/components/ui/Avatar'
 
-const DEMO_MEDICO = mockMedicosAdmin.find((m) => m.id === 'm1')!
+interface MedicoSidebarProps {
+  nombre?: string
+  especialidad?: string
+}
 
 const navItems = [
   { href: '/medico/inicio', label: 'Inicio',     icon: LayoutDashboard, exact: true },
   { href: '/medico/citas',  label: 'Mis citas',  icon: CalendarDays,    exact: false },
 ]
 
-export function MedicoSidebar() {
+export function MedicoSidebar({ nombre = '', especialidad = '' }: MedicoSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -44,10 +46,10 @@ export function MedicoSidebar() {
       {/* Doctor identity card */}
       <div className="px-4 py-4 border-b border-slate-700/40">
         <div className="flex items-center gap-3">
-          <Avatar nombre={DEMO_MEDICO.nombre} size="sm" />
+          <Avatar nombre={nombre || '?'} size="sm" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{DEMO_MEDICO.nombre}</p>
-            <p className="text-xs text-slate-400 truncate">{DEMO_MEDICO.especialidad}</p>
+            <p className="text-sm font-semibold text-white truncate">{nombre || '—'}</p>
+            <p className="text-xs text-slate-400 truncate">{especialidad || 'Médico'}</p>
           </div>
         </div>
       </div>
