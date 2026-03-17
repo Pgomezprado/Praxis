@@ -1,5 +1,6 @@
 /**
- * Formatea un RUT chileno: 12345678-9
+ * Formatea un RUT chileno a formato con puntos y guión: 12.345.678-9
+ * Útil para mostrar un RUT ya limpio.
  */
 export function formatRut(rut: string): string {
   const cleaned = rut.replace(/[^0-9kK]/g, '')
@@ -8,6 +9,38 @@ export function formatRut(rut: string): string {
   const dv = cleaned.slice(-1).toUpperCase()
   const formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
   return `${formatted}-${dv}`
+}
+
+/**
+ * Formatea RUT mientras el usuario escribe (maneja cualquier formato de entrada).
+ * Útil como handler onChange en inputs.
+ */
+export function formatearRut(valor: string): string {
+  const clean = valor.replace(/\./g, '').replace('-', '').replace(/[^0-9kK]/g, '')
+  if (clean.length <= 1) return clean
+  const cuerpo = clean.slice(0, -1)
+  const dv = clean.slice(-1)
+  const conPuntos = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${conPuntos}-${dv}`
+}
+
+/**
+ * Valida dígito verificador de RUT chileno.
+ */
+export function validarRut(rut: string): boolean {
+  const clean = rut.replace(/\./g, '').replace('-', '')
+  if (clean.length < 2) return false
+  const cuerpo = clean.slice(0, -1)
+  const dv = clean.slice(-1).toUpperCase()
+  let suma = 0
+  let multiplo = 2
+  for (let i = cuerpo.length - 1; i >= 0; i--) {
+    suma += Number(cuerpo[i]) * multiplo
+    multiplo = multiplo === 7 ? 2 : multiplo + 1
+  }
+  const dvEsperado = 11 - (suma % 11)
+  const dvCalc = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : String(dvEsperado)
+  return dv === dvCalc
 }
 
 /**

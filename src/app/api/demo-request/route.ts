@@ -26,8 +26,6 @@ export async function POST(request: Request) {
     //   html: `<p><b>Nombre:</b> ${nombre}</p><p><b>Clínica:</b> ${clinica}</p><p><b>Email:</b> ${email}</p><p><b>Teléfono:</b> ${telefono}</p>`,
     // })
 
-    console.log('[demo-request]', { nombre, clinica, email, telefono })
-
     return NextResponse.json({ success: true })
   } catch {
     return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })

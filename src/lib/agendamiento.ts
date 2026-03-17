@@ -55,36 +55,5 @@ export function generarSlots(fecha: string, horaInicio: string, horaFin: string,
   return slots
 }
 
-// Valida RUT chileno (formato 12345678-9 o 12.345.678-9)
-export function validarRut(rut: string): boolean {
-  const clean = rut.replace(/\./g, '').replace('-', '')
-  if (clean.length < 2) return false
-
-  const cuerpo = clean.slice(0, -1)
-  const dv = clean.slice(-1).toUpperCase()
-
-  let suma = 0
-  let multiplo = 2
-
-  for (let i = cuerpo.length - 1; i >= 0; i--) {
-    suma += Number(cuerpo[i]) * multiplo
-    multiplo = multiplo === 7 ? 2 : multiplo + 1
-  }
-
-  const dvEsperado = 11 - (suma % 11)
-  const dvCalc = dvEsperado === 11 ? '0' : dvEsperado === 10 ? 'K' : String(dvEsperado)
-
-  return dv === dvCalc
-}
-
-// Formatea RUT automáticamente mientras el usuario escribe
-export function formatearRut(valor: string): string {
-  const clean = valor.replace(/\./g, '').replace('-', '').replace(/[^0-9kK]/g, '')
-  if (clean.length <= 1) return clean
-
-  const cuerpo = clean.slice(0, -1)
-  const dv = clean.slice(-1)
-
-  const conPuntos = cuerpo.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-  return `${conPuntos}-${dv}`
-}
+// RUT helpers — fuente de verdad en lib/utils/formatters.ts
+export { validarRut, formatearRut } from '@/lib/utils/formatters'
