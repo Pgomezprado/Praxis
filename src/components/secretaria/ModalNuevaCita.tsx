@@ -1,20 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { X, User, Stethoscope, CalendarDays, FileText, Loader2 } from 'lucide-react'
 import { BuscadorPaciente, type PacienteSeleccionado } from './BuscadorPaciente'
 import { Avatar } from '@/components/ui/Avatar'
 import { generarSlots } from '@/lib/agendamiento'
-import type { MockCita, HorarioSemanal } from '@/lib/mock-data'
+import type { MockCita, HorarioSemanal } from '@/types/domain'
 
 interface ModalNuevaCitaProps {
   open: boolean
   onClose: () => void
   onCrear: (cita: MockCita) => void
   medicos: { id: string; nombre: string; especialidad: string }[]
-  /** Fecha y médico preseleccionados (desde click en slot del toolbar) */
+  /** Fecha, hora y médico preseleccionados (desde click en slot del timeline) */
   fechaInicial?: string
   medicoIdInicial?: string
+  horaInicial?: string
 }
 
 const TIPO_CONSULTA = [
@@ -34,6 +35,7 @@ export function ModalNuevaCita({
   medicos,
   fechaInicial,
   medicoIdInicial,
+  horaInicial,
 }: ModalNuevaCitaProps) {
   const [paciente, setPaciente] = useState<PacienteSeleccionado | null>(null)
   const [medicoId, setMedicoId] = useState(medicoIdInicial ?? '')
@@ -45,6 +47,9 @@ export function ModalNuevaCita({
   const [enviarEmail, setEnviarEmail] = useState(true)
   const [enviarSms, setEnviarSms] = useState(false)
   const [loading, setLoading] = useState(false)
+  const enviandoRef = useRef(false)
+  const [errorCrear, setErrorCrear] = useState<string | null>(null)
+  const [errorSlots, setErrorSlots] = useState(false)
 
   // Resetear al abrir
   useEffect(() => {
@@ -52,18 +57,20 @@ export function ModalNuevaCita({
       setPaciente(null)
       setMedicoId(medicoIdInicial ?? '')
       setFecha(fechaInicial ?? getToday())
-      setSlot('')
+      setSlot(horaInicial ?? '')
       setDuracion(30)
       setMotivo('')
       setTipo('control')
       setEnviarEmail(true)
       setEnviarSms(false)
     }
-  }, [open, medicoIdInicial, fechaInicial])
+  }, [open, medicoIdInicial, fechaInicial, horaInicial])
 
   // Recalcular slot disponible al cambiar médico o fecha
   useEffect(() => {
     setSlot('')
+    setErrorSlots(false)
+    setErrorCrear(null)
   }, [medicoId, fecha])
 
   // Horario real del médico (cargado al cambiar médico)
@@ -89,7 +96,7 @@ export function ModalNuevaCita({
             .map((c: { hora_inicio: string }) => c.hora_inicio)
         )
       })
-      .catch(() => {})
+      .catch(() => { setErrorSlots(true) })
   }, [medicoId, fecha])
 
   // Obtener config del día de la semana seleccionado
@@ -128,6 +135,8 @@ export function ModalNuevaCita({
 
   async function handleCrear() {
     if (!canSubmit || !medico || !paciente) return
+    if (enviandoRef.current) return
+    enviandoRef.current = true
     setLoading(true)
 
     const res = await fetch('/api/citas', {
@@ -145,8 +154,13 @@ export function ModalNuevaCita({
     })
 
     setLoading(false)
+    enviandoRef.current = false
 
-    if (!res.ok) return
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setErrorCrear(data.error ?? 'No se pudo crear la cita. Intenta nuevamente.')
+      return
+    }
 
     const data = await res.json()
     const c = data.cita
@@ -252,7 +266,9 @@ export function ModalNuevaCita({
                 <>
                   <div>
                     <p className="text-xs font-medium text-slate-500 mb-2">Horarios disponibles</p>
-                    {slotsDisponibles.length === 0 ? (
+                    {errorSlots ? (
+                      <p className="text-sm text-red-500 py-2">Error al cargar horarios. Verifica tu conexión.</p>
+                    ) : slotsDisponibles.length === 0 ? (
                       <p className="text-sm text-slate-400 py-2">Sin horarios disponibles para esta fecha.</p>
                     ) : (
                       <div className="grid grid-cols-4 gap-1.5">
@@ -353,6 +369,13 @@ export function ModalNuevaCita({
             </div>
           </section>
         </div>
+
+        {/* Error al crear */}
+        {errorCrear && (
+          <div className="mx-6 mb-2 px-3 py-2.5 bg-red-50 border border-red-200 rounded-xl">
+            <p className="text-sm text-red-600">{errorCrear}</p>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-200 flex gap-3">

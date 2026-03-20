@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Upload, FileText, CheckCircle2, AlertCircle, X, ArrowLeft, ArrowRight, Loader2 } from 'lucide-react'
+import { validarRut } from '@/lib/utils/formatters'
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -17,7 +18,7 @@ type FilaCSV = {
   errores: string[]
 }
 
-type EstadoImport = 'idle' | 'importando' | 'terminado'
+type EstadoImport = 'idle' | 'importando' | 'terminado' | 'error'
 
 const COLUMNAS_REQUERIDAS = ['nombre', 'rut', 'fecha_nacimiento', 'prevision', 'email', 'telefono']
 const PREVISIONES_VALIDAS = ['Fonasa A', 'Fonasa B', 'Fonasa C', 'Fonasa D', 'Isapre', 'Particular']
@@ -54,6 +55,7 @@ function parsearCSV(texto: string): { filas: FilaCSV[]; erroresCabecera: string[
     const errores: string[] = []
     if (!nombre)         errores.push('Nombre requerido')
     if (!rut)            errores.push('RUT requerido')
+    else if (!validarRut(rut)) errores.push('RUT inválido (dígito verificador incorrecto)')
     if (!fechaNacimiento || !/^\d{4}-\d{2}-\d{2}$/.test(fechaNacimiento))
                          errores.push('Fecha inválida (debe ser YYYY-MM-DD)')
     if (!PREVISIONES_VALIDAS.includes(prevision))
@@ -81,9 +83,12 @@ export function ImportarPacientesClient() {
   const [progreso, setProgreso] = useState(0)
   const [importados, setImportados] = useState(0)
   const [fallidos, setFallidos]   = useState(0)
+  const [erroresRut, setErroresRut] = useState(0)
+  const [consentimientoImport, setConsentimientoImport] = useState(false)
 
   const filasValidas   = filas.filter(f => f.errores.length === 0)
   const filasInvalidas = filas.filter(f => f.errores.length > 0)
+  const filasConErrorRut = filas.filter(f => f.errores.some(e => e.includes('RUT')))
 
   // ── Manejo de archivo ────────────────────────────────────────────────────
 
@@ -115,21 +120,45 @@ export function ImportarPacientesClient() {
   // ── Importar ─────────────────────────────────────────────────────────────
 
   async function confirmarImportacion() {
+    if (!consentimientoImport) return
     setPaso(3)
     setEstado('importando')
     setProgreso(0)
 
     const total = filasValidas.length
     let ok = 0
+    let fail = 0
 
     for (let i = 0; i < total; i++) {
-      await new Promise(r => setTimeout(r, 40))
-      ok++
-      setProgreso(Math.round((ok / total) * 100))
+      const fila = filasValidas[i]
+      try {
+        const res = await fetch('/api/pacientes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre: fila.nombre,
+            rut: fila.rut,
+            fecha_nac: fila.fechaNacimiento,
+            prevision: fila.prevision,
+            email: fila.email,
+            telefono: fila.telefono,
+          }),
+        })
+        // 409 = ya existe, lo contamos como importado (idempotente)
+        if (res.ok || res.status === 409) {
+          ok++
+        } else {
+          fail++
+        }
+      } catch {
+        fail++
+      }
+      setProgreso(Math.round(((i + 1) / total) * 100))
     }
 
     setImportados(ok)
-    setFallidos(filasInvalidas.length)
+    setFallidos(fail + filasInvalidas.length)
+    setErroresRut(filasConErrorRut.length)
     setEstado('terminado')
   }
 
@@ -140,6 +169,9 @@ export function ImportarPacientesClient() {
     setErroresCabecera([])
     setEstado('idle')
     setProgreso(0)
+    setImportados(0)
+    setFallidos(0)
+    setErroresRut(0)
     if (inputRef.current) inputRef.current.value = ''
   }
 
@@ -323,6 +355,23 @@ export function ImportarPacientesClient() {
             </div>
           )}
 
+          {/* Declaración de consentimiento — obligatoria antes de importar (Ley 19.628 Art. 4) */}
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={consentimientoImport}
+                onChange={(e) => setConsentimientoImport(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-amber-400 text-amber-600 focus:ring-amber-500 flex-shrink-0"
+              />
+              <span className="text-sm text-amber-800">
+                <strong>Declaración de responsabilidad (Ley 19.628 Art. 4):</strong> Confirmo que la clínica obtuvo
+                el consentimiento de cada uno de estos pacientes para el tratamiento de sus datos personales,
+                y que dicho consentimiento está registrado por medios propios de la clínica.
+              </span>
+            </label>
+          </div>
+
           {/* Acciones */}
           <div className="flex items-center justify-between pt-2">
             <button
@@ -334,7 +383,7 @@ export function ImportarPacientesClient() {
             </button>
             <button
               onClick={confirmarImportacion}
-              disabled={filasValidas.length === 0}
+              disabled={filasValidas.length === 0 || !consentimientoImport}
               className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             >
               Importar {filasValidas.length} pacientes
@@ -392,10 +441,15 @@ export function ImportarPacientesClient() {
                 {fallidos > 0 && (
                   <div className="text-center">
                     <div className="text-3xl font-bold text-red-400">{fallidos}</div>
-                    <div className="text-xs text-slate-500 mt-0.5">ignorados</div>
+                    <div className="text-xs text-slate-500 mt-0.5">con errores</div>
                   </div>
                 )}
               </div>
+              {erroresRut > 0 && (
+                <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5">
+                  {erroresRut} {erroresRut === 1 ? 'fila ignorada' : 'filas ignoradas'} por RUT inválido
+                </p>
+              )}
 
               <div className="flex items-center gap-3">
                 <button
