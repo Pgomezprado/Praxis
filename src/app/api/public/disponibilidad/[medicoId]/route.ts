@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { generarSlots } from '@/lib/agendamiento'
-import type { HorarioSemanal } from '@/lib/mock-data'
+import type { HorarioSemanal } from '@/types/domain'
+import { getClinicaSlugFromHost } from '@/lib/utils/getClinicaSlug'
 
 const DIA_KEYS: (keyof HorarioSemanal)[] = [
   'domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado',
@@ -26,19 +27,51 @@ export async function GET(
     const { searchParams } = new URL(req.url)
     const fecha = searchParams.get('fecha') // si se pide para una fecha específica
 
+    const slug = getClinicaSlugFromHost(req.headers.get('host') ?? '')
+
+    // Slug vacío → dominio raíz sin subdominio de clínica
+    if (!slug) {
+      return Response.json({ error: 'Clínica no encontrada' }, { status: 404 })
+    }
+
     const supabase = createAdminClient()
 
-    // Obtener horario del médico
+    // Verificar que el médico pertenece a la clínica del subdominio (aislamiento multitenant)
+    const { data: clinica } = await supabase
+      .from('clinicas')
+      .select('id')
+      .eq('slug', slug)
+      .single()
+
+    if (!clinica) return Response.json({ error: 'Clínica no encontrada' }, { status: 404 })
+
+    const { data: doctor } = await supabase
+      .from('usuarios')
+      .select('id')
+      .eq('id', medicoId)
+      .eq('clinica_id', clinica.id)
+      .eq('activo', true)
+      .single()
+
+    if (!doctor) return Response.json({ error: 'Médico no encontrado' }, { status: 404 })
+
+    // Obtener horario del médico (ya validado que pertenece a esta clínica)
     const { data: horarioDb } = await supabase
       .from('horarios')
       .select('configuracion')
       .eq('doctor_id', medicoId)
+      .eq('clinica_id', clinica.id)
       .single()
 
     const horario = horarioDb?.configuracion as HorarioSemanal | null
 
     // Si se pide slots para una fecha específica
     if (fecha) {
+      const FECHA_REGEX = /^\d{4}-\d{2}-\d{2}$/
+      if (!FECHA_REGEX.test(fecha) || isNaN(Date.parse(fecha))) {
+        return Response.json({ error: 'Fecha inválida.' }, { status: 400 })
+      }
+
       const [y, m, d] = fecha.split('-').map(Number)
       const diaKey = DIA_KEYS[new Date(y, m - 1, d).getDay()]
       const configDia = horario?.[diaKey]
@@ -47,11 +80,12 @@ export async function GET(
         return Response.json({ slots: [] })
       }
 
-      // Citas ocupadas ese día
+      // Citas ocupadas ese día (filtrado por clínica para aislamiento multitenant)
       const { data: citasDb } = await supabase
         .from('citas')
         .select('hora_inicio')
         .eq('doctor_id', medicoId)
+        .eq('clinica_id', clinica.id)
         .eq('fecha', fecha)
         .neq('estado', 'cancelada')
 

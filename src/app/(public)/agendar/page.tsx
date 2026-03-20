@@ -1,11 +1,17 @@
 import { Suspense } from 'react'
+import { notFound } from 'next/navigation'
 import { BuscarMedicoClient } from '@/components/agendamiento/BuscarMedicoClient'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getClinicaSlugServer } from '@/lib/utils/getClinicaSlug'
 
 export const metadata = { title: 'Agendar hora — Praxis' }
 
 async function getMedicosPublicos() {
-  const slug = process.env.CLINICA_SLUG ?? 'demo'
+  const slug = await getClinicaSlugServer()
+
+  // Dominio raíz sin subdominio — no hay clínica asociada
+  if (!slug) return null
+
   const supabase = createAdminClient()
 
   const { data: clinica } = await supabase
@@ -33,6 +39,11 @@ async function getMedicosPublicos() {
 
 export default async function BuscarMedicoPage() {
   const medicos = await getMedicosPublicos()
+
+  // Slug vacío → dominio raíz sin subdominio de clínica
+  if (medicos === null) {
+    notFound()
+  }
 
   return (
     <Suspense>

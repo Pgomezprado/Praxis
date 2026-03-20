@@ -1,10 +1,17 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { getClinicaSlugFromHost } from '@/lib/utils/getClinicaSlug'
 
 // Endpoint público — sin autenticación requerida
-// Devuelve médicos activos de la clínica configurada en CLINICA_SLUG
-export async function GET() {
+// Devuelve médicos activos de la clínica identificada por subdominio
+export async function GET(request: Request) {
   try {
-    const slug = process.env.CLINICA_SLUG ?? 'demo'
+    const slug = getClinicaSlugFromHost(request.headers.get('host') ?? '')
+
+    // Slug vacío → dominio raíz sin subdominio de clínica
+    if (!slug) {
+      return Response.json({ error: 'Clínica no encontrada' }, { status: 404 })
+    }
+
     const supabase = createAdminClient()
 
     const { data: clinica } = await supabase
