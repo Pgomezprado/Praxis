@@ -31,6 +31,7 @@ function ActivarCuentaContent() {
   const [nombreUsuario, setNombreUsuario] = useState('')
   const [emailUsuario, setEmailUsuario] = useState('')
   const [debugError, setDebugError] = useState('')
+  const [aceptaTerminos, setAceptaTerminos] = useState(false)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -68,7 +69,7 @@ function ActivarCuentaContent() {
 
   const passwordOk = password.length >= 8
   const coinciden = password === confirmar
-  const canGuardar = passwordOk && coinciden
+  const canGuardar = passwordOk && coinciden && aceptaTerminos
 
   async function handleGuardar(e: React.FormEvent) {
     e.preventDefault()
@@ -79,7 +80,7 @@ function ActivarCuentaContent() {
     const res = await fetch('/api/activar-cuenta', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ password, aceptaTerminos: true }),
     })
 
     const data = await res.json()
@@ -99,7 +100,6 @@ function ActivarCuentaContent() {
     setListo(true)
     setTimeout(() => {
       if (signInError) {
-        // Si el login falla, ir al login manual
         window.location.href = '/login'
         return
       }
@@ -151,7 +151,7 @@ function ActivarCuentaContent() {
           <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle2 className="w-6 h-6 text-emerald-500" />
           </div>
-          <h1 className="text-lg font-semibold text-slate-900 mb-2">¡Cuenta activada!</h1>
+          <h1 className="text-lg font-semibold text-slate-900 mb-2">Cuenta activada</h1>
           <p className="text-sm text-slate-500">Ingresando al sistema…</p>
         </div>
       </div>
@@ -221,6 +221,40 @@ function ActivarCuentaContent() {
             {confirmar.length > 0 && !coinciden && (
               <p className="text-xs text-red-500 mt-1">Las contraseñas no coinciden</p>
             )}
+          </div>
+
+          {/* Aceptación obligatoria de términos */}
+          <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <input
+              type="checkbox"
+              id="acepta-terminos"
+              checked={aceptaTerminos}
+              onChange={e => setAceptaTerminos(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+            />
+            <label htmlFor="acepta-terminos" className="text-xs text-slate-600 leading-relaxed cursor-pointer">
+              Acepto los{' '}
+              <a
+                href="/terminos"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline font-medium"
+                onClick={e => e.stopPropagation()}
+              >
+                Términos de Uso
+              </a>
+              {' '}y la{' '}
+              <a
+                href="/privacidad"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline font-medium"
+                onClick={e => e.stopPropagation()}
+              >
+                Política de Privacidad
+              </a>
+              {' '}de Praxis.
+            </label>
           </div>
 
           {error && (

@@ -27,40 +27,69 @@ export async function middleware(request: NextRequest) {
   )
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user },
+  } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
   const isLoginPage = pathname.startsWith('/login')
+  const isPublicApiRoute =
+    pathname.startsWith('/api/public/') ||
+    pathname.startsWith('/api/superadmin/') ||
+    pathname === '/api/arco' ||
+    pathname === '/api/demo-request'
   const isPublicPage =
     pathname === '/' ||
     pathname.startsWith('/agendar') ||
     pathname.startsWith('/activar-cuenta') ||
     pathname.startsWith('/auth/') ||
     pathname.startsWith('/superadmin') ||
-    pathname.startsWith('/api/')
+    pathname.startsWith('/privacidad') ||
+    pathname.startsWith('/terminos') ||
+    isPublicApiRoute
 
-  if (!session && !isLoginPage && !isPublicPage) {
+  // Rutas que requieren verificar el rol en DB
+  const needsRoleCheck =
+    isLoginPage ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/medico')
+
+  if (!user && !isLoginPage && !isPublicPage) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (session && isLoginPage) {
-    // Consultar rol del usuario para redirigir al dashboard correcto
+  if (user && needsRoleCheck) {
+    // Consultar rol solo cuando la ruta lo requiere — evita query en cada request
     const { data: usuario } = await supabase
       .from('usuarios')
-      .select('rol')
-      .eq('id', session.user.id)
+      .select('rol, es_doctor')
+      .eq('id', user.id)
       .single()
 
-    const rol = usuario?.rol
-    if (rol === 'doctor') {
-      return NextResponse.redirect(new URL('/medico/inicio', request.url))
-    } else if (rol === 'admin_clinica') {
-      return NextResponse.redirect(new URL('/admin', request.url))
-    } else if (rol) {
+    const rol = usuario?.rol as string | undefined
+    const esDoctor = usuario?.es_doctor === true
+
+    // Redirigir desde /login al dashboard correcto
+    if (isLoginPage) {
+      if (rol === 'doctor') {
+        return NextResponse.redirect(new URL('/medico/inicio', request.url))
+      } else if (rol === 'admin_clinica') {
+        return NextResponse.redirect(new URL('/admin', request.url))
+      } else if (rol) {
+        return NextResponse.redirect(new URL('/inicio', request.url))
+      }
+      // Si no se pudo determinar el rol, dejar pasar al login
+      return supabaseResponse
+    }
+
+    // Proteger /admin/* — solo admin_clinica
+    if (pathname.startsWith('/admin') && rol !== 'admin_clinica') {
       return NextResponse.redirect(new URL('/inicio', request.url))
     }
-    // Si no se pudo determinar el rol, dejar pasar al login para que el usuario se autentique
+
+    // Proteger /medico/* — doctor o admin_clinica con es_doctor
+    if (pathname.startsWith('/medico') && rol !== 'doctor' && !(rol === 'admin_clinica' && esDoctor)) {
+      return NextResponse.redirect(new URL('/inicio', request.url))
+    }
   }
 
   return supabaseResponse

@@ -1,12 +1,14 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import {
   CalendarDays, Clock, CheckCircle2, XCircle, Users,
   Plus, Search, ArrowRight, Stethoscope, AlertCircle,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
-import type { MockCita, MockMedicoAdmin, EstadoMedicoHoy } from '@/lib/mock-data'
+import { ModalNuevaCita } from './ModalNuevaCita'
+import type { MockCita, MockMedicoAdmin, EstadoMedicoHoy } from '@/types/domain'
 
 type Kpis = {
   total: number
@@ -26,6 +28,7 @@ type Props = {
   proximasCitas: MockCita[]
   equipo: MedicoEquipo[]
   clinicaNombre: string
+  medicos?: { id: string; nombre: string; especialidad: string }[]
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -68,7 +71,15 @@ const ESTADO_CITA_BADGE: Record<MockCita['estado'], { label: string; cls: string
 
 // ── componente ───────────────────────────────────────────────────────────────
 
-export function SecretariaDashboard({ kpis, proximasCitas, equipo, clinicaNombre }: Props) {
+export function SecretariaDashboard({ kpis, proximasCitas, equipo, clinicaNombre, medicos = [] }: Props) {
+  const [modalCitaOpen, setModalCitaOpen] = useState(false)
+  const [citasNuevas, setCitasNuevas] = useState<MockCita[]>([])
+
+  function handleCrearCita(cita: MockCita) {
+    setCitasNuevas(prev => [cita, ...prev])
+    setModalCitaOpen(false)
+  }
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
 
@@ -82,13 +93,13 @@ export function SecretariaDashboard({ kpis, proximasCitas, equipo, clinicaNombre
             {capitalize(formatFechaLarga())}
           </h1>
         </div>
-        <Link
-          href="/agenda/hoy"
+        <button
+          onClick={() => setModalCitaOpen(true)}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
         >
           <Plus className="w-4 h-4" />
           Nueva cita
-        </Link>
+        </button>
       </div>
 
       {/* ── KPIs ── */}
@@ -253,27 +264,43 @@ export function SecretariaDashboard({ kpis, proximasCitas, equipo, clinicaNombre
 
       {/* ── Acciones rápidas ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <button
+          onClick={() => setModalCitaOpen(true)}
+          className="flex flex-col gap-2 p-4 rounded-2xl border text-left transition-colors bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+        >
+          <Plus className="w-5 h-5" />
+          <div>
+            <p className="text-sm font-semibold leading-tight">Nueva cita</p>
+            <p className="text-xs mt-0.5 text-blue-200">Agendar paciente</p>
+          </div>
+        </button>
+
         {[
-          { href: '/agenda/hoy',   icon: Plus,        label: 'Nueva cita',      desc: 'Agendar paciente',     color: 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600' },
-          { href: '/agenda/hoy',   icon: Search,      label: 'Buscar paciente', desc: 'Ficha y antecedentes', color: 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200' },
-          { href: '/agenda/hoy',   icon: CalendarDays, label: 'Ver agenda',     desc: 'Vista del día',        color: 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200' },
-          { href: '/agenda/hoy',   icon: XCircle,     label: 'Cancelaciones',   desc: 'Gestionar canceladas', color: 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200' },
-        ].map(({ href, icon: Icon, label, desc, color }) => (
+          { href: '/pacientes',   icon: Search,       label: 'Buscar paciente', desc: 'Ficha y antecedentes' },
+          { href: '/agenda/hoy',  icon: CalendarDays,  label: 'Ver agenda',      desc: 'Vista del día' },
+          { href: '/agenda/hoy',  icon: XCircle,       label: 'Cancelaciones',   desc: 'Gestionar canceladas' },
+        ].map(({ href, icon: Icon, label, desc }) => (
           <Link
             key={label}
             href={href}
-            className={`flex flex-col gap-2 p-4 rounded-2xl border transition-colors ${color}`}
+            className="flex flex-col gap-2 p-4 rounded-2xl border transition-colors bg-white hover:bg-slate-50 text-slate-700 border-slate-200"
           >
             <Icon className="w-5 h-5" />
             <div>
               <p className="text-sm font-semibold leading-tight">{label}</p>
-              <p className={`text-xs mt-0.5 ${color.includes('text-white') ? 'text-blue-200' : 'text-slate-400'}`}>
-                {desc}
-              </p>
+              <p className="text-xs mt-0.5 text-slate-400">{desc}</p>
             </div>
           </Link>
         ))}
       </div>
+
+      {/* Modal nueva cita */}
+      <ModalNuevaCita
+        open={modalCitaOpen}
+        onClose={() => setModalCitaOpen(false)}
+        onCrear={handleCrearCita}
+        medicos={medicos}
+      />
 
     </div>
   )

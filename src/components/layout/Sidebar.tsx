@@ -4,11 +4,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { LayoutDashboard, CalendarDays, LogOut, Stethoscope } from 'lucide-react'
+import { LayoutDashboard, CalendarDays, LogOut, Stethoscope, Users } from 'lucide-react'
 
 const navItems = [
-  { href: '/inicio',  label: 'Inicio',        icon: LayoutDashboard, exact: true },
-  { href: '/agenda',  label: 'Agenda del día', icon: CalendarDays },
+  { href: '/inicio',    label: 'Inicio',        icon: LayoutDashboard, exact: true },
+  { href: '/pacientes', label: 'Pacientes',      icon: Users },
+  { href: '/agenda',    label: 'Agenda del día', icon: CalendarDays },
 ]
 
 export function Sidebar() {

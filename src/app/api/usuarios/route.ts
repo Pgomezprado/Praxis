@@ -12,15 +12,22 @@ export async function GET(req: Request) {
 
     const { data: me } = await supabase
       .from('usuarios')
-      .select('clinica_id')
+      .select('clinica_id, rol')
       .eq('id', user.id)
       .single()
 
     if (!me) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
+    // Solo admin_clinica y doctor pueden ver campos sensibles (RUT, teléfono, etc.)
+    const puedeVerSensibles = me.rol === 'admin_clinica' || me.rol === 'doctor'
+
+    const selectFields = puedeVerSensibles
+      ? 'id, nombre, email, especialidad, rol, activo, rut, telefono, duracion_consulta, medicos_asignados'
+      : 'id, nombre, email, especialidad, rol, activo'
+
     let query = supabase
       .from('usuarios')
-      .select('id, nombre, email, especialidad, rol, activo, rut, telefono, duracion_consulta, medicos_asignados')
+      .select(selectFields)
       .eq('clinica_id', me.clinica_id)
       .order('nombre')
 
@@ -43,6 +50,14 @@ export async function POST(req: Request) {
 
     if (!nombre || !email || !rol) {
       return Response.json({ error: 'nombre, email y rol son requeridos' }, { status: 400 })
+    }
+
+    const ROLES_VALIDOS = ['admin_clinica', 'doctor', 'recepcionista']
+    if (!ROLES_VALIDOS.includes(rol)) {
+      return Response.json(
+        { error: `Rol inválido. Los roles permitidos son: ${ROLES_VALIDOS.join(', ')}` },
+        { status: 400 }
+      )
     }
 
     const supabase = await createClient()

@@ -9,7 +9,7 @@ import { AlertTriangle, ChevronLeft, CheckCircle2, Clock } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { ResumenIA } from '@/components/paciente/ResumenIA'
 import { HistorialCitas } from '@/components/paciente/HistorialCitas'
-import type { MockConsulta } from '@/lib/mock-data'
+import type { MockConsulta } from '@/types/domain'
 import type { CitaPaciente } from '@/components/paciente/HistorialCitas'
 
 // ── types ─────────────────────────────────────────────────────────────────────
@@ -72,6 +72,7 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
   const [consultasLocales, setConsultasLocales] = useState<MockConsulta[]>(consultas)
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   const {
     register,
@@ -85,43 +86,51 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
 
   async function onSubmit(data: FormData) {
     setSaving(true)
+    setSaveError('')
 
     const notasCompletas = [data.notas, data.plan].filter(Boolean).join('\n\nPlan: ') || null
     const medicamentosArr = data.medicamentos
       ? data.medicamentos.split(',').map((m) => m.trim()).filter(Boolean)
       : []
 
-    const res = await fetch('/api/consultas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        paciente_id: paciente.id,
-        motivo: data.motivo,
-        diagnostico: data.diagnostico || null,
-        notas: notasCompletas,
-        medicamentos: medicamentosArr,
-      }),
-    })
+    try {
+      const res = await fetch('/api/consultas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paciente_id: paciente.id,
+          motivo: data.motivo,
+          diagnostico: data.diagnostico || null,
+          notas: notasCompletas,
+          medicamentos: medicamentosArr,
+        }),
+      })
 
-    if (res.ok) {
-      const nuevaConsulta: MockConsulta = {
-        id: `c-new-${Date.now()}`,
-        paciente_id: paciente.id,
-        fecha: new Date().toISOString(),
-        medicoNombre: '',
-        especialidad: '',
-        motivo: data.motivo,
-        diagnostico: data.diagnostico || null,
-        notas: notasCompletas,
-        medicamentos: medicamentosArr,
+      if (res.ok) {
+        const nuevaConsulta: MockConsulta = {
+          id: `c-new-${Date.now()}`,
+          paciente_id: paciente.id,
+          fecha: new Date().toISOString(),
+          medicoNombre: '',
+          especialidad: '',
+          motivo: data.motivo,
+          diagnostico: data.diagnostico || null,
+          notas: notasCompletas,
+          medicamentos: medicamentosArr,
+        }
+        setConsultasLocales((prev) => [nuevaConsulta, ...prev])
+        setSaved(true)
+        reset()
+        setTimeout(() => router.push('/medico/inicio'), 1500)
+      } else {
+        const body = await res.json() as { error?: string }
+        setSaveError(body.error ?? 'Error al guardar la consulta. Inténtalo de nuevo.')
       }
-      setConsultasLocales((prev) => [nuevaConsulta, ...prev])
-      setSaved(true)
-      reset()
-      setTimeout(() => router.push('/medico/inicio'), 1500)
+    } catch {
+      setSaveError('Error de conexión. Verifica tu internet e inténtalo de nuevo.')
+    } finally {
+      setSaving(false)
     }
-
-    setSaving(false)
   }
 
   return (
@@ -154,11 +163,11 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
         )}
       </div>
 
-      {/* ── 3-column layout ── */}
-      <div className="grid grid-cols-[260px_1fr_320px] gap-5 items-start">
+      {/* ── Layout responsive: 1 col mobile / 2 col tablet / 3 col desktop ── */}
+      <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] lg:grid-cols-[260px_1fr_320px] gap-5 items-start">
 
         {/* ── LEFT — datos del paciente ── */}
-        <aside className="space-y-4 sticky top-6">
+        <aside className="space-y-4 md:sticky md:top-6">
 
           {/* Alergias — en rojo, prominente */}
           {paciente.alergias.length > 0 ? (
@@ -234,8 +243,17 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
         {/* ── CENTER — resumen IA + historial ── */}
         <div className="space-y-5 min-w-0">
 
-          {/* Resumen IA — generado dinámicamente */}
-          <ResumenIA pacienteId={paciente.id} />
+          {/* Resumen clínico estático */}
+          <ResumenIA
+            pacienteId={paciente.id}
+            alergias={paciente.alergias}
+            condiciones={paciente.condiciones}
+            ultimaConsulta={consultas[0] ? {
+              fecha: formatFecha(consultas[0].fecha.split('T')[0]),
+              motivo: consultas[0].motivo,
+              diagnostico: consultas[0].diagnostico,
+            } : null}
+          />
 
           {/* Citas */}
           {citas.length > 0 && (
@@ -317,7 +335,7 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
         </div>
 
         {/* ── RIGHT — formulario de consulta (siempre visible) ── */}
-        <aside className="sticky top-6">
+        <aside className="sticky top-6 md:col-span-2 lg:col-span-1">
           <div className="bg-white border border-slate-200 rounded-xl p-5">
             <h3 className="text-base font-semibold text-slate-800 mb-4">
               Registrar consulta
@@ -390,6 +408,12 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
                     className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
+
+                {saveError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                    <p className="text-sm text-red-700">{saveError}</p>
+                  </div>
+                )}
 
                 <button
                   type="submit"

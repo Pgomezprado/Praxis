@@ -9,9 +9,28 @@ export async function GET(req: Request) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return Response.json({ error: 'No autorizado' }, { status: 401 })
 
+    // Obtener rol del usuario — Ley 20.584 Art. 13: campos clínicos sensibles
+    // solo accesibles por el equipo de salud (doctor, admin_clinica)
+    const { data: usuario } = await supabase
+      .from('usuarios')
+      .select('rol, clinica_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!usuario) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
+
+    const esClinico = usuario?.rol === 'doctor' || usuario?.rol === 'admin_clinica'
+
+    // Recepcionista: solo datos de contacto y agenda
+    // Médico / admin: todos los campos incluyendo datos clínicos sensibles
+    const campos = esClinico
+      ? 'id, nombre, rut, email, telefono, alergias, condiciones, fecha_nac, grupo_sang, created_at'
+      : 'id, nombre, rut, email, telefono, created_at'
+
     let query = supabase
       .from('pacientes')
-      .select('id, nombre, rut, email, telefono, alergias, condiciones, fecha_nac, grupo_sang, created_at')
+      .select(campos)
+      .eq('clinica_id', usuario.clinica_id)
       .eq('activo', true)
       .order('nombre')
 
@@ -32,7 +51,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { nombre, rut, fecha_nac, grupo_sang, alergias, condiciones } = body
+    const { nombre, rut, fecha_nac, grupo_sang, alergias, condiciones, email, telefono, prevision } = body
 
     if (!nombre || !rut) {
       return Response.json({ error: 'nombre y rut son requeridos' }, { status: 400 })
@@ -60,6 +79,9 @@ export async function POST(req: Request) {
         grupo_sang: grupo_sang ?? null,
         alergias: alergias ?? [],
         condiciones: condiciones ?? [],
+        email: email ?? null,
+        telefono: telefono ?? null,
+        prevision: prevision ?? null,
       })
       .select()
       .single()
@@ -70,6 +92,14 @@ export async function POST(req: Request) {
       }
       throw error
     }
+
+    // Registrar creación en audit_log (Decreto 41 MINSAL — trazabilidad desde el evento fundacional)
+    await supabase.from('audit_log').insert({
+      usuario_id: user.id,
+      paciente_id: (data as { id: string }).id,
+      clinica_id: usuario.clinica_id,
+      accion: 'paciente_creado',
+    })
 
     return Response.json({ paciente: data }, { status: 201 })
   } catch (error) {

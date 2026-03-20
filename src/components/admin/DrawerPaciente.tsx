@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { X, Plus } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { validarRut, formatearRut } from '@/lib/agendamiento'
-import { type MockPacienteAdmin, type Prevision } from '@/lib/mock-data'
+import { type MockPacienteAdmin, type Prevision } from '@/types/domain'
 
 const ISAPRES: Prevision[] = [
   'Isapre Banmédica', 'Isapre Cruz Blanca', 'Isapre Consalud',
@@ -46,6 +46,7 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
   const [form, setForm] = useState<FormData>(defaultForm)
   const [rutError, setRutError] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [errorApi, setErrorApi] = useState('')
   const [inputAlergia, setInputAlergia] = useState('')
   const [inputCondicion, setInputCondicion] = useState('')
 
@@ -65,6 +66,7 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
       setForm(defaultForm)
     }
     setRutError('')
+    setErrorApi('')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pacienteEditar, open])
 
@@ -112,26 +114,87 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
   async function handleGuardar() {
     if (!canGuardar) return
     setGuardando(true)
-    await new Promise(r => setTimeout(r, 600))
+    setErrorApi('')
 
-    const nuevo: MockPacienteAdmin = {
-      id: pacienteEditar?.id ?? `p${Date.now()}`,
-      nombre: form.nombre.trim(),
-      rut: form.rut,
-      fechaNacimiento: form.fechaNacimiento,
-      edad: calcularEdad(form.fechaNacimiento),
-      prevision: form.prevision as Prevision,
-      email: form.email.trim(),
-      telefono: form.telefono.trim(),
-      ultimaVisita: pacienteEditar?.ultimaVisita ?? null,
-      totalVisitas: pacienteEditar?.totalVisitas ?? 0,
-      medicoId: pacienteEditar?.medicoId ?? null,
-      activo: pacienteEditar?.activo ?? true,
-      alergias: form.alergias,
-      condiciones: form.condiciones,
+    try {
+      const payload = {
+        nombre: form.nombre.trim(),
+        rut: form.rut,
+        fecha_nac: form.fechaNacimiento || null,
+        email: form.email.trim(),
+        telefono: form.telefono.trim() || null,
+        prevision: form.prevision,
+        alergias: form.alergias,
+        condiciones: form.condiciones,
+      }
+
+      let res: Response
+      let responseData: Record<string, unknown>
+
+      if (esEdicion && pacienteEditar?.id) {
+        // Edición: PATCH /api/pacientes/[id]
+        res = await fetch(`/api/pacientes/${pacienteEditar.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      } else {
+        // Creación: POST /api/pacientes
+        res = await fetch('/api/pacientes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      }
+
+      responseData = await res.json() as Record<string, unknown>
+
+      if (!res.ok) {
+        const mensaje = typeof responseData.error === 'string'
+          ? responseData.error
+          : 'Error al guardar el paciente. Inténtalo de nuevo.'
+        setErrorApi(mensaje)
+        setGuardando(false)
+        return
+      }
+
+      // Mapear respuesta real de la API al tipo MockPacienteAdmin
+      const pacienteGuardado = (responseData.paciente ?? responseData) as {
+        id: string
+        nombre: string
+        rut: string
+        fecha_nac?: string | null
+        email?: string | null
+        telefono?: string | null
+        prevision?: string | null
+        alergias?: string[]
+        condiciones?: string[]
+        activo?: boolean
+      }
+
+      const resultado: MockPacienteAdmin = {
+        id: pacienteGuardado.id,
+        nombre: pacienteGuardado.nombre,
+        rut: pacienteGuardado.rut,
+        fechaNacimiento: pacienteGuardado.fecha_nac ?? form.fechaNacimiento,
+        edad: calcularEdad(pacienteGuardado.fecha_nac ?? form.fechaNacimiento),
+        prevision: (pacienteGuardado.prevision ?? form.prevision) as Prevision,
+        email: pacienteGuardado.email ?? form.email.trim(),
+        telefono: pacienteGuardado.telefono ?? form.telefono.trim(),
+        ultimaVisita: pacienteEditar?.ultimaVisita ?? null,
+        totalVisitas: pacienteEditar?.totalVisitas ?? 0,
+        medicoId: pacienteEditar?.medicoId ?? null,
+        activo: pacienteGuardado.activo ?? true,
+        alergias: pacienteGuardado.alergias ?? form.alergias,
+        condiciones: pacienteGuardado.condiciones ?? form.condiciones,
+      }
+
+      onGuardar(resultado)
+    } catch {
+      setErrorApi('Error de conexión. Verifica tu internet e inténtalo de nuevo.')
+    } finally {
+      setGuardando(false)
     }
-    onGuardar(nuevo)
-    setGuardando(false)
   }
 
   if (!open) return null
@@ -371,25 +434,32 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-200 flex items-center gap-3 bg-white">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={handleGuardar}
-            disabled={!canGuardar || guardando}
-            className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-          >
-            {guardando && (
-              <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-            )}
-            {esEdicion ? 'Guardar cambios' : 'Guardar paciente'}
-          </button>
+        <div className="px-6 py-4 border-t border-slate-200 flex flex-col gap-3 bg-white">
+          {errorApi && (
+            <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl border border-red-100">
+              {errorApi}
+            </p>
+          )}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleGuardar}
+              disabled={!canGuardar || guardando}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+            >
+              {guardando && (
+                <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+              )}
+              {esEdicion ? 'Guardar cambios' : 'Guardar paciente'}
+            </button>
+          </div>
         </div>
 
       </div>
