@@ -49,14 +49,28 @@ export function ModalEspecialidad({ open, onClose, onGuardar, especialidadEditar
   async function handleGuardar() {
     if (!nombre.trim()) return
     setGuardando(true)
-    await new Promise(r => setTimeout(r, 400))
-    onGuardar({
-      id: especialidadEditar?.id ?? `e${Date.now()}`,
-      nombre: nombre.trim(),
-      color,
-      duracion_default: duracion,
-    })
-    setGuardando(false)
+    try {
+      const esEdicion = !!especialidadEditar
+      const url = esEdicion
+        ? `/api/especialidades/${especialidadEditar.id}`
+        : '/api/especialidades'
+
+      const res = await fetch(url, {
+        method: esEdicion ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre: nombre.trim(), color, duracion_default: duracion }),
+      })
+
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Error al guardar')
+
+      onGuardar(json.especialidad)
+    } catch (err) {
+      console.error('Error al guardar especialidad:', err)
+      alert('No se pudo guardar la especialidad. Inténtalo de nuevo.')
+    } finally {
+      setGuardando(false)
+    }
   }
 
   if (!open) return null

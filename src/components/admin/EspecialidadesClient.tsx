@@ -47,11 +47,21 @@ export function EspecialidadesClient({ especialidadesIniciales, medicos }: Props
     mostrarToast(editando ? `"${esp.nombre}" actualizada` : `"${esp.nombre}" creada`)
   }
 
-  function handleEliminar(id: string) {
+  async function handleEliminar(id: string) {
     const esp = especialidades.find(e => e.id === id)
-    setEspecialidades(prev => prev.filter(e => e.id !== id))
-    setConfirmarEliminarId(null)
-    mostrarToast(`"${esp?.nombre}" eliminada`)
+    try {
+      const res = await fetch(`/api/especialidades/${id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Error al eliminar')
+
+      setEspecialidades(prev => prev.filter(e => e.id !== id))
+      mostrarToast(`"${esp?.nombre}" eliminada`)
+    } catch (err) {
+      console.error('Error al eliminar especialidad:', err)
+      alert('No se pudo eliminar la especialidad. Inténtalo de nuevo.')
+    } finally {
+      setConfirmarEliminarId(null)
+    }
   }
 
   const espAEliminar = confirmarEliminarId
