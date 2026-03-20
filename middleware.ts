@@ -36,7 +36,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/public/') ||
     pathname.startsWith('/api/superadmin/') ||
     pathname === '/api/arco' ||
-    pathname === '/api/demo-request'
+    pathname === '/api/demo-request' ||
+    pathname === '/api/onboarding'
   const isPublicPage =
     pathname === '/' ||
     pathname.startsWith('/agendar') ||
