@@ -158,16 +158,16 @@ export default function LoginPage() {
             >
               Ingresar
             </Button>
-
-            <div className="text-center pt-1">
-              <Link
-                href="/recuperar-contrasena"
-                className="text-sm text-slate-500 hover:text-blue-600 transition-colors"
-              >
-                ¿Olvidaste tu contraseña?
-              </Link>
-            </div>
           </form>
+
+          <div className="text-center pt-4">
+            <Link
+              href="/recuperar-contrasena"
+              className="text-sm text-slate-500 hover:text-blue-600 transition-colors"
+            >
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
         </div>
 
         <p className="text-center text-sm text-slate-400 mt-6">
