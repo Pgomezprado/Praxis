@@ -37,6 +37,14 @@ import {
 type Resultado = {
   clinica: { id: string; nombre: string; slug: string }
   admin: { id: string; email: string; nombre: string }
+  adminsAdicionales?: Array<{ nombre: string; email: string; error?: string }>
+  advertencia?: string
+}
+
+type AdminFormItem = {
+  nombre: string
+  email: string
+  rut: string
 }
 
 type ClinicaData = {
@@ -1454,26 +1462,33 @@ type TabNuevaClinicaProps = {
 }
 
 function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
-  const [form, setForm] = useState({
-    clinicaNombre: '',
-    clinicaCiudad: '',
-    clinicaSlug: '',
-    adminNombre: '',
-    adminEmail: '',
-  })
+  const [clinicaNombre, setClinicaNombre] = useState('')
+  const [clinicaCiudad, setClinicaCiudad] = useState('')
+  const [clinicaSlug, setClinicaSlug] = useState('')
+  const [admins, setAdmins] = useState<AdminFormItem[]>([{ nombre: '', email: '', rut: '' }])
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
   const [resultado, setResultado] = useState<Resultado | null>(null)
 
-  function set(key: keyof typeof form, value: string) {
-    setForm(prev => ({ ...prev, [key]: value }))
-    if (key === 'clinicaNombre' && !form.clinicaSlug) {
-      setForm(prev => ({
-        ...prev,
-        clinicaNombre: value,
-        clinicaSlug: value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
-      }))
+  function handleNombreClinica(value: string) {
+    setClinicaNombre(value)
+    // Auto-generar slug solo si el usuario no lo ha modificado manualmente
+    if (!clinicaSlug) {
+      setClinicaSlug(value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''))
     }
+  }
+
+  function actualizarAdmin(index: number, field: keyof AdminFormItem, value: string) {
+    setAdmins(prev => prev.map((a, i) => i === index ? { ...a, [field]: value } : a))
+  }
+
+  function agregarAdmin() {
+    setAdmins(prev => [...prev, { nombre: '', email: '', rut: '' }])
+  }
+
+  function eliminarAdmin(index: number) {
+    if (index === 0) return // El primer admin no se puede eliminar
+    setAdmins(prev => prev.filter((_, i) => i !== index))
   }
 
   async function handleCrear(e: React.FormEvent) {
@@ -1488,7 +1503,16 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
       res = await fetch(window.location.origin + '/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form }),
+        body: JSON.stringify({
+          clinicaNombre,
+          clinicaCiudad,
+          clinicaSlug,
+          admins: admins.map(a => ({
+            nombre: a.nombre.trim(),
+            email: a.email.trim(),
+            ...(a.rut.trim() && { rut: a.rut.trim() }),
+          })),
+        }),
       })
     } catch (err) {
       setCargando(false)
@@ -1519,6 +1543,9 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
   }
 
   if (resultado) {
+    const adminsCreados = [resultado.admin, ...(resultado.adminsAdicionales?.filter(a => !a.error) ?? [])]
+    const adminsConError = resultado.adminsAdicionales?.filter(a => a.error) ?? []
+
     return (
       <div className="max-w-md">
         <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6">
@@ -1528,7 +1555,11 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-white">Clínica creada</h2>
-              <p className="text-sm text-slate-400">Se envió la invitación al admin</p>
+              <p className="text-sm text-slate-400">
+                {adminsCreados.length === 1
+                  ? 'Se envió la invitación al administrador'
+                  : `Se enviaron ${adminsCreados.length} invitaciones`}
+              </p>
             </div>
           </div>
           <div className="space-y-3 mb-6">
@@ -1539,13 +1570,43 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
               <p className="text-slate-500 text-xs mt-1">ID: {resultado.clinica.id}</p>
             </div>
             <div className="bg-slate-700/50 rounded-xl p-4">
-              <p className="text-xs text-slate-400 mb-1">Administrador</p>
-              <p className="text-white font-medium">{resultado.admin.nombre}</p>
-              <p className="text-slate-400 text-sm">{resultado.admin.email}</p>
+              <p className="text-xs text-slate-400 mb-2">Administradores</p>
+              <div className="space-y-2">
+                {adminsCreados.map((a, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <div>
+                      <p className="text-white text-sm font-medium">{a.nombre}</p>
+                      <p className="text-slate-400 text-xs">{a.email}</p>
+                    </div>
+                  </div>
+                ))}
+                {adminsConError.map((a, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-white text-sm font-medium">{a.nombre}</p>
+                      <p className="text-slate-400 text-xs">{a.email}</p>
+                      <p className="text-yellow-400 text-xs mt-0.5">{a.error}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
+            {resultado.advertencia && (
+              <p className="text-xs text-yellow-400 bg-yellow-500/10 px-3 py-2 rounded-xl border border-yellow-500/20">
+                {resultado.advertencia}
+              </p>
+            )}
           </div>
           <button
-            onClick={() => setResultado(null)}
+            onClick={() => {
+              setResultado(null)
+              setClinicaNombre('')
+              setClinicaCiudad('')
+              setClinicaSlug('')
+              setAdmins([{ nombre: '', email: '', rut: '' }])
+            }}
             className="w-full py-2.5 rounded-xl text-sm font-medium bg-slate-700 text-white hover:bg-slate-600 transition-colors"
           >
             Crear otra clínica
@@ -1558,6 +1619,7 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
   return (
     <div className="max-w-lg">
       <form onSubmit={handleCrear} className="space-y-6">
+        {/* Datos de la clínica */}
         <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6">
           <div className="flex items-center gap-2 mb-5">
             <Building2 className="w-4 h-4 text-slate-400" />
@@ -1568,8 +1630,8 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
               <label className={labelCls}>Nombre *</label>
               <input
                 type="text"
-                value={form.clinicaNombre}
-                onChange={e => set('clinicaNombre', e.target.value)}
+                value={clinicaNombre}
+                onChange={e => handleNombreClinica(e.target.value)}
                 placeholder="Clínica Santa María"
                 required
                 className={inputCls}
@@ -1581,8 +1643,8 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
                 <span className="text-slate-500 text-sm shrink-0">praxisapp.cl/</span>
                 <input
                   type="text"
-                  value={form.clinicaSlug}
-                  onChange={e => set('clinicaSlug', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                  value={clinicaSlug}
+                  onChange={e => setClinicaSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                   placeholder="santa-maria"
                   required
                   className="flex-1 px-3 py-2.5 text-sm rounded-xl bg-slate-700 border border-slate-600 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
@@ -1593,8 +1655,8 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
               <label className={labelCls}>Ciudad</label>
               <input
                 type="text"
-                value={form.clinicaCiudad}
-                onChange={e => set('clinicaCiudad', e.target.value)}
+                value={clinicaCiudad}
+                onChange={e => setClinicaCiudad(e.target.value)}
                 placeholder="Santiago"
                 className={inputCls}
               />
@@ -1602,38 +1664,88 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
           </div>
         </div>
 
+        {/* Administradores */}
         <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6">
-          <div className="flex items-center gap-2 mb-5">
-            <User className="w-4 h-4 text-slate-400" />
-            <h2 className="text-sm font-semibold text-slate-200">Administrador de la clínica</h2>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <label className={labelCls}>Nombre completo *</label>
-              <input
-                type="text"
-                value={form.adminNombre}
-                onChange={e => set('adminNombre', e.target.value)}
-                placeholder="Juan Pérez"
-                required
-                className={inputCls}
-              />
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-slate-400" />
+              <h2 className="text-sm font-semibold text-slate-200">Administradores de la clínica</h2>
             </div>
-            <div>
-              <label className={labelCls}>Email *</label>
-              <input
-                type="email"
-                value={form.adminEmail}
-                onChange={e => set('adminEmail', e.target.value)}
-                placeholder="admin@clinica.cl"
-                required
-                className={inputCls}
-              />
-            </div>
-            <p className="text-xs text-slate-500">
-              Se enviará una invitación a este email para que el admin cree su contraseña.
-            </p>
           </div>
+
+          <div className="space-y-5">
+            {admins.map((admin, index) => (
+              <div key={index} className="relative">
+                {index > 0 && (
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Administrador {index + 1}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => eliminarAdmin(index)}
+                      className="flex items-center gap-1 text-xs text-slate-500 hover:text-red-400 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      Eliminar
+                    </button>
+                  </div>
+                )}
+                {index === 0 && (
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">
+                    Administrador principal
+                  </p>
+                )}
+                <div className="space-y-3 p-4 bg-slate-700/40 rounded-xl border border-slate-700">
+                  <div>
+                    <label className={labelCls}>Nombre completo *</label>
+                    <input
+                      type="text"
+                      value={admin.nombre}
+                      onChange={e => actualizarAdmin(index, 'nombre', e.target.value)}
+                      placeholder="María Gonzalez"
+                      required
+                      className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Email *</label>
+                    <input
+                      type="email"
+                      value={admin.email}
+                      onChange={e => actualizarAdmin(index, 'email', e.target.value)}
+                      placeholder="admin@clinica.cl"
+                      required
+                      className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelCls}>RUT (opcional)</label>
+                    <input
+                      type="text"
+                      value={admin.rut}
+                      onChange={e => actualizarAdmin(index, 'rut', e.target.value)}
+                      placeholder="12.345.678-9"
+                      className={inputCls}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={agregarAdmin}
+            className="mt-4 w-full py-2.5 rounded-xl text-sm font-medium border border-dashed border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors flex items-center justify-center gap-2"
+          >
+            <PlusCircle className="w-4 h-4" />
+            Agregar otro administrador
+          </button>
+
+          <p className="text-xs text-slate-500 mt-3">
+            Se enviará una invitación a cada email para que creen su contraseña.
+          </p>
         </div>
 
         {error && (
@@ -1646,7 +1758,7 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
           className="w-full py-3 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
         >
           {cargando && <Spinner />}
-          Crear clínica y enviar invitación
+          Crear clínica y enviar invitaciones
         </button>
       </form>
     </div>
