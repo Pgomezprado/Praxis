@@ -11,6 +11,7 @@ interface ConfirmacionCitaParams {
   clinicaNombre: string
   clinicaDireccion?: string
   clinicaCiudad?: string
+  clinicaTelefono?: string
 }
 
 function escapeHtml(str: string): string {
@@ -25,7 +26,7 @@ function escapeHtml(str: string): string {
 export async function enviarConfirmacionCita(params: ConfirmacionCitaParams) {
   const {
     to, pacienteNombre, folio, medicoNombre, especialidad,
-    fecha, hora, clinicaNombre, clinicaDireccion, clinicaCiudad,
+    fecha, hora, clinicaNombre, clinicaDireccion, clinicaCiudad, clinicaTelefono,
   } = params
 
   const fechaFormateada = new Date(fecha + 'T12:00:00').toLocaleDateString('es-CL', {
@@ -34,14 +35,15 @@ export async function enviarConfirmacionCita(params: ConfirmacionCitaParams) {
 
   const lugar = [clinicaDireccion, clinicaCiudad].filter(Boolean).join(', ')
 
-  const pacienteNombreSafe  = escapeHtml(pacienteNombre)
-  const folioSafe           = escapeHtml(folio)
-  const medicoNombreSafe    = escapeHtml(medicoNombre)
-  const especialidadSafe    = escapeHtml(especialidad)
-  const clinicaNombreSafe   = escapeHtml(clinicaNombre)
-  const lugarSafe           = escapeHtml(lugar)
-  const horaSafe            = escapeHtml(hora)
-  const fechaFormateadaSafe = escapeHtml(fechaFormateada)
+  const pacienteNombrePila   = escapeHtml(pacienteNombre.split(' ')[0])
+  const folioSafe             = escapeHtml(folio)
+  const medicoNombreSafe      = escapeHtml(medicoNombre)
+  const especialidadSafe      = escapeHtml(especialidad)
+  const clinicaNombreSafe     = escapeHtml(clinicaNombre)
+  const lugarSafe             = escapeHtml(lugar)
+  const horaSafe              = escapeHtml(hora)
+  const fechaFormateadaSafe   = escapeHtml(fechaFormateada)
+  const clinicaTelefonoSafe   = clinicaTelefono ? escapeHtml(clinicaTelefono) : ''
 
   const html = `
 <!DOCTYPE html>
@@ -67,8 +69,8 @@ export async function enviarConfirmacionCita(params: ConfirmacionCitaParams) {
           <!-- Body -->
           <tr>
             <td style="padding:32px;">
-              <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">¡Tu cita está confirmada!</p>
-              <p style="margin:0 0 28px;font-size:14px;color:#64748b;">Hola ${pacienteNombreSafe}, aquí está el resumen de tu agendamiento.</p>
+              <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">Listo, ${pacienteNombrePila}. Te esperamos el ${fechaFormateadaSafe}.</p>
+              <p style="margin:0 0 28px;font-size:14px;color:#64748b;">Aquí tienes todos los detalles de tu cita. Guárdalo por si lo necesitas.</p>
 
               <!-- Folio badge -->
               <div style="display:inline-block;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:6px 14px;margin-bottom:24px;">
@@ -102,8 +104,20 @@ export async function enviarConfirmacionCita(params: ConfirmacionCitaParams) {
                 ` : ''}
               </table>
 
-              <p style="margin:28px 0 0;font-size:13px;color:#94a3b8;text-align:center;">
-                Si necesitas cancelar o reagendar, contacta a la clínica directamente.
+              <!-- Preparación para la cita -->
+              <div style="margin-top:24px;padding:16px 18px;background:#f0f9ff;border-left:3px solid #0ea5e9;border-radius:0 8px 8px 0;">
+                <p style="margin:0 0 10px;font-size:12px;font-weight:600;color:#0369a1;text-transform:uppercase;letter-spacing:0.5px;">Antes de tu cita</p>
+                <ul style="margin:0;padding-left:18px;font-size:13px;color:#334155;line-height:1.8;">
+                  <li>Llega 10 minutos antes para el registro.</li>
+                  <li>Trae tu cédula de identidad o carnet de salud.</li>
+                  <li>Si tomas medicamentos de forma habitual, anótalos o trae la caja.</li>
+                  <li>Si tienes exámenes o documentos previos relacionados, tráelos contigo.</li>
+                </ul>
+              </div>
+
+              <!-- Cancelación -->
+              <p style="margin:24px 0 0;font-size:13px;color:#94a3b8;text-align:center;">
+                Si necesitas cancelar o cambiar tu hora, comunícate con ${clinicaNombreSafe} a la brevedad para que puedan darte otro horario disponible.${clinicaTelefonoSafe ? `<br/>Puedes llamar al <strong style="color:#64748b;">${clinicaTelefonoSafe}</strong> en horario de atención.` : ''}
               </p>
             </td>
           </tr>
@@ -112,7 +126,7 @@ export async function enviarConfirmacionCita(params: ConfirmacionCitaParams) {
           <tr>
             <td style="padding:20px 32px;border-top:1px solid #f1f5f9;background:#f8fafc;">
               <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">
-                Praxis · Sistema de historia clínica electrónica
+                Praxis · Agenda médica digital para clínicas en Chile
               </p>
             </td>
           </tr>
@@ -130,7 +144,7 @@ export async function enviarConfirmacionCita(params: ConfirmacionCitaParams) {
     await resend.emails.send({
       from: process.env.RESEND_FROM ?? 'Praxis <no-reply@praxisapp.cl>',
       to,
-      subject: `Cita confirmada — ${fechaFormateada} · ${folio}`,
+      subject: `Tu cita del ${fechaFormateada} está reservada, ${pacienteNombre.split(' ')[0]}`,
       html,
     })
   } catch (err) {

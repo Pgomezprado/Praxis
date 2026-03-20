@@ -31,6 +31,8 @@ import {
   ArrowDownRight,
   Minus,
   Send,
+  Mail,
+  Pencil,
 } from 'lucide-react'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -1306,6 +1308,165 @@ function TabDemos({
   )
 }
 
+// ─── Modal: Editar correo ─────────────────────────────────────────────────────
+
+type ModalEditarEmailProps = {
+  usuario: UsuarioData
+  onClose: () => void
+  onActualizado: (emailNuevo: string) => void
+}
+
+function ModalEditarEmail({ usuario, onClose, onActualizado }: ModalEditarEmailProps) {
+  const [emailNuevo, setEmailNuevo] = useState('')
+  const [emailConfirm, setEmailConfirm] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+  const [exito, setExito] = useState(false)
+  const [advertencia, setAdvertencia] = useState('')
+
+  function validar(): string | null {
+    const n = emailNuevo.trim().toLowerCase()
+    const c = emailConfirm.trim().toLowerCase()
+    if (!n) return 'Ingresa el nuevo correo'
+    if (!n.includes('@') || !n.includes('.')) return 'El correo no tiene un formato válido'
+    if (n !== c) return 'Los correos no coinciden'
+    if (n === usuario.email.toLowerCase()) return 'El nuevo correo es igual al correo actual'
+    return null
+  }
+
+  async function handleGuardar(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+    setAdvertencia('')
+
+    const err = validar()
+    if (err) { setError(err); return }
+
+    setGuardando(true)
+    try {
+      const res = await fetch(`/api/superadmin/usuarios/${usuario.id}/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ emailNuevo: emailNuevo.trim().toLowerCase() }),
+      })
+      const data = await res.json() as { ok?: boolean; emailNuevo?: string; advertencia?: string; error?: string }
+
+      if (!res.ok) {
+        setError(data.error ?? 'Error al actualizar el correo')
+        return
+      }
+
+      if (data.advertencia) setAdvertencia(data.advertencia)
+      setExito(true)
+      onActualizado(emailNuevo.trim().toLowerCase())
+    } catch {
+      setError('Error de red. Intenta nuevamente.')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+      <div className="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6 space-y-5">
+        {/* Cabecera */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="text-white font-semibold">Editar correo</h3>
+            <p className="text-slate-400 text-sm mt-0.5">{usuario.nombre}</p>
+          </div>
+          <button onClick={onClose} className="p-1 rounded hover:bg-slate-700 text-slate-400">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Correo actual */}
+        <div className="bg-slate-700/50 rounded-xl px-4 py-3 flex items-center gap-2">
+          <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <div>
+            <p className="text-xs text-slate-400">Correo actual</p>
+            <p className="text-sm text-white font-medium">{usuario.email}</p>
+          </div>
+        </div>
+
+        {exito ? (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-emerald-300 font-medium">Correo actualizado</p>
+                <p className="text-xs text-slate-400 mt-0.5">Se envió una invitación al nuevo correo para restablecer la sesión.</p>
+              </div>
+            </div>
+            {advertencia && (
+              <div className="flex items-start gap-2 bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3">
+                <AlertTriangle className="w-3.5 h-3.5 text-yellow-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-yellow-300">{advertencia}</p>
+              </div>
+            )}
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 rounded-xl text-sm font-medium bg-slate-700 text-white hover:bg-slate-600 transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleGuardar} className="space-y-4">
+            <div>
+              <label className={labelCls}>Nuevo correo *</label>
+              <input
+                type="email"
+                value={emailNuevo}
+                onChange={e => setEmailNuevo(e.target.value)}
+                placeholder="nuevo@correo.cl"
+                autoComplete="off"
+                className={inputCls}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Confirmar correo *</label>
+              <input
+                type="email"
+                value={emailConfirm}
+                onChange={e => setEmailConfirm(e.target.value)}
+                placeholder="nuevo@correo.cl"
+                autoComplete="off"
+                className={inputCls}
+              />
+            </div>
+
+            {error && (
+              <p className="text-sm text-red-400 bg-red-500/10 px-4 py-3 rounded-xl border border-red-500/20">
+                {error}
+              </p>
+            )}
+
+            <div className="flex gap-3 pt-1">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={guardando}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+              >
+                {guardando ? <Spinner /> : <Pencil className="w-3.5 h-3.5" />}
+                {guardando ? 'Actualizando...' : 'Actualizar'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Tab: Usuarios ────────────────────────────────────────────────────────────
 
 function TabUsuarios({
@@ -1321,6 +1482,7 @@ function TabUsuarios({
   const [cambiandoId, setCambiandoId] = useState<string | null>(null)
   const [enviandoId, setEnviandoId] = useState<string | null>(null)
   const [feedbackEnvio, setFeedbackEnvio] = useState<Record<string, { ok: boolean; msg: string }>>({})
+  const [modalEmail, setModalEmail] = useState<UsuarioData | null>(null)
 
   async function reenviarInvitacion(usuario: UsuarioData) {
     setEnviandoId(usuario.id)
@@ -1441,6 +1603,14 @@ function TabUsuarios({
                             {enviandoId === u.id ? <Spinner /> : <Send className="w-3.5 h-3.5" />}
                             Reenviar
                           </button>
+                          <button
+                            onClick={() => setModalEmail(u)}
+                            title="Editar correo"
+                            className="text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1 whitespace-nowrap"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            Editar correo
+                          </button>
                         </div>
                         {feedbackEnvio[u.id] && (
                           <span className={`text-xs ${feedbackEnvio[u.id].ok ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -1480,7 +1650,7 @@ function TabUsuarios({
                 <span className={`text-xs ${u.activo ? 'text-emerald-400' : 'text-slate-500'}`}>
                   {u.activo ? 'Activo' : 'Inactivo'}
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-end">
                   <button
                     onClick={() => reenviarInvitacion(u)}
                     disabled={enviandoId === u.id}
@@ -1488,6 +1658,13 @@ function TabUsuarios({
                   >
                     {enviandoId === u.id ? <Spinner /> : <Send className="w-3 h-3" />}
                     Reenviar
+                  </button>
+                  <button
+                    onClick={() => setModalEmail(u)}
+                    className="text-xs font-medium px-3 py-1.5 rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center gap-1"
+                  >
+                    <Pencil className="w-3 h-3" />
+                    Correo
                   </button>
                   <button
                     onClick={() => toggleActivo(u)}
@@ -1512,6 +1689,18 @@ function TabUsuarios({
           )
         })}
       </div>
+
+      {/* Modal editar correo */}
+      {modalEmail && (
+        <ModalEditarEmail
+          usuario={modalEmail}
+          onClose={() => setModalEmail(null)}
+          onActualizado={emailNuevo => {
+            onActualizado({ ...modalEmail, email: emailNuevo })
+            setModalEmail(prev => prev ? { ...prev, email: emailNuevo } : null)
+          }}
+        />
+      )}
     </div>
   )
 }

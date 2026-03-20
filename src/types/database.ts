@@ -76,6 +76,8 @@ export interface AuditLog {
   clinica_id: string | null
   accion: string
   ip: string | null
+  // Columna agregada en migración 023 — contexto adicional en JSON
+  detalle: Record<string, unknown> | null
   created_at: string
 }
 

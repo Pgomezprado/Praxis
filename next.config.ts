@@ -1,37 +1,26 @@
 import type { NextConfig } from "next";
 import path from "path";
 
-// Dominios de Supabase (variables de entorno; en build se sustituyen si están presentes)
-// La CSP usa la variable de entorno en runtime via middleware cuando se necesite más dinamismo,
-// pero aquí cubrimos los dominios fijos de producción.
+const isDev = process.env.NODE_ENV === 'development'
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://*.supabase.co'
 const supabaseHost = (() => {
   try { return new URL(SUPABASE_URL).host } catch { return '*.supabase.co' }
 })()
 
 const cspDirectives = [
-  // Sólo HTTPS en producción; en desarrollo permite localhost
   `default-src 'self'`,
-  // Scripts: self + inline requerido por Next.js (nonces manejados por Next.js)
   `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
-  // Estilos: self + inline (Tailwind genera estilos inline) + Google Fonts
   `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
-  // Fuentes: self + Google Fonts CDN
   `font-src 'self' https://fonts.gstatic.com`,
-  // Imágenes: self + data URIs (avatares generados) + Supabase Storage
   `img-src 'self' data: https://${supabaseHost}`,
-  // Conexiones: self + Supabase + Anthropic API (solo server-side, pero CSP cubre fetch del browser)
   `connect-src 'self' https://${supabaseHost} wss://${supabaseHost} https://api.anthropic.com https://api.resend.com`,
-  // Frames: ninguno (X-Frame-Options: DENY ya lo cubre)
   `frame-src 'none'`,
-  // Objetos: ninguno
   `object-src 'none'`,
-  // Base URI: restringido a self
   `base-uri 'self'`,
-  // Form action: solo self
   `form-action 'self'`,
-  // Upgrade insecure requests en producción
-  `upgrade-insecure-requests`,
+  // Solo en producción: fuerza HTTPS en el browser
+  ...(!isDev ? [`upgrade-insecure-requests`] : []),
 ].join('; ')
 
 const securityHeaders = [
@@ -51,10 +40,11 @@ const securityHeaders = [
     key: 'Permissions-Policy',
     value: 'camera=(), microphone=(), geolocation=()',
   },
-  {
+  // HSTS solo en producción — en dev hace que Safari bloquee localhost con HTTP
+  ...(!isDev ? [{
     key: 'Strict-Transport-Security',
     value: 'max-age=63072000; includeSubDomains; preload',
-  },
+  }] : []),
   {
     key: 'Content-Security-Policy',
     value: cspDirectives,
