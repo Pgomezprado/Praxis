@@ -10,12 +10,16 @@ export async function GET(request: Request) {
   try {
     const supabase = await createClient()
 
+    const isRecovery = type === 'recovery'
+    const successRedirect = isRecovery ? `${origin}/nueva-contrasena` : `${origin}/activar-cuenta`
+    const errorRedirect = isRecovery ? `${origin}/recuperar-contrasena` : `${origin}/activar-cuenta`
+
     // PKCE flow: ?code=
     if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code)
-      if (!error) return NextResponse.redirect(`${origin}/activar-cuenta`)
+      if (!error) return NextResponse.redirect(successRedirect)
       return NextResponse.redirect(
-        `${origin}/activar-cuenta?error=${encodeURIComponent(error.message)}`
+        `${errorRedirect}?error=${encodeURIComponent(error.message)}`
       )
     }
 
@@ -25,9 +29,9 @@ export async function GET(request: Request) {
         token_hash,
         type: type as 'invite' | 'recovery' | 'email' | 'signup',
       })
-      if (!error) return NextResponse.redirect(`${origin}/activar-cuenta`)
+      if (!error) return NextResponse.redirect(successRedirect)
       return NextResponse.redirect(
-        `${origin}/activar-cuenta?error=${encodeURIComponent(error.message)}`
+        `${errorRedirect}?error=${encodeURIComponent(error.message)}`
       )
     }
 

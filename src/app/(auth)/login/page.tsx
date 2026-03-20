@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -157,6 +158,15 @@ export default function LoginPage() {
             >
               Ingresar
             </Button>
+
+            <div className="text-center pt-1">
+              <Link
+                href="/recuperar-contrasena"
+                className="text-sm text-slate-500 hover:text-blue-600 transition-colors"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
           </form>
         </div>
 
