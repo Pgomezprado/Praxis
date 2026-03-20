@@ -79,6 +79,70 @@ export interface AuditLog {
   created_at: string
 }
 
+// ── Finanzas ──────────────────────────────────────────────────
+
+export interface Arancel {
+  id: string
+  clinica_id: string
+  nombre: string
+  tipo_cita: 'primera_consulta' | 'control' | 'urgencia' | 'otro' | null
+  especialidad_id: string | null
+  precio_particular: number
+  activo: boolean
+  created_at: string
+}
+
+export interface Pago {
+  id: string
+  clinica_id: string
+  cobro_id: string
+  monto: number
+  medio_pago: 'efectivo' | 'tarjeta'
+  referencia: string | null
+  fecha_pago: string
+  registrado_por: string
+  activo: boolean
+  created_at: string
+}
+
+export interface Cobro {
+  id: string
+  folio_cobro: string
+  clinica_id: string
+  cita_id: string | null
+  paciente_id: string
+  doctor_id: string
+  arancel_id: string | null
+  concepto: string
+  monto_neto: number
+  estado: 'pendiente' | 'pagado' | 'anulado'
+  notas: string | null
+  creado_por: string
+  activo: boolean
+  created_at: string
+  // Joins opcionales
+  paciente?: Pick<Paciente, 'id' | 'nombre' | 'rut'>
+  doctor?: Pick<Usuario, 'id' | 'nombre' | 'especialidad'>
+  cita?: Pick<Cita, 'id' | 'folio' | 'tipo' | 'fecha' | 'hora_inicio'>
+  pagos?: Pago[]
+}
+
+export interface Cita {
+  id: string
+  folio: string
+  clinica_id: string
+  doctor_id: string
+  paciente_id: string
+  fecha: string
+  hora_inicio: string
+  hora_fin: string
+  motivo: string | null
+  tipo: 'primera_consulta' | 'control' | 'urgencia'
+  estado: 'confirmada' | 'pendiente' | 'en_consulta' | 'completada' | 'cancelada'
+  creada_por: 'secretaria' | 'paciente'
+  created_at: string
+}
+
 export type Database = {
   public: {
     Tables: {

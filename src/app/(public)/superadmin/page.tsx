@@ -30,6 +30,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Minus,
+  Send,
 } from 'lucide-react'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -1318,6 +1319,34 @@ function TabUsuarios({
 }) {
   const [filtroClinica, setFiltroClinica] = useState('')
   const [cambiandoId, setCambiandoId] = useState<string | null>(null)
+  const [enviandoId, setEnviandoId] = useState<string | null>(null)
+  const [feedbackEnvio, setFeedbackEnvio] = useState<Record<string, { ok: boolean; msg: string }>>({})
+
+  async function reenviarInvitacion(usuario: UsuarioData) {
+    setEnviandoId(usuario.id)
+    setFeedbackEnvio(prev => {
+      const next = { ...prev }
+      delete next[usuario.id]
+      return next
+    })
+    try {
+      const res = await fetch('/api/superadmin/usuarios/reenviar-invitacion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: usuario.email }),
+      })
+      const data = await res.json() as { ok?: boolean; error?: string }
+      if (res.ok && data.ok) {
+        setFeedbackEnvio(prev => ({ ...prev, [usuario.id]: { ok: true, msg: 'Invitación enviada' } }))
+      } else {
+        setFeedbackEnvio(prev => ({ ...prev, [usuario.id]: { ok: false, msg: data.error ?? 'Error al enviar' } }))
+      }
+    } catch {
+      setFeedbackEnvio(prev => ({ ...prev, [usuario.id]: { ok: false, msg: 'Error de red' } }))
+    } finally {
+      setEnviandoId(null)
+    }
+  }
 
   const usuariosFiltrados = filtroClinica
     ? usuarios.filter(u => u.clinica_id === filtroClinica)
@@ -1389,18 +1418,36 @@ function TabUsuarios({
                     </td>
                     <td className="py-3 px-4 text-slate-500 text-xs whitespace-nowrap">{formatFecha(u.created_at)}</td>
                     <td className="py-3 px-4">
-                      <button
-                        onClick={() => toggleActivo(u)}
-                        disabled={cambiandoId === u.id}
-                        className={`text-xs font-medium transition-colors flex items-center gap-1 whitespace-nowrap ${
-                          u.activo
-                            ? 'text-red-400 hover:text-red-300'
-                            : 'text-emerald-400 hover:text-emerald-300'
-                        } disabled:opacity-50`}
-                      >
-                        {cambiandoId === u.id ? <Spinner /> : u.activo ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
-                        {u.activo ? 'Desactivar' : 'Activar'}
-                      </button>
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => toggleActivo(u)}
+                            disabled={cambiandoId === u.id}
+                            className={`text-xs font-medium transition-colors flex items-center gap-1 whitespace-nowrap ${
+                              u.activo
+                                ? 'text-red-400 hover:text-red-300'
+                                : 'text-emerald-400 hover:text-emerald-300'
+                            } disabled:opacity-50`}
+                          >
+                            {cambiandoId === u.id ? <Spinner /> : u.activo ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+                            {u.activo ? 'Desactivar' : 'Activar'}
+                          </button>
+                          <button
+                            onClick={() => reenviarInvitacion(u)}
+                            disabled={enviandoId === u.id}
+                            title="Reenviar invitación"
+                            className="text-xs font-medium text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-1 whitespace-nowrap disabled:opacity-50"
+                          >
+                            {enviandoId === u.id ? <Spinner /> : <Send className="w-3.5 h-3.5" />}
+                            Reenviar
+                          </button>
+                        </div>
+                        {feedbackEnvio[u.id] && (
+                          <span className={`text-xs ${feedbackEnvio[u.id].ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {feedbackEnvio[u.id].msg}
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )
@@ -1433,19 +1480,34 @@ function TabUsuarios({
                 <span className={`text-xs ${u.activo ? 'text-emerald-400' : 'text-slate-500'}`}>
                   {u.activo ? 'Activo' : 'Inactivo'}
                 </span>
-                <button
-                  onClick={() => toggleActivo(u)}
-                  disabled={cambiandoId === u.id}
-                  className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 flex items-center gap-1 ${
-                    u.activo
-                      ? 'border-red-500/30 text-red-400 hover:bg-red-500/10'
-                      : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
-                  }`}
-                >
-                  {cambiandoId === u.id ? <Spinner /> : null}
-                  {u.activo ? 'Desactivar' : 'Activar'}
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => reenviarInvitacion(u)}
+                    disabled={enviandoId === u.id}
+                    className="text-xs font-medium px-3 py-1.5 rounded-lg border border-sky-500/30 text-sky-400 hover:bg-sky-500/10 transition-colors disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {enviandoId === u.id ? <Spinner /> : <Send className="w-3 h-3" />}
+                    Reenviar
+                  </button>
+                  <button
+                    onClick={() => toggleActivo(u)}
+                    disabled={cambiandoId === u.id}
+                    className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 flex items-center gap-1 ${
+                      u.activo
+                        ? 'border-red-500/30 text-red-400 hover:bg-red-500/10'
+                        : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
+                    }`}
+                  >
+                    {cambiandoId === u.id ? <Spinner /> : null}
+                    {u.activo ? 'Desactivar' : 'Activar'}
+                  </button>
+                </div>
               </div>
+              {feedbackEnvio[u.id] && (
+                <p className={`text-xs mt-2 ${feedbackEnvio[u.id].ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {feedbackEnvio[u.id].msg}
+                </p>
+              )}
             </div>
           )
         })}

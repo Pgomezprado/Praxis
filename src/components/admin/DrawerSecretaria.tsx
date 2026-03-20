@@ -129,6 +129,7 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
       telefono: u.telefono ?? form.telefono.trim(),
       medicosAsignados: (u.medicos_asignados as string[] | null) ?? form.medicosAsignados,
       estado: u.activo ? 'activo' : 'inactivo',
+      invitacionPendiente: secretariaEditar?.invitacionPendiente ?? true,
     }
     onGuardar(sec)
   }

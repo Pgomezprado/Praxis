@@ -15,6 +15,7 @@ import {
   LogOut,
   ShieldCheck,
   CalendarDays,
+  DollarSign,
 } from 'lucide-react'
 
 const navItems = [
@@ -24,6 +25,7 @@ const navItems = [
   { href: '/admin/especialidades', label: 'Especialidades', icon: Tag },
   { href: '/admin/horarios',     label: 'Horarios',        icon: Clock },
   { href: '/admin/pacientes',    label: 'Pacientes',       icon: Users },
+  { href: '/admin/finanzas',     label: 'Finanzas',        icon: DollarSign },
   { href: '/admin/configuracion', label: 'Configuración',  icon: Settings },
 ]
 

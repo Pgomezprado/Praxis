@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { MedicosClient } from '@/components/admin/MedicosClient'
 import { type MockMedicoAdmin } from '@/types/domain'
 import { type Especialidad } from '@/types/database'
@@ -42,6 +43,13 @@ export default async function AdminMedicosPage() {
       .neq('estado', 'cancelada'),
   ])
 
+  // Obtener estado de activación de Auth para detectar invitaciones pendientes
+  const admin = createAdminClient()
+  const { data: authList } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+  const authUserMap = new Map(
+    (authList?.users ?? []).map(u => [u.id, u])
+  )
+
   const especialidades = (especialidadesDb ?? []) as Especialidad[]
 
   // Cuenta de citas del mes por doctor
@@ -54,6 +62,7 @@ export default async function AdminMedicosPage() {
     const esp = especialidades.find(
       (e) => e.nombre.toLowerCase() === (d.especialidad ?? '').toLowerCase()
     )
+    const authEntry = authUserMap.get(d.id)
     return {
       id: d.id,
       clinicaId: clinicaId ?? '',
@@ -66,6 +75,7 @@ export default async function AdminMedicosPage() {
       duracionConsulta: d.duracion_consulta ?? 30,
       estado: d.activo ? 'activo' : 'inactivo',
       citasMes: citasPorDoctor.get(d.id) ?? 0,
+      invitacionPendiente: !authEntry?.email_confirmed_at,
     }
   })
 

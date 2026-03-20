@@ -35,6 +35,7 @@ export type MockMedicoAdmin = {
   duracionConsulta: number
   estado: 'activo' | 'inactivo'
   citasMes: number
+  invitacionPendiente: boolean
 }
 
 export type MockSecretaria = {
@@ -46,6 +47,7 @@ export type MockSecretaria = {
   telefono: string
   medicosAsignados: string[]
   estado: 'activo' | 'inactivo'
+  invitacionPendiente: boolean
 }
 
 export type EstadoMedicoHoy = 'en_consulta' | 'disponible' | 'sin_agenda'

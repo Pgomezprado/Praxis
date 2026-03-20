@@ -67,6 +67,7 @@ export default async function InicioPage() {
       duracionConsulta: m.duracion_consulta ?? 30,
       estado: 'activo',
       citasMes: 0,
+      invitacionPendiente: false,
     }
 
     return { ...medicoAdmin, estadoHoy, proximaCita }

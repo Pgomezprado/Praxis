@@ -84,6 +84,7 @@ export default async function MedicoInicioPage() {
     duracionConsulta: me.duracion_consulta ?? 30,
     estado: 'activo',
     citasMes: 0,
+    invitacionPendiente: false,
   }
 
   return (

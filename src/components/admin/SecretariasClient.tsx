@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Search, Plus, Pencil, PowerOff } from 'lucide-react'
+import { Search, Plus, Pencil, PowerOff, Send } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { DrawerSecretaria } from './DrawerSecretaria'
 import { type MockSecretaria, type MockMedicoAdmin } from '@/types/domain'
@@ -18,6 +18,7 @@ export function SecretariasClient({ secretariasIniciales, medicosDisponibles }: 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [secretariaEditar, setSecretariaEditar] = useState<MockSecretaria | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [enviandoId, setEnviandoId] = useState<string | null>(null)
 
   const filtradas = secretarias.filter(s => {
     const q = busqueda.toLowerCase()
@@ -49,6 +50,21 @@ export function SecretariasClient({ secretariasIniciales, medicosDisponibles }: 
     })
     setDrawerOpen(false)
     mostrarToast(secretariaEditar ? `${secretaria.nombre} actualizada` : `${secretaria.nombre} agregada`)
+  }
+
+  async function reenviarInvitacion(id: string) {
+    setEnviandoId(id)
+    try {
+      const res = await fetch(`/api/usuarios/${id}/reenviar-invitacion`, { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) {
+        mostrarToast(json.error ?? 'Error al reenviar la invitación')
+      } else {
+        mostrarToast(json.mensaje ?? 'Invitación reenviada')
+      }
+    } finally {
+      setEnviandoId(null)
+    }
   }
 
   async function toggleEstado(id: string) {
@@ -170,7 +186,7 @@ export function SecretariasClient({ secretariasIniciales, medicosDisponibles }: 
                 </div>
 
                 {/* Estado badge */}
-                <div className="hidden lg:flex">
+                <div className="hidden lg:flex flex-col gap-1">
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
                     activo
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -179,6 +195,12 @@ export function SecretariasClient({ secretariasIniciales, medicosDisponibles }: 
                     <span className={`w-1.5 h-1.5 rounded-full ${activo ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                     {activo ? 'Activo' : 'Inactivo'}
                   </span>
+                  {s.invitacionPendiente && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      Sin activar
+                    </span>
+                  )}
                 </div>
 
                 {/* Acciones */}
@@ -199,6 +221,16 @@ export function SecretariasClient({ secretariasIniciales, medicosDisponibles }: 
                   >
                     <PowerOff className="w-3.5 h-3.5" />
                   </button>
+                  {s.invitacionPendiente && (
+                    <button
+                      onClick={() => reenviarInvitacion(s.id)}
+                      disabled={enviandoId === s.id}
+                      title="Reenviar invitación"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-amber-50 transition-colors text-amber-500 hover:text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             )

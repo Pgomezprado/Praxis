@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { SecretariasClient } from '@/components/admin/SecretariasClient'
 import { type MockSecretaria, type MockMedicoAdmin } from '@/types/domain'
 
@@ -31,6 +32,13 @@ export default async function AdminSecretariasPage() {
       .order('nombre'),
   ])
 
+  // Obtener estado de activación de Auth para detectar invitaciones pendientes
+  const admin = createAdminClient()
+  const { data: authList } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
+  const authUserMap = new Map(
+    (authList?.users ?? []).map(u => [u.id, u])
+  )
+
   const secretarias: MockSecretaria[] = (secDb ?? []).map((s) => ({
     id: s.id,
     clinicaId: clinicaId,
@@ -40,6 +48,7 @@ export default async function AdminSecretariasPage() {
     telefono: s.telefono ?? '',
     medicosAsignados: (s.medicos_asignados as string[] | null) ?? [],
     estado: s.activo ? 'activo' : 'inactivo',
+    invitacionPendiente: !authUserMap.get(s.id)?.email_confirmed_at,
   }))
 
   const medicos: MockMedicoAdmin[] = (docDb ?? []).map((d) => ({
@@ -54,6 +63,7 @@ export default async function AdminSecretariasPage() {
     duracionConsulta: d.duracion_consulta ?? 30,
     estado: d.activo ? 'activo' : 'inactivo',
     citasMes: 0,
+    invitacionPendiente: !authUserMap.get(d.id)?.email_confirmed_at,
   }))
 
   return (

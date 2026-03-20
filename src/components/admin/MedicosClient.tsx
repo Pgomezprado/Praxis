@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Search, ChevronDown, Plus, ArrowRight, Pencil, PowerOff } from 'lucide-react'
+import { Search, ChevronDown, Plus, ArrowRight, Pencil, PowerOff, Send } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { DrawerMedico } from './DrawerMedico'
 import { type MockMedicoAdmin } from '@/types/domain'
@@ -21,6 +21,7 @@ export function MedicosClient({ medicosIniciales, especialidades }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [medicoEditar, setMedicoEditar] = useState<MockMedicoAdmin | null>(null)
   const [toast, setToast] = useState<string | null>(null)
+  const [enviandoId, setEnviandoId] = useState<string | null>(null)
 
   // Filtros
   const medicosFiltrados = medicos.filter(m => {
@@ -54,6 +55,21 @@ export function MedicosClient({ medicosIniciales, especialidades }: Props) {
     })
     setDrawerOpen(false)
     mostrarToast(medicoEditar ? `${medico.nombre} actualizado` : `${medico.nombre} agregado`)
+  }
+
+  async function reenviarInvitacion(id: string) {
+    setEnviandoId(id)
+    try {
+      const res = await fetch(`/api/usuarios/${id}/reenviar-invitacion`, { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) {
+        mostrarToast(json.error ?? 'Error al reenviar la invitación')
+      } else {
+        mostrarToast(json.mensaje ?? 'Invitación reenviada')
+      }
+    } finally {
+      setEnviandoId(null)
+    }
   }
 
   async function toggleEstado(id: string) {
@@ -184,7 +200,7 @@ export function MedicosClient({ medicosIniciales, especialidades }: Props) {
                 <span className="hidden lg:block text-sm text-slate-600">{medico.telefono}</span>
 
                 {/* Estado badge */}
-                <div className="hidden lg:flex">
+                <div className="hidden lg:flex flex-col gap-1">
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
                     activo
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -193,6 +209,12 @@ export function MedicosClient({ medicosIniciales, especialidades }: Props) {
                     <span className={`w-1.5 h-1.5 rounded-full ${activo ? 'bg-emerald-500' : 'bg-slate-400'}`} />
                     {activo ? 'Activo' : 'Inactivo'}
                   </span>
+                  {medico.invitacionPendiente && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      Sin activar
+                    </span>
+                  )}
                 </div>
 
                 {/* Citas mes */}
@@ -225,6 +247,16 @@ export function MedicosClient({ medicosIniciales, especialidades }: Props) {
                   >
                     <PowerOff className="w-3.5 h-3.5" />
                   </button>
+                  {medico.invitacionPendiente && (
+                    <button
+                      onClick={() => reenviarInvitacion(medico.id)}
+                      disabled={enviandoId === medico.id}
+                      title="Reenviar invitación"
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-amber-50 transition-colors text-amber-500 hover:text-amber-700 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             )

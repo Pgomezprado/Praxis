@@ -2,9 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { MoreVertical, XCircle, PlayCircle, CheckCircle2, Loader2, CheckCheck, FileText } from 'lucide-react'
+import { MoreVertical, XCircle, PlayCircle, CheckCircle2, Loader2, CheckCheck, FileText, DollarSign } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
+import { ModalCobro } from './ModalCobro'
 import type { MockCita } from '@/types/domain'
 
 interface CitaCardProps {
@@ -35,6 +36,8 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
   const [menuOpen, setMenuOpen] = useState(false)
   const [estadoLocal, setEstadoLocal] = useState(cita.estado)
   const [loading, setLoading] = useState(false)
+  const [modalCobroOpen, setModalCobroOpen] = useState(false)
+  const [cobrada, setCobrada] = useState(false)
 
   const { label, variant } = ESTADO_BADGE[estadoLocal]
   const isCancelada = estadoLocal === 'cancelada'
@@ -156,6 +159,25 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
         <div className="relative flex-shrink-0 flex items-center gap-1">
           {loading && <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />}
 
+          {/* Botón cobro — solo secretaria, cita completada */}
+          {!esDoctor && isCompletada && !isCancelada && (
+            cobrada ? (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200">
+                <CheckCircle2 className="w-3 h-3" />
+                Cobrado
+              </span>
+            ) : (
+              <button
+                onClick={() => setModalCobroOpen(true)}
+                title="Registrar cobro"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+              >
+                <DollarSign className="w-3 h-3" />
+                Cobrar
+              </button>
+            )
+          )}
+
           {/* Link a historia clínica — solo médico, citas no canceladas */}
           {esDoctor && !isCancelada && (
             <Link
@@ -202,6 +224,17 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
           )}
         </div>
       </div>
+
+      {/* Modal de cobro */}
+      <ModalCobro
+        open={modalCobroOpen}
+        onClose={() => setModalCobroOpen(false)}
+        cita={cita}
+        onCobrado={() => {
+          setCobrada(true)
+          setModalCobroOpen(false)
+        }}
+      />
     </div>
   )
 }

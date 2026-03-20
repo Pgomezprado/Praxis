@@ -35,6 +35,7 @@ export default async function AdminHorariosPage() {
       duracionConsulta: u?.duracion_consulta ?? 30,
       estado: 'activo',
       citasMes: 0,
+      invitacionPendiente: false,
     }
   })
 

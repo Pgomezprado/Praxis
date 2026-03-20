@@ -145,6 +145,7 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
       duracionConsulta: u.duracion_consulta ?? form.duracionConsulta,
       estado: u.activo ? 'activo' : 'inactivo',
       citasMes: medicoEditar?.citasMes ?? 0,
+      invitacionPendiente: medicoEditar?.invitacionPendiente ?? true,
     }
     onGuardar(medico)
   }
