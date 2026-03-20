@@ -23,7 +23,7 @@ export default function RecuperarContrasenaPage() {
     setError('')
 
     const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/auth/callback?type=recovery`,
+      redirectTo: `${window.location.origin}/auth/recovery`,
     })
 
     if (authError) {
