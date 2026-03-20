@@ -58,6 +58,17 @@ export async function PUT(req: Request) {
       return Response.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
+    // Validar que el doctor pertenece a la clínica del admin
+    const { data: doctor } = await supabase
+      .from('usuarios')
+      .select('clinica_id')
+      .eq('id', doctor_id)
+      .single()
+
+    if (!doctor || doctor.clinica_id !== me.clinica_id) {
+      return Response.json({ error: 'Médico no pertenece a esta clínica' }, { status: 403 })
+    }
+
     const { data, error } = await supabase
       .from('horarios')
       .upsert(

@@ -7,11 +7,12 @@ import type { CitaPaciente } from '@/components/paciente/HistorialCitas'
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const { data } = await supabase
-    .from('pacientes')
-    .select('nombre')
-    .eq('id', id)
-    .single()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { title: 'Paciente' }
+  const { data: me } = await supabase.from('usuarios').select('clinica_id').eq('id', user.id).single()
+  const clinicaId = (me as { clinica_id: string } | null)?.clinica_id
+  if (!clinicaId) return { title: 'Paciente' }
+  const { data } = await supabase.from('pacientes').select('nombre').eq('id', id).eq('clinica_id', clinicaId).single()
   return { title: data ? `${data.nombre} — Praxis` : 'Paciente' }
 }
 
@@ -27,14 +28,34 @@ export default async function MedicoPacientePage({
 
   const supabase = await createClient()
 
-  // Cargar paciente
+  // Validar sesión y obtener clinica_id del médico
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) notFound()
+
+  const { data: meData } = await supabase.from('usuarios').select('clinica_id').eq('id', user.id).single()
+  const clinicaId = (meData as { clinica_id: string } | null)?.clinica_id
+  if (!clinicaId) notFound()
+
+  // Cargar paciente — filtrado por clinica_id del médico autenticado
   const { data: pacienteDb } = await supabase
     .from('pacientes')
     .select('*')
     .eq('id', id)
+    .eq('clinica_id', clinicaId)
+    .eq('activo', true)
     .single()
 
   if (!pacienteDb) notFound()
+
+  // Registrar acceso en audit_log (Decreto 41 MINSAL)
+  if (user) {
+    await supabase.from('audit_log').insert({
+      usuario_id: user.id,
+      paciente_id: pacienteDb.id,
+      clinica_id: pacienteDb.clinica_id,
+      accion: 'ficha_vista_medico',
+    })
+  }
 
   // Cargar cita actual si viene en query param
   let citaContext = null
@@ -43,6 +64,7 @@ export default async function MedicoPacientePage({
       .from('citas')
       .select('id, folio, hora_inicio, hora_fin, motivo, tipo')
       .eq('id', citaId)
+      .eq('clinica_id', clinicaId)
       .single()
     if (citaDb) {
       citaContext = {
@@ -64,6 +86,7 @@ export default async function MedicoPacientePage({
       doctor:usuarios ( nombre, especialidad )
     `)
     .eq('paciente_id', id)
+    .eq('clinica_id', clinicaId)
     .order('fecha', { ascending: false })
 
   // Mapear paciente al shape que espera PacienteConsultaClient
@@ -104,6 +127,7 @@ export default async function MedicoPacientePage({
     .from('citas')
     .select('id, folio, fecha, hora_inicio, estado, motivo, doctor:usuarios!citas_doctor_id_fkey(nombre, especialidad)')
     .eq('paciente_id', id)
+    .eq('clinica_id', clinicaId)
     .order('fecha', { ascending: false })
     .limit(30)
 

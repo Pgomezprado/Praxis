@@ -5,14 +5,18 @@ import { ResumenIA } from '@/components/paciente/ResumenIA'
 import { AlergiasBadges } from '@/components/paciente/AlergiasBadges'
 import { HistorialConsultas } from '@/components/paciente/HistorialConsultas'
 import { HistorialCitas } from '@/components/paciente/HistorialCitas'
-import { FormConsulta } from '@/components/consulta/FormConsulta'
 import type { Consulta } from '@/types/database'
 import type { CitaPaciente } from '@/components/paciente/HistorialCitas'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-  const { data } = await supabase.from('pacientes').select('nombre').eq('id', id).single()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { title: 'Paciente' }
+  const { data: me } = await supabase.from('usuarios').select('clinica_id').eq('id', user.id).single()
+  const clinicaId = (me as { clinica_id: string } | null)?.clinica_id
+  if (!clinicaId) return { title: 'Paciente' }
+  const { data } = await supabase.from('pacientes').select('nombre').eq('id', id).eq('clinica_id', clinicaId).single()
   const nombre = (data as { nombre: string } | null)?.nombre
   return { title: nombre ? `${nombre} — Praxis` : 'Paciente' }
 }
@@ -21,10 +25,18 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
   const { id } = await params
   const supabase = await createClient()
 
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) notFound()
+
+  const { data: meData } = await supabase.from('usuarios').select('clinica_id').eq('id', user!.id).single()
+  const clinicaId = (meData as { clinica_id: string } | null)?.clinica_id
+  if (!clinicaId) notFound()
+
   const { data: paciente } = await supabase
     .from('pacientes')
     .select('*')
     .eq('id', id)
+    .eq('clinica_id', clinicaId)
     .eq('activo', true)
     .single()
 
@@ -35,24 +47,25 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
       .from('consultas')
       .select('*, doctor:usuarios(nombre, especialidad)')
       .eq('paciente_id', id)
+      .eq('clinica_id', clinicaId)
       .order('fecha', { ascending: false })
       .limit(20),
     supabase
       .from('citas')
       .select('id, folio, fecha, hora_inicio, estado, motivo, doctor:usuarios!citas_doctor_id_fkey(nombre, especialidad)')
       .eq('paciente_id', id)
+      .eq('clinica_id', clinicaId)
       .order('fecha', { ascending: false })
       .limit(30),
   ])
 
-  // Registrar acceso en audit_log
-  const { data: { user } } = await supabase.auth.getUser()
+  // Registrar acceso en audit_log (Decreto 41 MINSAL)
   if (user) {
     await supabase.from('audit_log').insert({
       usuario_id: user.id,
       paciente_id: paciente.id,
       clinica_id: paciente.clinica_id,
-      accion: 'perfil_visto',
+      accion: 'ficha_vista_recepcionista',
     })
   }
 
@@ -71,8 +84,8 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
         </div>
       </div>
 
-      {/* Layout de 3 columnas */}
-      <div className="grid grid-cols-[280px_1fr_320px] gap-6 items-start">
+      {/* Layout de 2 columnas — recepcionista no tiene acceso al formulario de consulta */}
+      <div className="grid grid-cols-[280px_1fr] gap-6 items-start">
 
         {/* COLUMNA IZQUIERDA — Alergias y condiciones (siempre visible) */}
         <aside className="space-y-5 sticky top-6">
@@ -103,7 +116,16 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
         {/* COLUMNA CENTRAL — Resumen IA + historial */}
         <div className="space-y-6">
           {/* Resumen IA — siempre lo primero */}
-          <ResumenIA pacienteId={paciente.id} />
+          <ResumenIA
+            pacienteId={paciente.id}
+            alergias={(paciente as unknown as { alergias?: string[] }).alergias ?? []}
+            condiciones={(paciente as unknown as { condiciones?: string[] }).condiciones ?? []}
+            ultimaConsulta={consultas?.[0] ? {
+              fecha: formatFecha((consultas[0] as unknown as { fecha: string }).fecha),
+              motivo: (consultas[0] as unknown as { motivo: string }).motivo,
+              diagnostico: (consultas[0] as unknown as { diagnostico?: string }).diagnostico,
+            } : null}
+          />
 
           {/* Historial de citas */}
           <div>
@@ -124,11 +146,6 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
             <HistorialConsultas consultas={(consultas as Consulta[]) ?? []} />
           </div>
         </div>
-
-        {/* COLUMNA DERECHA — Formulario siempre visible */}
-        <aside className="sticky top-6">
-          <FormConsulta pacienteId={paciente.id} />
-        </aside>
 
       </div>
     </div>

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { MoreVertical, XCircle, PlayCircle, CheckCircle2, Loader2, CheckCheck, FileText } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
-import type { MockCita } from '@/lib/mock-data'
+import type { MockCita } from '@/types/domain'
 
 interface CitaCardProps {
   cita: MockCita

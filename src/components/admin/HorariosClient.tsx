@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Copy, Save, ChevronDown } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
-import type { HorarioSemanal, ConfigDia, MockMedicoAdmin } from '@/lib/mock-data'
+import type { HorarioSemanal, ConfigDia, MockMedicoAdmin } from '@/types/domain'
 
 const DIAS = [
   { key: 'lunes',     label: 'Lunes',     short: 'Lun' },

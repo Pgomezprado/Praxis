@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { calcularEdad } from '@/lib/utils/formatters'
-import type { Prevision, MockPacienteAdmin } from '@/lib/mock-data'
+import type { Prevision, MockPacienteAdmin } from '@/types/domain'
 
 // Simula el mapeo que hace /admin/pacientes/page.tsx con datos de Supabase
 

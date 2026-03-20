@@ -65,7 +65,20 @@ export function BuscarMedicoClient({ medicos }: BuscarMedicoClientProps) {
 
       {filtrados.length === 0 ? (
         <div className="text-center py-12 text-slate-400">
-          <p className="text-base">No se encontraron médicos con ese criterio.</p>
+          {medicos.length === 0 ? (
+            <>
+              <p className="text-base font-medium text-slate-600">No hay médicos disponibles en este momento.</p>
+              <p className="text-sm mt-2">Contacta a la clínica para agendar tu hora.</p>
+              <a
+                href="tel:+56993589027"
+                className="inline-block mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-xl hover:bg-blue-700 transition-colors"
+              >
+                Llamar a la clínica
+              </a>
+            </>
+          ) : (
+            <p className="text-base">No se encontraron médicos con ese criterio.</p>
+          )}
         </div>
       ) : (
         <div className="space-y-3">

@@ -10,7 +10,7 @@ export default async function AdminAgendaPage({
   searchParams: Promise<{ medico?: string; fecha?: string }>
 }) {
   const params = await searchParams
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
   const fecha = params.fecha ?? today
   const medicoId = params.medico ?? ''
 

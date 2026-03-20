@@ -141,7 +141,7 @@ lib/
 //   recepcionista → /inicio
 ```
 
-**Importante:** usa `getSession()` (no `getUser()`) para evitar pantallas en blanco con tokens expirados.
+**Importante:** usa `getUser()` (no `getSession()`) — valida el JWT contra el servidor de auth, previniendo sesiones falsificadas.
 
 ---
 

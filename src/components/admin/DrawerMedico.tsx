@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { X, Send, ChevronDown } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
-import { type MockMedicoAdmin } from '@/lib/mock-data'
+import { type MockMedicoAdmin } from '@/types/domain'
 import { type Especialidad } from '@/types/database'
 import { validarRut, formatearRut } from '@/lib/agendamiento'
 

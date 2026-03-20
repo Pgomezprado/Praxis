@@ -28,11 +28,13 @@ export type Medico = {
   proximaDisponibilidad: string
 }
 
-// Genera un folio único tipo PRX-2024-0042
+// Genera un folio único tipo PRX-2026-A1B2C3
+// Usa timestamp en base36 + aleatoriedad para evitar colisiones incluso con alto volumen
 export function generarFolio(): string {
   const anio = new Date().getFullYear()
-  const num = Math.floor(Math.random() * 9000) + 1000
-  return `PRX-${anio}-${num}`
+  const ts = Date.now().toString(36).toUpperCase().slice(-4) // últimos 4 chars del timestamp base36
+  const rand = Math.floor(Math.random() * 1296).toString(36).toUpperCase().padStart(2, '0') // 2 chars base36
+  return `PRX-${anio}-${ts}${rand}`
 }
 
 // Genera slots de 30 min entre hora inicio y fin para una fecha

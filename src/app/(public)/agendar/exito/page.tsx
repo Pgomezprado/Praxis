@@ -52,6 +52,9 @@ function ExitoContent() {
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Resumen de tu cita</p>
           <span className="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded-lg">{folio}</span>
         </div>
+        <p className="text-xs text-slate-500 mt-1">
+          Guarda este folio como comprobante en caso de que el email no llegue.
+        </p>
 
         <div className="space-y-3">
           <div className="flex items-start gap-3">

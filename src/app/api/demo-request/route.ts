@@ -1,4 +1,9 @@
 import { NextResponse } from 'next/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+// Rate limiting: máx. 3 solicitudes de demo por email por hora (serverless-safe, basado en DB)
+const DEMO_RATE_LIMIT = 3
+const DEMO_WINDOW_MS  = 60 * 60 * 1000 // 1 hora
 
 interface DemoRequest {
   nombre: string
@@ -14,6 +19,41 @@ export async function POST(request: Request) {
 
     if (!nombre || !clinica || !email || !telefono) {
       return NextResponse.json({ error: 'Todos los campos son requeridos' }, { status: 400 })
+    }
+
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!EMAIL_REGEX.test(email)) {
+      return NextResponse.json({ error: 'Email inválido.' }, { status: 400 })
+    }
+    if (nombre?.length > 100 || clinica?.length > 100 || telefono?.length > 30) {
+      return NextResponse.json({ error: 'Datos demasiado largos.' }, { status: 400 })
+    }
+
+    const supabase = createAdminClient()
+
+    // Rate limiting por email: contar solicitudes recientes en DB (serverless-safe)
+    const windowStart = new Date(Date.now() - DEMO_WINDOW_MS).toISOString()
+    const { count: recentCount } = await supabase
+      .from('demo_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('email', email)
+      .gte('created_at', windowStart)
+
+    if ((recentCount ?? 0) >= DEMO_RATE_LIMIT) {
+      return NextResponse.json(
+        { error: 'Has alcanzado el límite de solicitudes por hora. Intenta más tarde.' },
+        { status: 429 }
+      )
+    }
+
+    // Persistir solicitud en DB
+    const { error: dbError } = await supabase
+      .from('demo_requests')
+      .insert({ nombre, clinica, email, telefono })
+
+    if (dbError) {
+      console.error('Error al persistir solicitud de demo:', dbError)
+      return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
     }
 
     // TODO: Integrar Resend cuando esté configurado

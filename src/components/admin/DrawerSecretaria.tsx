@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { X, Check, Mail } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
-import { type MockSecretaria, type MockMedicoAdmin } from '@/lib/mock-data'
+import { type MockSecretaria, type MockMedicoAdmin } from '@/types/domain'
 import { validarRut, formatearRut } from '@/lib/agendamiento'
 
 type FormData = {

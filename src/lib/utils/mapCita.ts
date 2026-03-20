@@ -1,4 +1,4 @@
-import type { MockCita } from '@/lib/mock-data'
+import type { MockCita } from '@/types/domain'
 
 type CitaDb = {
   id: string

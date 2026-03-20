@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { ChevronLeft, ChevronRight, List, CalendarRange, Plus } from 'lucide-react'
-import type { MockCita } from '@/lib/mock-data'
+import type { MockCita } from '@/types/domain'
 
 interface AgendaToolbarProps {
   citas: MockCita[]

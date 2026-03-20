@@ -66,10 +66,10 @@ export function Footer() {
             <div>
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-4">Legal</p>
               <div className="space-y-2.5">
-                <Link href="#" className="block text-sm text-slate-400 hover:text-white transition-colors">
+                <Link href="/privacidad" className="block text-sm text-slate-400 hover:text-white transition-colors">
                   Política de privacidad
                 </Link>
-                <Link href="#" className="block text-sm text-slate-400 hover:text-white transition-colors">
+                <Link href="/terminos" className="block text-sm text-slate-400 hover:text-white transition-colors">
                   Términos de uso
                 </Link>
                 <Link href="/login" className="block text-sm text-slate-400 hover:text-white transition-colors">

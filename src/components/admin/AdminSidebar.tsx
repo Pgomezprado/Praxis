@@ -14,6 +14,7 @@ import {
   Settings,
   LogOut,
   ShieldCheck,
+  CalendarDays,
 } from 'lucide-react'
 
 const navItems = [
@@ -33,6 +34,8 @@ export function AdminSidebar() {
 
   const [clinicaNombre, setClinicaNombre] = useState('')
   const [userEmail, setUserEmail] = useState('')
+  const [userNombre, setUserNombre] = useState('')
+  const [esDoctor, setEsDoctor] = useState(false)
 
   useEffect(() => {
     async function loadData() {
@@ -41,13 +44,16 @@ export function AdminSidebar() {
       setUserEmail(user.email ?? '')
       const { data: me } = await supabase
         .from('usuarios')
-        .select('clinica_id, clinicas(nombre)')
+        .select('nombre, clinica_id, es_doctor, clinicas(nombre)')
         .eq('id', user.id)
         .single()
       if (me?.clinicas) {
         const c = me.clinicas as { nombre: string } | { nombre: string }[]
         setClinicaNombre(Array.isArray(c) ? c[0]?.nombre : c.nombre)
       }
+      const meTyped = me as { nombre?: string; es_doctor?: boolean } | null
+      if (meTyped?.nombre) setUserNombre(meTyped.nombre)
+      if (meTyped?.es_doctor) setEsDoctor(true)
     }
     loadData()
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -109,17 +115,26 @@ export function AdminSidebar() {
         })}
       </nav>
 
-      {/* Footer: usuario + logout */}
+      {/* Footer: usuario + switcher + logout */}
       <div className="p-3 border-t border-slate-700/60 space-y-0.5">
         <div className="flex items-center gap-3 px-3 py-2.5">
           <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-            A
+            {userNombre ? userNombre.charAt(0).toUpperCase() : 'A'}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-white truncate">Administrador</p>
+            <p className="text-sm font-medium text-white truncate">{userNombre || 'Administrador'}</p>
             <p className="text-xs text-slate-400 truncate">{userEmail || '…'}</p>
           </div>
         </div>
+        {esDoctor && (
+          <Link
+            href="/medico/inicio"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-emerald-400 hover:bg-slate-800 hover:text-emerald-300 transition-colors"
+          >
+            <CalendarDays className="w-4 h-4 flex-shrink-0" />
+            Mi agenda médica
+          </Link>
+        )}
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"

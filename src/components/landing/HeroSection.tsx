@@ -5,10 +5,10 @@ import { MessageCircle, ArrowRight, ShieldCheck, Zap, Clock } from 'lucide-react
 const WA_URL = 'https://wa.me/+56993589027'
 
 const STATS = [
-  { value: '12+',    label: 'Clínicas activas' },
-  { value: '2.400',  label: 'Consultas/mes' },
-  { value: '4.9★',   label: 'Satisfacción' },
-  { value: '< 1 día', label: 'Tiempo de setup' },
+  { value: '< 1 día',    label: 'Setup y capacitación' },
+  { value: '24/7',       label: 'Agenda online para pacientes' },
+  { value: 'IA',         label: 'Resumen pre-consulta automático' },
+  { value: 'Sin contrato', label: 'Cancela cuando quieras' },
 ]
 
 export function HeroSection() {

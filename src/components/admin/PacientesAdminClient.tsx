@@ -5,7 +5,7 @@ import { Plus, Search, Upload, Eye, Pencil, PowerOff, ChevronUp, ChevronDown } f
 import { useRouter } from 'next/navigation'
 import { Avatar } from '@/components/ui/Avatar'
 import { DrawerPaciente } from './DrawerPaciente'
-import { type MockPacienteAdmin, type Prevision } from '@/lib/mock-data'
+import { type MockPacienteAdmin, type Prevision } from '@/types/domain'
 
 const PREVISIONES: Prevision[] = [
   'Fonasa A', 'Fonasa B', 'Fonasa C', 'Fonasa D',

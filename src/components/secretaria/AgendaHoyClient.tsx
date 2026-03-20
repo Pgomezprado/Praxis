@@ -5,7 +5,7 @@ import { CheckCircle2 } from 'lucide-react'
 import { AgendaToolbar } from './AgendaToolbar'
 import { ListaDia } from './ListaDia'
 import { ModalNuevaCita } from './ModalNuevaCita'
-import type { MockCita } from '@/lib/mock-data'
+import type { MockCita } from '@/types/domain'
 
 interface AgendaHoyClientProps {
   citasIniciales: MockCita[]
@@ -33,6 +33,7 @@ export function AgendaHoyClient({
   esDoctor = false,
 }: AgendaHoyClientProps) {
   const [modalOpen, setModalOpen] = useState(false)
+  const [horaPreseleccionada, setHoraPreseleccionada] = useState<string | undefined>(undefined)
   const [citasLocales, setCitasLocales] = useState<MockCita[]>(citasIniciales)
   const [toast, setToast] = useState<Toast | null>(null)
 
@@ -61,14 +62,20 @@ export function AgendaHoyClient({
       <AgendaToolbar
         citas={todasCitas}
         medicos={medicos}
-        onNuevaCita={() => setModalOpen(true)}
+        onNuevaCita={() => { setHoraPreseleccionada(undefined); setModalOpen(true) }}
         listPath={listPath}
         semanaPath={semanaPath}
         hideMedicoFilter={hideMedicoFilter}
       />
 
       <div className="max-w-[720px] mx-auto px-4 py-6">
-        <ListaDia citas={citasLocales} showMedico={!medicoId} esDoctor={esDoctor} onEstadoCambiado={handleEstadoCambiado} />
+        <ListaDia
+          citas={citasLocales}
+          showMedico={!medicoId}
+          esDoctor={esDoctor}
+          onEstadoCambiado={handleEstadoCambiado}
+          onNuevaCita={(hora) => { setHoraPreseleccionada(hora); setModalOpen(true) }}
+        />
       </div>
 
       <ModalNuevaCita
@@ -78,6 +85,7 @@ export function AgendaHoyClient({
         medicos={medicos}
         fechaInicial={fecha}
         medicoIdInicial={medicoId || undefined}
+        horaInicial={horaPreseleccionada}
       />
 
       {/* Toast */}

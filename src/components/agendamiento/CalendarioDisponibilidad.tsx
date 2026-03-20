@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface CalendarioDisponibilidadProps {
@@ -23,9 +23,17 @@ export function CalendarioDisponibilidad({
 }: CalendarioDisponibilidadProps) {
   const hoy = new Date()
   const [mesVista, setMesVista] = useState(new Date(hoy.getFullYear(), hoy.getMonth(), 1))
+  const slotsRef = useRef<HTMLDivElement>(null)
 
   const anio = mesVista.getFullYear()
   const mes = mesVista.getMonth()
+  const esHoy = anio === hoy.getFullYear() && mes === hoy.getMonth()
+
+  useEffect(() => {
+    if (fechaSeleccionada && slotsRef.current) {
+      slotsRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [fechaSeleccionada])
   const primerDia = new Date(anio, mes, 1).getDay()
   const diasEnMes = new Date(anio, mes + 1, 0).getDate()
 
@@ -50,8 +58,9 @@ export function CalendarioDisponibilidad({
       {/* Cabecera del mes */}
       <div className="flex items-center justify-between mb-4">
         <button
-          onClick={() => setMesVista(new Date(anio, mes - 1, 1))}
-          className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+          onClick={() => !esHoy && setMesVista(new Date(anio, mes - 1, 1))}
+          disabled={esHoy}
+          className={`p-2 rounded-lg transition-colors ${esHoy ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-100'}`}
         >
           <ChevronLeft className="w-4 h-4 text-slate-600" />
         </button>
@@ -107,7 +116,7 @@ export function CalendarioDisponibilidad({
 
       {/* Slots de hora */}
       {fechaSeleccionada && horasDelDia.length > 0 && (
-        <div className="mt-6">
+        <div ref={slotsRef} className="mt-6">
           <p className="text-sm font-semibold text-slate-700 mb-3">
             Horas disponibles —{' '}
             {new Date(fechaSeleccionada + 'T12:00:00').toLocaleDateString('es-CL', {

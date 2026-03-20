@@ -25,6 +25,8 @@ export function StepIndicator({ pasoActual }: StepIndicatorProps) {
                 className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
                   completado
                     ? 'bg-blue-600 text-white'
+                    : activo && paso.num === 4
+                    ? 'bg-emerald-500 text-white ring-4 ring-emerald-100'
                     : activo
                     ? 'bg-blue-600 text-white ring-4 ring-blue-100'
                     : 'bg-slate-200 text-slate-500'

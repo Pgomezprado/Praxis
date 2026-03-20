@@ -4,12 +4,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { LayoutDashboard, CalendarDays, LogOut, Stethoscope } from 'lucide-react'
+import { LayoutDashboard, CalendarDays, LogOut, Stethoscope, ShieldCheck } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 
 interface MedicoSidebarProps {
   nombre?: string
   especialidad?: string
+  esAdmin?: boolean
 }
 
 const navItems = [
@@ -17,7 +18,7 @@ const navItems = [
   { href: '/medico/citas',  label: 'Mis citas',  icon: CalendarDays,    exact: false },
 ]
 
-export function MedicoSidebar({ nombre = '', especialidad = '' }: MedicoSidebarProps) {
+export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false }: MedicoSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -78,8 +79,17 @@ export function MedicoSidebar({ nombre = '', especialidad = '' }: MedicoSidebarP
         })}
       </nav>
 
-      {/* Logout */}
-      <div className="p-3 border-t border-slate-700/60">
+      {/* Footer: switcher + logout */}
+      <div className="p-3 border-t border-slate-700/60 space-y-0.5">
+        {esAdmin && (
+          <Link
+            href="/admin"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-amber-400 hover:bg-slate-800 hover:text-amber-300 transition-colors"
+          >
+            <ShieldCheck className="w-4 h-4 flex-shrink-0" />
+            Panel de administración
+          </Link>
+        )}
         <button
           onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"

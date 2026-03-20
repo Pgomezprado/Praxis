@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Search, Plus, Pencil, PowerOff } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { DrawerSecretaria } from './DrawerSecretaria'
-import { type MockSecretaria, type MockMedicoAdmin } from '@/lib/mock-data'
+import { type MockSecretaria, type MockMedicoAdmin } from '@/types/domain'
 
 type Props = {
   secretariasIniciales: MockSecretaria[]

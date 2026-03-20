@@ -3,20 +3,22 @@ import { createClient } from '@/lib/supabase/server'
 
 export default async function MedicoLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user } } = await supabase.auth.getUser()
 
   let nombre = ''
   let especialidad = ''
+  let esAdmin = false
 
-  if (session?.user) {
+  if (user) {
     const { data: me } = await supabase
       .from('usuarios')
-      .select('nombre, especialidad')
-      .eq('id', session.user.id)
+      .select('nombre, especialidad, rol')
+      .eq('id', user.id)
       .single()
 
-    nombre = (me as { nombre?: string; especialidad?: string } | null)?.nombre ?? ''
-    especialidad = (me as { nombre?: string; especialidad?: string } | null)?.especialidad ?? ''
+    nombre = (me as { nombre?: string; especialidad?: string; rol?: string } | null)?.nombre ?? ''
+    especialidad = (me as { nombre?: string; especialidad?: string; rol?: string } | null)?.especialidad ?? ''
+    esAdmin = (me as { nombre?: string; especialidad?: string; rol?: string } | null)?.rol === 'admin_clinica'
   }
 
   const iniciales = nombre
@@ -25,7 +27,7 @@ export default async function MedicoLayout({ children }: { children: React.React
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
-      <MedicoSidebar nombre={nombre} especialidad={especialidad} />
+      <MedicoSidebar nombre={nombre} especialidad={especialidad} esAdmin={esAdmin} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
           <div />

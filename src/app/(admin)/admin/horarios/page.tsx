@@ -2,8 +2,8 @@ import { Suspense } from 'react'
 import { HorariosClient } from '@/components/admin/HorariosClient'
 import { getClinicsId, getMedicos } from '@/lib/queries/agenda'
 import { createClient } from '@/lib/supabase/server'
-import type { MockMedicoAdmin } from '@/lib/mock-data'
-import type { HorarioSemanal } from '@/lib/mock-data'
+import type { MockMedicoAdmin } from '@/types/domain'
+import type { HorarioSemanal } from '@/types/domain'
 
 export const metadata = { title: 'Horarios — Praxis Admin' }
 

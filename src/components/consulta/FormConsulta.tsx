@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { CheckCircle2 } from 'lucide-react'
 
 const schema = z.object({
   motivo: z.string().min(3, 'Ingresa el motivo de consulta'),
@@ -25,6 +26,7 @@ export function FormConsulta({ pacienteId }: FormConsultaProps) {
   const router = useRouter()
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const {
     register,
@@ -35,6 +37,7 @@ export function FormConsulta({ pacienteId }: FormConsultaProps) {
 
   async function onSubmit(data: FormData) {
     setSaving(true)
+    setError(null)
     try {
       const medicamentosArray = data.medicamentos
         ? data.medicamentos.split(',').map((m) => m.trim()).filter(Boolean)
@@ -56,9 +59,9 @@ export function FormConsulta({ pacienteId }: FormConsultaProps) {
 
       setSaved(true)
       reset()
-      setTimeout(() => router.push('/agenda'), 1200)
+      setTimeout(() => router.push(`/pacientes/${pacienteId}`), 1500)
     } catch {
-      // Manejo silencioso; el botón no quedará en loading
+      setError('No se pudo guardar la consulta. Verifica tu conexión e intenta nuevamente.')
     } finally {
       setSaving(false)
     }
@@ -110,9 +113,22 @@ export function FormConsulta({ pacienteId }: FormConsultaProps) {
           placeholder="Ej: Paracetamol 1g, Ibuprofeno 400mg"
         />
 
+        {saved && (
+          <div className="flex items-center gap-2.5 px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+            <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+            <p className="text-sm font-medium text-emerald-700">Consulta guardada — redirigiendo a la ficha...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="px-3 py-2.5 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+
         <div className="pt-1">
-          <Button type="submit" loading={saving} className="w-full">
-            {saved ? '✓ Guardado — volviendo a agenda...' : 'Guardar y terminar consulta'}
+          <Button type="submit" loading={saving} disabled={saved} className="w-full">
+            Guardar y terminar consulta
           </Button>
         </div>
       </form>

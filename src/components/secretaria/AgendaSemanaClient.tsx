@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, List, CalendarRange, Plus, CheckCircle2 } from 'lucide-react'
 import { ModalNuevaCita } from './ModalNuevaCita'
-import type { MockCita } from '@/lib/mock-data'
+import type { MockCita } from '@/types/domain'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { SecretariasClient } from '@/components/admin/SecretariasClient'
-import { type MockSecretaria, type MockMedicoAdmin } from '@/lib/mock-data'
+import { type MockSecretaria, type MockMedicoAdmin } from '@/types/domain'
 
 export const metadata = { title: 'Secretarias — Praxis Admin' }
 

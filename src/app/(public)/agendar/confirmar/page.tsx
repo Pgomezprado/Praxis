@@ -6,7 +6,7 @@ import { StepIndicator } from '@/components/agendamiento/StepIndicator'
 import { ResumenCita } from '@/components/agendamiento/ResumenCita'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import { validarRut, formatearRut } from '@/lib/agendamiento'
 
@@ -27,6 +27,8 @@ function ConfirmarForm() {
   const [motivo, setMotivo] = useState('')
   const [primeraConsulta, setPrimeraConsulta] = useState(false)
   const [recordatorioSms, setRecordatorioSms] = useState(false)
+  const [consentimientoDatos, setConsentimientoDatos] = useState(false)
+  const [consentimientoIa, setConsentimientoIa] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errores, setErrores] = useState<Record<string, string>>({})
 
@@ -42,6 +44,7 @@ function ConfirmarForm() {
     if (!email.trim() || !email.includes('@')) e.email = 'Ingresa un email válido'
     if (!telefono.trim()) e.telefono = 'Ingresa tu teléfono'
     if (!motivo.trim()) e.motivo = 'Describe el motivo de tu consulta'
+    if (!consentimientoDatos) e.consentimientoDatos = 'Debes aceptar el tratamiento de tus datos para continuar'
     setErrores(e)
     return Object.keys(e).length === 0
   }
@@ -65,6 +68,8 @@ function ConfirmarForm() {
           telefono,
           motivo,
           tipo: primeraConsulta ? 'primera_consulta' : 'control',
+          consentimientoDatos,
+          consentimientoIa,
         }),
       })
       const data = await res.json()
@@ -108,6 +113,14 @@ function ConfirmarForm() {
         className="mb-6"
       />
 
+      {/* Aviso de creación de ficha */}
+      <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4">
+        <ShieldCheck className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+        <p className="text-xs text-blue-700 leading-relaxed">
+          Al confirmar tu cita, se creará tu ficha de atención en esta clínica. Tienes derecho a acceder y solicitar la corrección de tus datos en cualquier momento.
+        </p>
+      </div>
+
       <form onSubmit={handleSubmit} className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
         <h2 className="text-base font-semibold text-slate-800 mb-1">Tus datos</h2>
 
@@ -117,6 +130,7 @@ function ConfirmarForm() {
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           error={errores.nombre}
+          maxLength={150}
         />
         <Input
           label="RUT"
@@ -133,6 +147,7 @@ function ConfirmarForm() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           error={errores.email}
+          maxLength={100}
         />
         <Input
           label="Teléfono"
@@ -141,6 +156,7 @@ function ConfirmarForm() {
           value={telefono}
           onChange={(e) => setTelefono(e.target.value)}
           error={errores.telefono}
+          maxLength={20}
         />
         <div>
           <label className="text-sm font-medium text-slate-700 block mb-1.5">Motivo de consulta</label>
@@ -149,6 +165,7 @@ function ConfirmarForm() {
             placeholder="Describe brevemente por qué agendas esta consulta..."
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
+            maxLength={500}
             className={`w-full px-3 py-2.5 text-base border rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-transparent resize-none ${
               errores.motivo ? 'border-red-400 focus:ring-red-400' : 'border-slate-300 focus:ring-blue-500'
             }`}
@@ -174,6 +191,41 @@ function ConfirmarForm() {
               className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
             <span className="text-sm text-slate-700">Acepto recibir recordatorio por SMS</span>
+          </label>
+        </div>
+
+        {/* Consentimientos */}
+        <div className="space-y-3 pt-2 border-t border-slate-100">
+          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Consentimientos</p>
+          <div>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={consentimientoDatos}
+                onChange={(e) => setConsentimientoDatos(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-slate-700">
+                Autorizo que mis datos personales sean usados para gestionar mi atención médica, conforme a la{' '}
+                <Link href="/privacidad" target="_blank" className="text-blue-600 underline">Política de Privacidad</Link>.
+              </span>
+            </label>
+            {errores.consentimientoDatos && (
+              <p className="text-xs text-red-600 mt-1 ml-7">{errores.consentimientoDatos}</p>
+            )}
+          </div>
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={consentimientoIa}
+              onChange={(e) => setConsentimientoIa(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className="text-sm text-slate-600">
+              <span className="text-xs font-medium text-slate-400 mr-1">(opcional)</span>
+              Autorizo el uso de inteligencia artificial para generar resúmenes de mis consultas, con el fin de apoyar la atención médica.{' '}
+              <Link href="/privacidad#ia" target="_blank" className="text-blue-600 underline">Saber más</Link>.
+            </span>
           </label>
         </div>
 

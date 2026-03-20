@@ -7,7 +7,7 @@ import { CalendarioDisponibilidad } from './CalendarioDisponibilidad'
 import { ResumenCita } from './ResumenCita'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import type { SlotDisponible } from '@/lib/agendamiento'
 
@@ -24,6 +24,7 @@ export function ElegirHoraClient({ medico, fechasDisponibles }: ElegirHoraClient
   const [horaSeleccionada, setHoraSeleccionada] = useState<string | null>(null)
   const [slots, setSlots] = useState<Record<string, string[]>>({})
   const [loadingSlots, setLoadingSlots] = useState(false)
+  const [errorSlots, setErrorSlots] = useState(false)
 
   // Cargar slots reales al seleccionar una fecha
   useEffect(() => {
@@ -31,6 +32,7 @@ export function ElegirHoraClient({ medico, fechasDisponibles }: ElegirHoraClient
     if (slots[fechaSeleccionada]) return // ya cargados
 
     setLoadingSlots(true)
+    setErrorSlots(false)
     fetch(`/api/public/disponibilidad/${medico.id}?fecha=${fechaSeleccionada}`)
       .then(r => r.json())
       .then((data: { slots: SlotDisponible[] }) => {
@@ -41,7 +43,7 @@ export function ElegirHoraClient({ medico, fechasDisponibles }: ElegirHoraClient
             .map((s: SlotDisponible) => s.hora),
         }))
       })
-      .catch(() => {})
+      .catch(() => { setErrorSlots(true) })
       .finally(() => setLoadingSlots(false))
   }, [fechaSeleccionada, medico.id, slots])
 
@@ -86,7 +88,15 @@ export function ElegirHoraClient({ medico, fechasDisponibles }: ElegirHoraClient
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl border border-slate-200 p-5">
             {loadingSlots && (
-              <p className="text-xs text-slate-400 text-center mb-3">Cargando horarios…</p>
+              <div className="flex items-center justify-center gap-2 text-sm text-slate-400 mb-3">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Cargando horarios…</span>
+              </div>
+            )}
+            {errorSlots && (
+              <p className="text-sm text-red-500 text-center mb-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                Error al cargar los horarios disponibles. Por favor intenta nuevamente.
+              </p>
             )}
             <CalendarioDisponibilidad
               fechasDisponibles={fechasDisponibles}
@@ -113,6 +123,9 @@ export function ElegirHoraClient({ medico, fechasDisponibles }: ElegirHoraClient
           >
             Continuar →
           </Button>
+          {fechaSeleccionada && !horaSeleccionada && (
+            <p className="text-xs text-center text-slate-400 mt-2">Elige una hora para continuar</p>
+          )}
         </div>
       </div>
     </div>

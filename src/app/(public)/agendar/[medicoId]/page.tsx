@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ElegirHoraClient } from '@/components/agendamiento/ElegirHoraClient'
-import type { HorarioSemanal } from '@/lib/mock-data'
+import type { HorarioSemanal } from '@/types/domain'
 
 export default async function ElegirHoraPage({
   params,
@@ -45,21 +45,21 @@ export default async function ElegirHoraPage({
     }
   }
 
-  // Si no tiene horario configurado, mostrar los próximos 30 días hábiles
-  const diasParaMostrar = fechasDisponibles.length > 0
-    ? fechasDisponibles
-    : Array.from({ length: 30 }, (_, i) => {
-        const d = new Date(hoy)
-        d.setDate(hoy.getDate() + i + 1)
-        const day = d.getDay()
-        return day !== 0 && day !== 6 ? d.toISOString().split('T')[0] : null
-      }).filter(Boolean) as string[]
+  // Si no tiene horario configurado, mostrar aviso en lugar de calendario vacío
+  if (fechasDisponibles.length === 0) {
+    return (
+      <div className="text-center py-16 px-4">
+        <p className="text-slate-500 text-base">Este médico no tiene horarios disponibles en este momento.</p>
+        <p className="text-slate-400 text-sm mt-2">Comunícate directamente con la clínica para agendar tu cita.</p>
+      </div>
+    )
+  }
 
   return (
     <Suspense>
       <ElegirHoraClient
         medico={{ id: medico.id, nombre: medico.nombre, especialidad: medico.especialidad ?? '' }}
-        fechasDisponibles={diasParaMostrar}
+        fechasDisponibles={fechasDisponibles}
       />
     </Suspense>
   )

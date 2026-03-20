@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { PacientesAdminClient } from '@/components/admin/PacientesAdminClient'
-import { type MockPacienteAdmin, type Prevision } from '@/lib/mock-data'
+import { type MockPacienteAdmin, type Prevision } from '@/types/domain'
 import { calcularEdad } from '@/lib/utils/formatters'
 
 export const metadata = { title: 'Pacientes — Praxis Admin' }

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Search, ChevronDown, Plus, ArrowRight, Pencil, PowerOff } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { DrawerMedico } from './DrawerMedico'
-import { type MockMedicoAdmin } from '@/lib/mock-data'
+import { type MockMedicoAdmin } from '@/types/domain'
 import { type Especialidad } from '@/types/database'
 
 type Props = {

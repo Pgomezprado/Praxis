@@ -32,6 +32,8 @@ export interface Usuario {
   telefono: string | null
   duracion_consulta: number
   medicos_asignados: string[]
+  // Campo agregado en migración 009
+  es_doctor: boolean
 }
 
 export interface Paciente {

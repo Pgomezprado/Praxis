@@ -57,11 +57,16 @@ export function HistorialCitas({ citas }: HistorialCitasProps) {
   )
 }
 
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+
+function formatFecha(fecha: string) {
+  const [year, month, day] = fecha.split('-')
+  return `${parseInt(day)} ${MESES[parseInt(month) - 1]} ${year}`
+}
+
 function CitaRow({ cita }: { cita: CitaPaciente }) {
   const badge = ESTADO_LABELS[cita.estado] ?? { label: cita.estado, color: 'bg-slate-100 text-slate-600 border-slate-200' }
-  const fechaStr = new Date(cita.fecha + 'T12:00:00').toLocaleDateString('es-CL', {
-    day: 'numeric', month: 'short', year: 'numeric',
-  })
+  const fechaStr = formatFecha(cita.fecha)
 
   return (
     <div className="flex items-start gap-3 bg-white border border-slate-200 rounded-xl p-4">

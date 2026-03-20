@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { SecretariaDashboard } from '@/components/secretaria/SecretariaDashboard'
 import { getCitasByFecha, getClinicsId } from '@/lib/queries/agenda'
-import type { EstadoMedicoHoy, MockMedicoAdmin } from '@/lib/mock-data'
+import type { EstadoMedicoHoy, MockMedicoAdmin } from '@/types/domain'
 
 export const metadata = { title: 'Inicio — Praxis' }
 
@@ -13,10 +13,17 @@ function getEstadoHoy(citasDoctor: { estado: string }[]): EstadoMedicoHoy {
 
 export default async function InicioPage() {
   const me = await getClinicsId()
-  if (!me) return null
+  if (!me) return (
+    <div className="max-w-3xl mx-auto px-4 py-12">
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-red-800">
+        <p className="font-medium">Sesión no encontrada</p>
+        <p className="text-sm mt-1">No se pudo cargar tu sesión. Por favor, inicia sesión nuevamente.</p>
+      </div>
+    </div>
+  )
 
   const supabase = await createClient()
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 
   const [citasHoy, { data: medicos }, { data: clinica }] = await Promise.all([
     getCitasByFecha(me.clinica_id, today),
@@ -53,7 +60,7 @@ export default async function InicioPage() {
       clinicaId: me.clinica_id,
       nombre: m.nombre,
       rut: m.rut ?? '',
-      especialidadId: 'e1',
+      especialidadId: '',
       especialidad: m.especialidad ?? '',
       email: m.email ?? '',
       telefono: m.telefono ?? '',
@@ -65,12 +72,19 @@ export default async function InicioPage() {
     return { ...medicoAdmin, estadoHoy, proximaCita }
   })
 
+  const medicosSimples = (medicos ?? []).map(m => ({
+    id: m.id,
+    nombre: m.nombre,
+    especialidad: m.especialidad ?? '',
+  }))
+
   return (
     <SecretariaDashboard
       kpis={kpis}
       proximasCitas={proximasCitas}
       equipo={equipo}
       clinicaNombre={clinica?.nombre ?? ''}
+      medicos={medicosSimples}
     />
   )
 }

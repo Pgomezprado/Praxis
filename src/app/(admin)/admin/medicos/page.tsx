@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { MedicosClient } from '@/components/admin/MedicosClient'
-import { type MockMedicoAdmin } from '@/lib/mock-data'
+import { type MockMedicoAdmin } from '@/types/domain'
 import { type Especialidad } from '@/types/database'
 
 export const metadata = { title: 'Médicos — Praxis Admin' }
@@ -17,9 +17,9 @@ export default async function AdminMedicosPage() {
 
   const clinicaId = (me as { clinica_id: string } | null)?.clinica_id
 
-  const inicioMes = new Date()
-  inicioMes.setDate(1)
-  const inicioMesStr = inicioMes.toISOString().split('T')[0]
+  const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
+  const [ym_year, ym_month] = todayStr.split('-')
+  const inicioMesStr = `${ym_year}-${ym_month}-01`
 
   const [{ data: doctoresDb }, { data: especialidadesDb }, { data: citasMesDb }] = await Promise.all([
     supabase

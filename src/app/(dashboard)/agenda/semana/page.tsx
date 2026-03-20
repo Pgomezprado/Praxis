@@ -10,7 +10,7 @@ export default async function AgendaSemanaPage({
   searchParams: Promise<{ medico?: string; fecha?: string }>
 }) {
   const params = await searchParams
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
   const fecha = params.fecha ?? today
   const medicoId = params.medico ?? ''
 
@@ -26,7 +26,11 @@ export default async function AgendaSemanaPage({
   const hasta = domingo.toISOString().split('T')[0]
 
   const me = await getClinicsId()
-  if (!me) return null
+  if (!me) return (
+    <div className="flex items-center justify-center min-h-[40vh]">
+      <p className="text-slate-400 text-sm">No se pudo cargar la agenda. Intenta recargar la página.</p>
+    </div>
+  )
 
   const [citas, medicos] = await Promise.all([
     getCitasByRango(me.clinica_id, desde, hasta, medicoId || undefined),

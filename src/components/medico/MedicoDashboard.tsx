@@ -1,10 +1,10 @@
 import Link from 'next/link'
 import {
   CalendarDays, CheckCircle2, Clock, AlertTriangle,
-  ArrowRight, ChevronRight, User,
+  ArrowRight, ChevronRight, FileText,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
-import type { MockCita, MockMedicoAdmin } from '@/lib/mock-data'
+import type { MockCita, MockMedicoAdmin } from '@/types/domain'
 
 type Paciente = {
   id: string
@@ -58,6 +58,13 @@ const ESTADO_CONFIG: Record<MockCita['estado'], { dot: string; label: string; te
   cancelada:   { dot: 'bg-red-400',     label: 'Cancelada',   text: 'text-red-600' },
 }
 
+function getSaludo() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Buenos días'
+  if (h < 20) return 'Buenas tardes'
+  return 'Buenas noches'
+}
+
 // ── component ─────────────────────────────────────────────────────────────────
 
 export function MedicoDashboard({
@@ -83,7 +90,7 @@ export function MedicoDashboard({
             {clinicaNombre}
           </p>
           <h1 className="text-2xl font-bold text-slate-900">
-            Buenos días, {medico.nombre.split(' ').slice(0, 2).join(' ')}
+            {getSaludo()}, {medico.nombre.split(' ').slice(0, 2).join(' ')}
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
             {capitalize(formatFechaLarga())} · {medico.especialidad}
@@ -296,7 +303,7 @@ export function MedicoDashboard({
                       className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors"
                       title="Abrir historia clínica"
                     >
-                      <User className="w-4 h-4" />
+                      <FileText className="w-4 h-4" />
                     </Link>
                   )}
                 </div>

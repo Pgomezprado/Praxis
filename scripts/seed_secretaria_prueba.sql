@@ -16,7 +16,7 @@ DECLARE
   v_paciente1     UUID;
   v_paciente2     UUID;
   v_paciente3     UUID;
-  v_today         DATE := CURRENT_DATE;
+  v_today         DATE := '2026-03-17';
 BEGIN
 
   -- ── 1. Obtener clínica Demo ────────────────────────────────

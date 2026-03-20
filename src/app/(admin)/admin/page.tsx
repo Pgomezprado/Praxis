@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
   Stethoscope,
@@ -12,7 +13,7 @@ import {
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { createClient } from '@/lib/supabase/server'
-import type { EstadoMedicoHoy } from '@/lib/mock-data'
+import type { EstadoMedicoHoy } from '@/types/domain'
 
 export const metadata = { title: 'Panel de administración — Praxis' }
 
@@ -30,9 +31,8 @@ function getEstadoHoy(citasDoctor: { estado: string }[]): EstadoMedicoHoy {
 
 export default async function AdminInicioPage() {
   const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session?.user) return null
-  const user = session.user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
   const { data: me } = await supabase
     .from('usuarios')
@@ -46,17 +46,16 @@ export default async function AdminInicioPage() {
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-amber-800">
           <p className="font-medium">Configuración pendiente</p>
           <p className="text-sm mt-1">No se encontró la clínica asociada a tu cuenta. Contacta al administrador del sistema.</p>
-          <p className="text-xs mt-2 font-mono text-amber-600">user_id: {user.id}</p>
+          <p className="text-xs mt-2 text-amber-600">Contacta al soporte con tu email registrado.</p>
         </div>
       </div>
     )
   }
   const clinicaId = me.clinica_id
 
-  const today = new Date().toISOString().split('T')[0]
-  const inicioMes = new Date()
-  inicioMes.setDate(1)
-  const inicioMesStr = inicioMes.toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
+  const [ym_year, ym_month] = today.split('-')
+  const inicioMesStr = `${ym_year}-${ym_month}-01`
 
   const [
     { data: clinica },

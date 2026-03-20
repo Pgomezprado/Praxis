@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { mapCitaDb } from '@/lib/utils/mapCita'
-import type { MockCita } from '@/lib/mock-data'
+import type { MockCita } from '@/types/domain'
 
 export type MedicoAgenda = { id: string; nombre: string; especialidad: string }
 

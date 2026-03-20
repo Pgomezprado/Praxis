@@ -13,6 +13,15 @@ interface ConfirmacionCitaParams {
   clinicaCiudad?: string
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 export async function enviarConfirmacionCita(params: ConfirmacionCitaParams) {
   const {
     to, pacienteNombre, folio, medicoNombre, especialidad,
@@ -24,6 +33,15 @@ export async function enviarConfirmacionCita(params: ConfirmacionCitaParams) {
   })
 
   const lugar = [clinicaDireccion, clinicaCiudad].filter(Boolean).join(', ')
+
+  const pacienteNombreSafe  = escapeHtml(pacienteNombre)
+  const folioSafe           = escapeHtml(folio)
+  const medicoNombreSafe    = escapeHtml(medicoNombre)
+  const especialidadSafe    = escapeHtml(especialidad)
+  const clinicaNombreSafe   = escapeHtml(clinicaNombre)
+  const lugarSafe           = escapeHtml(lugar)
+  const horaSafe            = escapeHtml(hora)
+  const fechaFormateadaSafe = escapeHtml(fechaFormateada)
 
   const html = `
 <!DOCTYPE html>
@@ -50,11 +68,11 @@ export async function enviarConfirmacionCita(params: ConfirmacionCitaParams) {
           <tr>
             <td style="padding:32px;">
               <p style="margin:0 0 8px;font-size:22px;font-weight:700;color:#0f172a;">¡Tu cita está confirmada!</p>
-              <p style="margin:0 0 28px;font-size:14px;color:#64748b;">Hola ${pacienteNombre}, aquí está el resumen de tu agendamiento.</p>
+              <p style="margin:0 0 28px;font-size:14px;color:#64748b;">Hola ${pacienteNombreSafe}, aquí está el resumen de tu agendamiento.</p>
 
               <!-- Folio badge -->
               <div style="display:inline-block;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:6px 14px;margin-bottom:24px;">
-                <span style="font-size:12px;color:#64748b;font-family:monospace;font-weight:600;">${folio}</span>
+                <span style="font-size:12px;color:#64748b;font-family:monospace;font-weight:600;">${folioSafe}</span>
               </div>
 
               <!-- Detalle -->
@@ -62,23 +80,23 @@ export async function enviarConfirmacionCita(params: ConfirmacionCitaParams) {
                 <tr style="background:#f8fafc;">
                   <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;">
                     <p style="margin:0;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Fecha y hora</p>
-                    <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#1e293b;text-transform:capitalize;">${fechaFormateada}</p>
-                    <p style="margin:2px 0 0;font-size:14px;color:#475569;">${hora} hrs</p>
+                    <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#1e293b;text-transform:capitalize;">${fechaFormateadaSafe}</p>
+                    <p style="margin:2px 0 0;font-size:14px;color:#475569;">${horaSafe} hrs</p>
                   </td>
                 </tr>
                 <tr>
                   <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;">
                     <p style="margin:0;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Médico</p>
-                    <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#1e293b;">${medicoNombre}</p>
-                    <p style="margin:2px 0 0;font-size:14px;color:#475569;">${especialidad}</p>
+                    <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#1e293b;">${medicoNombreSafe}</p>
+                    <p style="margin:2px 0 0;font-size:14px;color:#475569;">${especialidadSafe}</p>
                   </td>
                 </tr>
                 ${clinicaNombre ? `
                 <tr>
                   <td style="padding:14px 18px;">
                     <p style="margin:0;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Lugar</p>
-                    <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#1e293b;">${clinicaNombre}</p>
-                    ${lugar ? `<p style="margin:2px 0 0;font-size:14px;color:#475569;">${lugar}</p>` : ''}
+                    <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#1e293b;">${clinicaNombreSafe}</p>
+                    ${lugar ? `<p style="margin:2px 0 0;font-size:14px;color:#475569;">${lugarSafe}</p>` : ''}
                   </td>
                 </tr>
                 ` : ''}
