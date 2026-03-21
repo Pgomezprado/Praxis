@@ -28,13 +28,39 @@ export default async function MedicoPacientePage({
 
   const supabase = await createClient()
 
-  // Validar sesión y obtener clinica_id del médico
+  // Validar sesión y obtener datos del médico autenticado
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  const { data: meData } = await supabase.from('usuarios').select('clinica_id').eq('id', user.id).single()
-  const clinicaId = (meData as { clinica_id: string } | null)?.clinica_id
-  if (!clinicaId) notFound()
+  const { data: meData } = await supabase
+    .from('usuarios')
+    .select('clinica_id, nombre, rut, especialidad')
+    .eq('id', user.id)
+    .single()
+
+  const meTyped = meData as {
+    clinica_id: string
+    nombre: string
+    rut: string | null
+    especialidad: string | null
+  } | null
+
+  if (!meTyped?.clinica_id) notFound()
+  const clinicaId = meTyped.clinica_id
+
+  // Cargar datos de la clínica (para el membrete de la receta)
+  const { data: clinicaDb } = await supabase
+    .from('clinicas')
+    .select('nombre, direccion, ciudad, telefono')
+    .eq('id', clinicaId)
+    .single()
+
+  const clinicaTyped = clinicaDb as {
+    nombre: string
+    direccion: string | null
+    ciudad: string | null
+    telefono: string | null
+  } | null
 
   // Cargar paciente — filtrado por clinica_id del médico autenticado
   const { data: pacienteDb } = await supabase
@@ -48,14 +74,12 @@ export default async function MedicoPacientePage({
   if (!pacienteDb) notFound()
 
   // Registrar acceso en audit_log (Decreto 41 MINSAL)
-  if (user) {
-    await supabase.from('audit_log').insert({
-      usuario_id: user.id,
-      paciente_id: pacienteDb.id,
-      clinica_id: pacienteDb.clinica_id,
-      accion: 'ficha_vista_medico',
-    })
-  }
+  await supabase.from('audit_log').insert({
+    usuario_id: user.id,
+    paciente_id: pacienteDb.id,
+    clinica_id: pacienteDb.clinica_id,
+    accion: 'ficha_vista_medico',
+  })
 
   // Cargar cita actual si viene en query param
   let citaContext = null
@@ -143,6 +167,17 @@ export default async function MedicoPacientePage({
         consultas={consultas}
         citaContext={citaContext}
         citas={citas}
+        clinica={{
+          nombre: clinicaTyped?.nombre ?? 'Clínica',
+          direccion: clinicaTyped?.direccion ?? null,
+          ciudad: clinicaTyped?.ciudad ?? null,
+          telefono: clinicaTyped?.telefono ?? null,
+        }}
+        medico={{
+          nombre: meTyped.nombre,
+          rut: meTyped.rut,
+          especialidad: meTyped.especialidad,
+        }}
       />
     </div>
   )

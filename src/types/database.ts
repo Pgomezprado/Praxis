@@ -145,6 +145,28 @@ export interface Cita {
   created_at: string
 }
 
+// ── Recetas ────────────────────────────────────────────────────────────────
+
+export interface MedicamentoReceta {
+  nombre: string
+  dosis: string
+  frecuencia: string
+  duracion: string
+  indicaciones: string
+}
+
+export interface Receta {
+  id: string
+  consulta_id: string
+  clinica_id: string
+  medico_id: string
+  paciente_id: string
+  medicamentos: MedicamentoReceta[]
+  indicaciones_generales: string | null
+  activo: boolean
+  created_at: string
+}
+
 export type Database = {
   public: {
     Tables: {

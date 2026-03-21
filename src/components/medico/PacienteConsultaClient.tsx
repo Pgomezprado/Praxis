@@ -5,10 +5,13 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { AlertTriangle, ChevronLeft, CheckCircle2, Clock } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, CheckCircle2, Clock, Printer } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { ResumenIA } from '@/components/paciente/ResumenIA'
 import { HistorialCitas } from '@/components/paciente/HistorialCitas'
+import { SeccionReceta } from '@/components/consulta/SeccionReceta'
+import { abrirVentanaImpresion } from '@/components/consulta/RecetaImprimible'
+import type { MedicamentoItem } from '@/components/consulta/SeccionReceta'
 import type { MockConsulta } from '@/types/domain'
 import type { CitaPaciente } from '@/components/paciente/HistorialCitas'
 
@@ -38,11 +41,26 @@ type CitaContext = {
   folio: string
 } | null
 
+type DatosClinica = {
+  nombre: string
+  direccion: string | null
+  ciudad: string | null
+  telefono: string | null
+}
+
+type DatosMedico = {
+  nombre: string
+  rut: string | null
+  especialidad: string | null
+}
+
 type Props = {
   paciente: Paciente
   consultas: MockConsulta[]
   citaContext: CitaContext
   citas?: CitaPaciente[]
+  clinica: DatosClinica
+  medico: DatosMedico
 }
 
 // ── form schema ───────────────────────────────────────────────────────────────
@@ -67,12 +85,27 @@ function formatFecha(iso: string): string {
 
 // ── component ─────────────────────────────────────────────────────────────────
 
-export function PacienteConsultaClient({ paciente, consultas, citaContext, citas = [] }: Props) {
+export function PacienteConsultaClient({
+  paciente,
+  consultas,
+  citaContext,
+  citas = [],
+  clinica,
+  medico,
+}: Props) {
   const router = useRouter()
   const [consultasLocales, setConsultasLocales] = useState<MockConsulta[]>(consultas)
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+
+  // Estado de la receta
+  const [medicamentosReceta, setMedicamentosReceta] = useState<MedicamentoItem[]>([])
+  const [indicacionesGenerales, setIndicacionesGenerales] = useState('')
+  const [consultaGuardadaId, setConsultaGuardadaId] = useState<string | null>(null)
+  const [guardandoReceta, setGuardandoReceta] = useState(false)
+  const [recetaError, setRecetaError] = useState('')
+  const [recetaGuardada, setRecetaGuardada] = useState(false)
 
   const {
     register,
@@ -107,8 +140,12 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
       })
 
       if (res.ok) {
+        const body = await res.json() as { consulta?: { id: string } }
+        const idConsulta = body.consulta?.id ?? null
+        setConsultaGuardadaId(idConsulta)
+
         const nuevaConsulta: MockConsulta = {
-          id: `c-new-${Date.now()}`,
+          id: idConsulta ?? `c-new-${Date.now()}`,
           paciente_id: paciente.id,
           fecha: new Date().toISOString(),
           medicoNombre: '',
@@ -121,10 +158,14 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
         setConsultasLocales((prev) => [nuevaConsulta, ...prev])
         setSaved(true)
         reset()
-        setTimeout(() => router.push('/medico/inicio'), 1500)
+
+        // Si no hay receta, redirigir inmediatamente
+        if (medicamentosReceta.length === 0) {
+          setTimeout(() => router.push('/medico/inicio'), 1500)
+        }
       } else {
-        const body = await res.json() as { error?: string }
-        setSaveError(body.error ?? 'Error al guardar la consulta. Inténtalo de nuevo.')
+        const errorBody = await res.json() as { error?: string }
+        setSaveError(errorBody.error ?? 'Error al guardar la consulta. Inténtalo de nuevo.')
       }
     } catch {
       setSaveError('Error de conexión. Verifica tu internet e inténtalo de nuevo.')
@@ -132,6 +173,85 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
       setSaving(false)
     }
   }
+
+  async function guardarYImprimirReceta() {
+    if (medicamentosReceta.length === 0) return
+    if (!consultaGuardadaId) {
+      setRecetaError('Primero guarda la consulta para poder emitir la receta.')
+      return
+    }
+
+    // Validar que todos los medicamentos tengan nombre
+    const invalidos = medicamentosReceta.filter((m) => !m.nombre.trim())
+    if (invalidos.length > 0) {
+      setRecetaError('Todos los medicamentos deben tener un nombre.')
+      return
+    }
+
+    setGuardandoReceta(true)
+    setRecetaError('')
+
+    try {
+      const res = await fetch('/api/recetas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          consulta_id: consultaGuardadaId,
+          paciente_id: paciente.id,
+          medicamentos: medicamentosReceta,
+          indicaciones_generales: indicacionesGenerales || null,
+        }),
+      })
+
+      if (!res.ok) {
+        const errorBody = await res.json() as { error?: string }
+        setRecetaError(errorBody.error ?? 'Error al guardar la receta.')
+        return
+      }
+
+      setRecetaGuardada(true)
+
+      // Abrir ventana de impresión
+      abrirVentanaImpresion({
+        clinica,
+        medico,
+        paciente: {
+          nombre: paciente.nombre,
+          rut: paciente.rut,
+          fechaNacimiento: paciente.fecha_nacimiento,
+          edad: paciente.edad,
+        },
+        medicamentos: medicamentosReceta,
+        indicacionesGenerales,
+        fechaReceta: new Date().toISOString(),
+      })
+
+      setTimeout(() => router.push('/medico/inicio'), 2000)
+    } catch {
+      setRecetaError('Error de conexión al guardar la receta.')
+    } finally {
+      setGuardandoReceta(false)
+    }
+  }
+
+  function imprimirSinGuardar() {
+    if (medicamentosReceta.length === 0) return
+    abrirVentanaImpresion({
+      clinica,
+      medico,
+      paciente: {
+        nombre: paciente.nombre,
+        rut: paciente.rut,
+        fechaNacimiento: paciente.fecha_nacimiento,
+        edad: paciente.edad,
+      },
+      medicamentos: medicamentosReceta,
+      indicacionesGenerales,
+      fechaReceta: new Date().toISOString(),
+    })
+  }
+
+  const tieneMedicamentosReceta = medicamentosReceta.length > 0
 
   return (
     <div>
@@ -169,7 +289,7 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
         {/* ── LEFT — datos del paciente ── */}
         <aside className="space-y-4 md:sticky md:top-6">
 
-          {/* Alergias — en rojo, prominente */}
+          {/* Alergias */}
           {paciente.alergias.length > 0 ? (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4">
               <div className="flex items-center gap-2 mb-3">
@@ -265,7 +385,7 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
             </div>
           )}
 
-          {/* Historial */}
+          {/* Historial de consultas */}
           <div>
             <h3 className="text-base font-semibold text-slate-800 mb-4">
               Historial de consultas ({consultasLocales.length})
@@ -334,14 +454,21 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
           </div>
         </div>
 
-        {/* ── RIGHT — formulario de consulta (siempre visible) ── */}
+        {/* ── RIGHT — formulario de consulta ── */}
         <aside className="sticky top-6 md:col-span-2 lg:col-span-1">
           <div className="bg-white border border-slate-200 rounded-xl p-5">
             <h3 className="text-base font-semibold text-slate-800 mb-4">
               Registrar consulta
             </h3>
 
-            {saved ? (
+            {/* Estado: consulta guardada + receta guardada */}
+            {saved && recetaGuardada ? (
+              <div className="py-6 text-center space-y-2">
+                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
+                <p className="text-sm font-semibold text-slate-800">Consulta y receta guardadas</p>
+                <p className="text-xs text-slate-400">Volviendo al inicio...</p>
+              </div>
+            ) : saved && medicamentosReceta.length === 0 ? (
               <div className="py-6 text-center space-y-2">
                 <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
                 <p className="text-sm font-semibold text-slate-800">Consulta guardada</p>
@@ -349,6 +476,7 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
               </div>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                {/* Motivo */}
                 <div>
                   <label className="text-sm font-medium text-slate-700 block mb-1.5">
                     Motivo <span className="text-red-500">*</span>
@@ -364,6 +492,7 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
                   )}
                 </div>
 
+                {/* Diagnóstico */}
                 <div>
                   <label className="text-sm font-medium text-slate-700 block mb-1.5">Diagnóstico</label>
                   <textarea
@@ -374,6 +503,7 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
                   />
                 </div>
 
+                {/* Notas clínicas */}
                 <div>
                   <label className="text-sm font-medium text-slate-700 block mb-1.5">Notas clínicas</label>
                   <textarea
@@ -384,6 +514,7 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
                   />
                 </div>
 
+                {/* Plan */}
                 <div>
                   <label className="text-sm font-medium text-slate-700 block mb-1.5">
                     Plan / Indicaciones
@@ -396,9 +527,10 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
                   />
                 </div>
 
+                {/* Medicamentos (campo legacy — separados por coma) */}
                 <div>
                   <label className="text-sm font-medium text-slate-700 block mb-1.5">
-                    Medicamentos
+                    Medicamentos clínicos
                     <span className="text-xs font-normal text-slate-400 ml-1">(separados por coma)</span>
                   </label>
                   <input
@@ -409,26 +541,85 @@ export function PacienteConsultaClient({ paciente, consultas, citaContext, citas
                   />
                 </div>
 
+                {/* Divisor */}
+                <div className="border-t border-slate-100 pt-1" />
+
+                {/* Sección receta */}
+                <SeccionReceta
+                  medicamentos={medicamentosReceta}
+                  indicacionesGenerales={indicacionesGenerales}
+                  onMedicamentosChange={setMedicamentosReceta}
+                  onIndicacionesChange={setIndicacionesGenerales}
+                />
+
+                {/* Error receta */}
+                {recetaError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                    <p className="text-sm text-red-700">{recetaError}</p>
+                  </div>
+                )}
+
+                {/* Error consulta */}
                 {saveError && (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
                     <p className="text-sm text-red-700">{saveError}</p>
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors"
-                >
-                  {saving ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Guardando...
-                    </>
-                  ) : (
-                    'Guardar y cerrar consulta'
+                {/* Botones de acción */}
+                <div className="space-y-2 pt-1">
+                  {/* Botón principal: guardar consulta */}
+                  {!saved && (
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors"
+                    >
+                      {saving ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Guardando...
+                        </>
+                      ) : (
+                        'Guardar y cerrar consulta'
+                      )}
+                    </button>
                   )}
-                </button>
+
+                  {/* Botón guardar receta + imprimir (solo si hay receta y consulta guardada) */}
+                  {saved && tieneMedicamentosReceta && !recetaGuardada && (
+                    <button
+                      type="button"
+                      onClick={guardarYImprimirReceta}
+                      disabled={guardandoReceta}
+                      className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors"
+                    >
+                      {guardandoReceta ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Guardando receta...
+                        </>
+                      ) : (
+                        <>
+                          <Printer className="w-4 h-4" />
+                          Guardar e imprimir receta
+                        </>
+                      )}
+                    </button>
+                  )}
+
+                  {/* Botón imprimir sin guardar (útil antes de guardar la consulta) */}
+                  {!saved && tieneMedicamentosReceta && (
+                    <button
+                      type="button"
+                      onClick={imprimirSinGuardar}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 border border-slate-300 hover:border-slate-400 text-slate-700 text-sm font-medium rounded-xl transition-colors"
+                    >
+                      <Printer className="w-4 h-4" />
+                      Vista previa de la receta
+                    </button>
+                  )}
+                </div>
               </form>
             )}
           </div>

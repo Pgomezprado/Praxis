@@ -9,7 +9,7 @@ function getAdmin() {
   )
 }
 
-function verificarSecret(req: NextRequest): boolean {
+async function verificarSecret(req: NextRequest): Promise<boolean> {
   return verificarSesionSuperadmin(req)
 }
 
@@ -36,7 +36,7 @@ type PagoRow = {
 }
 
 export async function GET(req: NextRequest) {
-  if (!verificarSecret(req)) {
+  if (!await verificarSecret(req)) {
     return Response.json({ error: 'No autorizado' }, { status: 401 })
   }
 

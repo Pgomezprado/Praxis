@@ -1,14 +1,4 @@
-import { createHmac, randomBytes } from 'crypto'
-
-// Crea un token firmado con HMAC-SHA256 que expira en 1 hora
-function crearToken(secret: string): string {
-  const expires = Date.now() + 60 * 60 * 1000 // 1 hora
-  const payload = `superadmin:${expires}`
-  const hmac = createHmac('sha256', secret).update(payload).digest('hex')
-  // Token = payload base64 + . + firma
-  const tokenData = Buffer.from(payload).toString('base64url')
-  return `${tokenData}.${hmac}`
-}
+import { crearTokenSuperadmin } from '@/lib/superadmin/auth'
 
 // Rate limiting: máximo 5 intentos fallidos por IP en 15 minutos
 const intentosFallidosPorIp = new Map<string, { count: number; resetAt: number }>()
@@ -61,15 +51,15 @@ export async function POST(req: Request) {
     }
 
     if (!secret || typeof secret !== 'string' || secret !== superadminSecret) {
-      // Pequeño delay para mitigar ataques de timing
-      await new Promise(r => setTimeout(r, randomBytes(1)[0]))
+      // Pequeño delay aleatorio para mitigar ataques de timing
+      await new Promise(r => setTimeout(r, Math.floor(Math.random() * 50) + 10))
       registrarFalloIp(ip)
       return Response.json({ error: 'Clave incorrecta' }, { status: 401 })
     }
 
-    const token = crearToken(superadminSecret)
+    const token = await crearTokenSuperadmin(superadminSecret)
 
-    // Construir respuesta con cookie httpOnly firmada (1 hora)
+    // Cookie httpOnly firmada, expira en 1 hora
     const response = Response.json({ ok: true })
     const cookieOptions = [
       `superadmin_session=${token}`,

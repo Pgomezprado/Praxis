@@ -1,7 +1,57 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
 
+// ── Rate limiting por IP ──────────────────────────────────────────────────────
+// Máximo 5 intentos por IP en una ventana de 15 minutos.
+// Solución en memoria válida para el piloto con un solo servidor/proceso.
+// Para múltiples instancias (producción escalada), migrar a Redis (S2-SEC-1).
+
+interface EntradaRateLimit {
+  count: number
+  resetAt: number
+}
+
+const intentosPorIp = new Map<string, EntradaRateLimit>()
+
+const LIMITE_INTENTOS = 5
+const VENTANA_MS = 15 * 60 * 1000 // 15 minutos
+
+function estaLimitadaPorIp(ip: string): boolean {
+  const ahora = Date.now()
+  const entrada = intentosPorIp.get(ip)
+  if (!entrada || ahora > entrada.resetAt) return false
+  return entrada.count >= LIMITE_INTENTOS
+}
+
+function registrarIntentoPorIp(ip: string): void {
+  const ahora = Date.now()
+  const entrada = intentosPorIp.get(ip)
+  if (!entrada || ahora > entrada.resetAt) {
+    intentosPorIp.set(ip, { count: 1, resetAt: ahora + VENTANA_MS })
+  } else {
+    entrada.count++
+  }
+}
+
+function obtenerIp(req: Request): string {
+  return (
+    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+    req.headers.get('x-real-ip') ??
+    'unknown'
+  )
+}
+
 export async function POST(req: Request) {
+  const ip = obtenerIp(req)
+
+  if (estaLimitadaPorIp(ip)) {
+    return Response.json(
+      { error: 'Demasiados intentos. Por favor espera 15 minutos antes de intentar nuevamente.' },
+      { status: 429 }
+    )
+  }
+
+  registrarIntentoPorIp(ip)
   try {
     const { password, aceptaTerminos } = await req.json()
 
@@ -43,9 +93,7 @@ export async function POST(req: Request) {
 
     // Registrar aceptación del contrato (Ley 19.628 Art. 4 — consentimiento informado)
     if (usuario?.clinica_id) {
-      const ip = req.headers.get('x-forwarded-for')?.split(',')[0].trim()
-        ?? req.headers.get('x-real-ip')
-        ?? null
+      const ipOrigen = ip !== 'unknown' ? ip : null
 
       // Usar admin client ya que el usuario aún no tiene sesión de RLS establecida
       await admin.from('aceptaciones_contrato').insert({
@@ -53,7 +101,7 @@ export async function POST(req: Request) {
         clinica_id: usuario.clinica_id,
         tipo: 'terminos_y_privacidad',
         version_documento: 'v1.0',
-        ip,
+        ip: ipOrigen,
       })
     }
 

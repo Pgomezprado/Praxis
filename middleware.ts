@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { verificarSesionSuperadmin } from '@/lib/superadmin/auth'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -38,6 +39,10 @@ export async function middleware(request: NextRequest) {
     pathname === '/api/arco' ||
     pathname === '/api/demo-request' ||
     pathname === '/api/onboarding'
+
+  // /superadmin requiere la cookie HMAC firmada — se maneja por separado
+  const isSuperadminPage = pathname.startsWith('/superadmin')
+
   const isPublicPage =
     pathname === '/' ||
     pathname.startsWith('/agendar') ||
@@ -45,7 +50,6 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/recuperar-contrasena') ||
     pathname.startsWith('/nueva-contrasena') ||
     pathname.startsWith('/auth/') ||
-    pathname.startsWith('/superadmin') ||
     pathname.startsWith('/privacidad') ||
     pathname.startsWith('/terminos') ||
     isPublicApiRoute
@@ -55,6 +59,17 @@ export async function middleware(request: NextRequest) {
     isLoginPage ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/medico')
+
+  // Proteger /superadmin con cookie HMAC firmada.
+  // La cookie la emite /api/superadmin/verify-secret tras verificar SUPERADMIN_SECRET.
+  // Los API routes /api/superadmin/* también verifican la cookie individualmente.
+  // Si la cookie no es válida, la page muestra su propio formulario de login —
+  // no se redirige porque /superadmin ES el punto de entrada del panel.
+  if (isSuperadminPage) {
+    // Verificación usando el módulo compartido (Web Crypto API — compatible con Edge Runtime)
+    await verificarSesionSuperadmin(request)
+    return supabaseResponse
+  }
 
   if (!user && !isLoginPage && !isPublicPage) {
     return NextResponse.redirect(new URL('/login', request.url))

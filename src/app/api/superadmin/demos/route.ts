@@ -9,7 +9,7 @@ function getAdmin() {
   )
 }
 
-function verificarSecret(req: NextRequest): boolean {
+async function verificarSecret(req: NextRequest): Promise<boolean> {
   return verificarSesionSuperadmin(req)
 }
 
@@ -25,7 +25,7 @@ type DemoRow = {
 }
 
 export async function GET(req: NextRequest) {
-  if (!verificarSecret(req)) {
+  if (!await verificarSecret(req)) {
     return Response.json({ error: 'No autorizado' }, { status: 401 })
   }
 
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  if (!verificarSecret(req)) {
+  if (!await verificarSecret(req)) {
     return Response.json({ error: 'No autorizado' }, { status: 401 })
   }
 

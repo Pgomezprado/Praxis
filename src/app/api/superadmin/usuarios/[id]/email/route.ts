@@ -13,7 +13,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!verificarSesionSuperadmin(req)) {
+  if (!await verificarSesionSuperadmin(req)) {
     return Response.json({ error: 'No autorizado' }, { status: 401 })
   }
 

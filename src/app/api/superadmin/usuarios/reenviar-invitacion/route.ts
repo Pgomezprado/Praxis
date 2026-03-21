@@ -33,7 +33,7 @@ function checkRateLimit(ip: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
-  if (!verificarSesionSuperadmin(req)) {
+  if (!await verificarSesionSuperadmin(req)) {
     return Response.json({ error: 'No autorizado' }, { status: 401 })
   }
 
