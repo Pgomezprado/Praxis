@@ -202,11 +202,11 @@ export function HorariosClient({ medicos, horariosInicial }: HorariosClientProps
                   <button
                     type="button"
                     onClick={() => setDia(key, 'activo', !dia.activo)}
-                    className={`relative w-9 h-5 rounded-full transition-colors flex-shrink-0 focus:outline-none overflow-hidden ${
+                    className={`relative inline-flex items-center w-9 h-5 rounded-full transition-colors flex-shrink-0 focus:outline-none ${
                       dia.activo ? 'bg-blue-600' : 'bg-slate-300'
                     }`}
                   >
-                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                    <span className={`inline-block w-4 h-4 bg-white rounded-full shadow transition-transform ${
                       dia.activo ? 'translate-x-4' : 'translate-x-0.5'
                     }`} />
                   </button>
