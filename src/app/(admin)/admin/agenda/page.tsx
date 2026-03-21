@@ -31,6 +31,8 @@ export default async function AdminAgendaPage({
           medicos={medicos}
           fecha={fecha}
           medicoId={medicoId}
+          listPath="/admin/agenda"
+          semanaPath="/admin/agenda/semana"
         />
       </Suspense>
     </div>

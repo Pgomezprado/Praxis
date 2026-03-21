@@ -161,7 +161,7 @@ export function HorariosClient({ medicos, horariosInicial }: HorariosClientProps
             </div>
             <div className="text-center">
               <div className="text-xl font-bold text-blue-600">{totalSlotsSemanales}</div>
-              <div className="text-xs text-slate-500">slots/semana</div>
+              <div className="text-xs text-slate-500">horas/semana</div>
             </div>
             {medico && (
               <div className="flex items-center gap-2">
@@ -304,7 +304,7 @@ export function HorariosClient({ medicos, horariosInicial }: HorariosClientProps
                     {/* Slots calculados */}
                     <div className="pt-1 border-t border-slate-100 text-center">
                       <span className={`text-xs font-semibold ${slots > 0 ? 'text-blue-600' : 'text-slate-400'}`}>
-                        {slots} slot{slots !== 1 ? 's' : ''}
+                        {slots} hora{slots !== 1 ? 's' : ''}
                       </span>
                     </div>
 
