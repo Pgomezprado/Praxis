@@ -1,5 +1,8 @@
 export type UserRole = 'admin_clinica' | 'doctor' | 'recepcionista'
 
+// ── Previsión ──────────────────────────────────────────────────
+export type PrevisionTipo = 'particular' | 'fonasa' | 'isapre'
+
 export interface Especialidad {
   id: string
   clinica_id: string
@@ -48,7 +51,7 @@ export interface Paciente {
   activo: boolean
   created_at: string
   // Campos agregados en migración 004
-  prevision: string | null
+  prevision: PrevisionTipo | string | null
   email: string | null
   telefono: string | null
   sexo: 'M' | 'F' | 'otro' | null
@@ -90,6 +93,9 @@ export interface Arancel {
   tipo_cita: 'primera_consulta' | 'control' | 'urgencia' | 'otro' | null
   especialidad_id: string | null
   precio_particular: number
+  // Campos agregados en migración 026
+  prevision?: PrevisionTipo
+  doctor_id?: string | null
   activo: boolean
   created_at: string
 }
@@ -163,6 +169,78 @@ export interface Receta {
   paciente_id: string
   medicamentos: MedicamentoReceta[]
   indicaciones_generales: string | null
+  activo: boolean
+  created_at: string
+}
+
+// ── Paquetes de sesiones ───────────────────────────────────────
+
+export interface PaqueteArancel {
+  id: string
+  clinica_id: string
+  nombre: string
+  doctor_id: string
+  especialidad_id: string | null
+  tipo_cita: 'primera_consulta' | 'control' | 'urgencia' | 'otro'
+  prevision: PrevisionTipo
+  num_sesiones: number
+  precio_total: number
+  vigente_desde: string
+  vigente_hasta: string | null
+  activo: boolean
+  created_at: string
+  // Joins opcionales
+  doctor?: Pick<Usuario, 'id' | 'nombre' | 'especialidad'>
+  especialidad?: Pick<Especialidad, 'id' | 'nombre'>
+}
+
+export interface PaquetePaciente {
+  id: string
+  clinica_id: string
+  paciente_id: string
+  doctor_id: string
+  paquete_arancel_id: string | null
+  sesiones_total: number
+  sesiones_usadas: number
+  /** Campo calculado: sesiones_total - sesiones_usadas */
+  sesiones_restantes: number
+  modalidad_pago: 'contado' | 'cuotas'
+  num_cuotas: number | null
+  precio_total: number
+  estado: 'activo' | 'completado' | 'vencido' | 'anulado'
+  fecha_inicio: string
+  fecha_vencimiento: string | null
+  notas: string | null
+  activo: boolean
+  created_at: string
+  // Joins opcionales
+  doctor?: Pick<Usuario, 'id' | 'nombre' | 'especialidad'>
+  paquete_arancel?: Pick<PaqueteArancel, 'id' | 'nombre' | 'prevision'>
+  cuotas?: CuotaPaquete[]
+  sesiones?: SesionPaquete[]
+}
+
+export interface CuotaPaquete {
+  id: string
+  clinica_id: string
+  paquete_paciente_id: string
+  numero_cuota: number
+  monto: number
+  fecha_vencimiento: string
+  fecha_pago: string | null
+  medio_pago: 'efectivo' | 'tarjeta' | 'transferencia' | null
+  estado: 'pendiente' | 'pagada' | 'vencida'
+  activo: boolean
+  created_at: string
+}
+
+export interface SesionPaquete {
+  id: string
+  clinica_id: string
+  paquete_paciente_id: string
+  cita_id: string | null
+  numero_sesion: number
+  registrado_por: string | null
   activo: boolean
   created_at: string
 }

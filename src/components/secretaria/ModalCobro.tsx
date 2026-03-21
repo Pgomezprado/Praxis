@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, CreditCard, Banknote, Loader2, CheckCircle2 } from 'lucide-react'
+import { X, CreditCard, Banknote, Loader2, CheckCircle2, Package } from 'lucide-react'
 import type { MockCita } from '@/types/domain'
-import type { Arancel } from '@/types/database'
+import type { Arancel, PaquetePaciente } from '@/types/database'
 
 interface ModalCobroProps {
   open: boolean
@@ -21,41 +21,75 @@ export function ModalCobro({ open, onClose, cita, onCobrado }: ModalCobroProps) 
   const [error, setError] = useState<string | null>(null)
   const [aranceles, setAranceles] = useState<Arancel[]>([])
   const [arancelSeleccionado, setArancelSeleccionado] = useState<string>('')
+  // Estado para paquete activo del paciente con este médico
+  const [paqueteActivo, setPaqueteActivo] = useState<PaquetePaciente | null>(null)
+  const [usarPaquete, setUsarPaquete] = useState(false)
+  const [cargandoPaquete, setCargandoPaquete] = useState(false)
 
-  // Cargar aranceles al abrir el modal
+  // Cargar aranceles y paquete activo al abrir el modal
   useEffect(() => {
     if (!open) return
-    async function cargarAranceles() {
-      try {
-        const res = await fetch('/api/finanzas/aranceles')
-        if (!res.ok) return
-        const json = await res.json()
-        const lista = (json.aranceles ?? []) as Arancel[]
-        setAranceles(lista)
-        // Pre-seleccionar arancel según tipo de cita
-        const coincidente = lista.find(a => a.tipo_cita === cita.tipo)
-        if (coincidente) {
-          setArancelSeleccionado(coincidente.id)
-          setConcepto(coincidente.nombre)
-          setMonto(String(coincidente.precio_particular))
-        } else {
-          const tipoLabel: Record<MockCita['tipo'], string> = {
-            primera_consulta: 'Primera consulta',
-            control: 'Control médico',
-            urgencia: 'Atención de urgencia',
-          }
-          setConcepto(tipoLabel[cita.tipo] ?? 'Consulta médica')
-          setMonto('')
-        }
-      } catch {
-        // Si falla la carga de aranceles, continuar con campos vacíos
-      }
-    }
-    cargarAranceles()
+
     setError(null)
     setMedioPago('efectivo')
     setReferencia('')
-  }, [open, cita.tipo])
+    setUsarPaquete(false)
+    setPaqueteActivo(null)
+
+    async function cargarDatos() {
+      // 1. Aranceles
+      try {
+        const res = await fetch('/api/finanzas/aranceles')
+        if (res.ok) {
+          const json = await res.json()
+          const lista = (json.aranceles ?? []) as Arancel[]
+          setAranceles(lista)
+          const coincidente = lista.find(a => a.tipo_cita === cita.tipo)
+          if (coincidente) {
+            setArancelSeleccionado(coincidente.id)
+            setConcepto(coincidente.nombre)
+            setMonto(String(coincidente.precio_particular))
+          } else {
+            const tipoLabel: Record<MockCita['tipo'], string> = {
+              primera_consulta: 'Primera consulta',
+              control: 'Control médico',
+              urgencia: 'Atención de urgencia',
+            }
+            setConcepto(tipoLabel[cita.tipo] ?? 'Consulta médica')
+            setMonto('')
+          }
+        }
+      } catch {
+        // continuar con campos vacíos
+      }
+
+      // 2. Paquete activo del paciente con este médico
+      if (cita.pacienteId) {
+        setCargandoPaquete(true)
+        try {
+          const res = await fetch(`/api/paquetes/paciente?paciente_id=${cita.pacienteId}`)
+          if (res.ok) {
+            const json = await res.json()
+            const paquetes = (json.paquetes ?? []) as PaquetePaciente[]
+            // Buscar paquete activo con el médico de esta cita y sesiones disponibles
+            const activo = paquetes.find(
+              p => p.doctor_id === cita.medicoId
+                && p.estado === 'activo'
+                && p.sesiones_restantes > 0
+            )
+            setPaqueteActivo(activo ?? null)
+            if (activo) setUsarPaquete(true)
+          }
+        } catch {
+          // ignorar error de paquetes
+        } finally {
+          setCargandoPaquete(false)
+        }
+      }
+    }
+
+    cargarDatos()
+  }, [open, cita.tipo, cita.pacienteId, cita.medicoId])
 
   function handleArancelChange(arancelId: string) {
     setArancelSeleccionado(arancelId)
@@ -75,18 +109,39 @@ export function ModalCobro({ open, onClose, cita, onCobrado }: ModalCobroProps) 
     e.preventDefault()
     setError(null)
 
-    const montoNum = parseInt(monto.replace(/\./g, ''), 10)
-    if (!concepto.trim()) {
-      setError('El concepto es obligatorio')
-      return
-    }
-    if (isNaN(montoNum) || montoNum <= 0) {
-      setError('Ingresa un monto válido mayor a 0')
-      return
-    }
-
     setLoading(true)
     try {
+      // Flujo A: consumir sesión del paquete activo
+      if (usarPaquete && paqueteActivo) {
+        const resSesion = await fetch(`/api/paquetes/paciente/${paqueteActivo.id}/sesion`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cita_id: cita.id }),
+        })
+
+        if (!resSesion.ok) {
+          const json = await resSesion.json()
+          throw new Error(json.error ?? 'Error al consumir sesión del paquete')
+        }
+
+        onCobrado(cita.id)
+        onClose()
+        return
+      }
+
+      // Flujo B: cobro normal
+      const montoNum = parseInt(monto.replace(/\./g, ''), 10)
+      if (!concepto.trim()) {
+        setError('El concepto es obligatorio')
+        setLoading(false)
+        return
+      }
+      if (isNaN(montoNum) || montoNum <= 0) {
+        setError('Ingresa un monto válido mayor a 0')
+        setLoading(false)
+        return
+      }
+
       // 1. Crear el cobro
       const resCobro = await fetch('/api/finanzas/cobros', {
         method: 'POST',
@@ -189,6 +244,58 @@ export function ModalCobro({ open, onClose, cita, onCobrado }: ModalCobroProps) 
 
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+          {/* Banner paquete activo */}
+          {cargandoPaquete && (
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Verificando paquetes…
+            </div>
+          )}
+
+          {paqueteActivo && !cargandoPaquete && (
+            <div className={`border rounded-xl p-3.5 transition-all ${
+              usarPaquete
+                ? 'border-indigo-300 bg-indigo-50 ring-1 ring-indigo-300'
+                : 'border-slate-200 bg-slate-50'
+            }`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                    <Package className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-800">
+                      {(paqueteActivo.paquete_arancel as { nombre?: string } | undefined)?.nombre ?? 'Paquete activo'}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {paqueteActivo.sesiones_restantes} sesión{paqueteActivo.sesiones_restantes !== 1 ? 'es' : ''} disponible{paqueteActivo.sesiones_restantes !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setUsarPaquete(v => !v)}
+                  disabled={loading}
+                  className={`text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors ${
+                    usarPaquete
+                      ? 'border-indigo-400 bg-indigo-600 text-white hover:bg-indigo-700'
+                      : 'border-slate-300 text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {usarPaquete ? 'Usando paquete' : 'Usar paquete'}
+                </button>
+              </div>
+              {usarPaquete && (
+                <p className="text-xs text-indigo-600 mt-2 font-medium">
+                  Se descontará 1 sesión del paquete. No se registra cobro adicional.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Si se usa paquete, no mostrar el resto del formulario de cobro */}
+          {!usarPaquete && (
+          <>
           {/* Selector de arancel */}
           {aranceles.length > 0 && (
             <div>
@@ -306,17 +413,36 @@ export function ModalCobro({ open, onClose, cita, onCobrado }: ModalCobroProps) 
               {error}
             </div>
           )}
+          </>
+          )}
+          {/* /fin bloque cobro normal */}
+
+          {/* Error fuera del bloque — visible siempre */}
+          {error && usarPaquete && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2.5 rounded-xl">
+              {error}
+            </div>
+          )}
 
           {/* Botón submit */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl text-white text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+              usarPaquete
+                ? 'bg-indigo-600 hover:bg-indigo-700'
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
           >
             {loading ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Registrando...
+                Registrando…
+              </>
+            ) : usarPaquete ? (
+              <>
+                <Package className="w-4 h-4" />
+                Descontar sesión del paquete
               </>
             ) : (
               <>

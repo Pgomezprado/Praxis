@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { DollarSign, Clock, CheckCircle2, Tag, ArrowRight, TrendingUp } from 'lucide-react'
+import { DollarSign, Clock, CheckCircle2, Tag, ArrowRight, TrendingUp, Package } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import type { Cobro, Pago } from '@/types/database'
 
@@ -220,7 +220,7 @@ export default async function AdminFinanzasPage() {
         </div>
       </section>
 
-      {/* Acceso rápido a aranceles */}
+      {/* Acceso rápido a aranceles y paquetes */}
       <section>
         <h2 className="text-lg font-semibold text-slate-800 mb-4">Accesos rápidos</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -235,6 +235,22 @@ export default async function AdminFinanzasPage() {
               <div>
                 <p className="text-sm font-semibold text-slate-800">Gestionar aranceles</p>
                 <p className="text-xs text-slate-500">Precios y tipos de consulta</p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
+          </Link>
+
+          <Link
+            href="/admin/finanzas/paquetes"
+            className="flex items-center justify-between px-5 py-4 bg-white border border-slate-200 rounded-xl hover:border-blue-200 hover:shadow-sm transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                <Package className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Paquetes de sesiones</p>
+                <p className="text-xs text-slate-500">Precios por volumen con cuotas</p>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-colors" />

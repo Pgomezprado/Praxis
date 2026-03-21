@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { MoreVertical, XCircle, PlayCircle, CheckCircle2, Loader2, CheckCheck, FileText, DollarSign } from 'lucide-react'
+import { MoreVertical, XCircle, PlayCircle, CheckCircle2, Loader2, CheckCheck, FileText, DollarSign, Package } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { ModalCobro } from './ModalCobro'
@@ -13,6 +13,8 @@ interface CitaCardProps {
   showMedico?: boolean
   esDoctor?: boolean
   onEstadoCambiado?: (id: string, nuevoEstado: MockCita['estado']) => void
+  /** Si el paciente tiene un paquete activo con este médico, indica las sesiones restantes */
+  sesionesRestantesPaquete?: number
 }
 
 const ESTADO_BADGE: Record<
@@ -32,7 +34,7 @@ const TIPO_LABEL: Record<MockCita['tipo'], string> = {
   urgencia: 'Urgencia',
 }
 
-export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoCambiado }: CitaCardProps) {
+export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoCambiado, sesionesRestantesPaquete }: CitaCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [estadoLocal, setEstadoLocal] = useState(cita.estado)
   const [loading, setLoading] = useState(false)
@@ -151,6 +153,12 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
             )}
             {showMedico && (
               <span className="text-xs text-slate-400 ml-0.5">{cita.medicoNombre}</span>
+            )}
+            {sesionesRestantesPaquete !== undefined && sesionesRestantesPaquete > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">
+                <Package className="w-3 h-3" />
+                Paquete · {sesionesRestantesPaquete} sesión{sesionesRestantesPaquete !== 1 ? 'es' : ''}
+              </span>
             )}
           </div>
         </div>
