@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { LayoutDashboard, CalendarDays, LogOut, Stethoscope, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, CalendarDays, LogOut, Stethoscope, ShieldCheck, BookOpen, DollarSign, Users } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 
 interface MedicoSidebarProps {
@@ -14,8 +14,11 @@ interface MedicoSidebarProps {
 }
 
 const navItems = [
-  { href: '/medico/inicio', label: 'Inicio',     icon: LayoutDashboard, exact: true },
-  { href: '/medico/citas',  label: 'Mis citas',  icon: CalendarDays,    exact: false },
+  { href: '/medico/inicio',                       label: 'Inicio',              icon: LayoutDashboard, exact: true  },
+  { href: '/medico/citas',                        label: 'Mis citas',           icon: CalendarDays,    exact: false },
+  { href: '/medico/pacientes',                    label: 'Pacientes',           icon: Users,           exact: false },
+  { href: '/medico/odontologia/catalogo',         label: 'Catálogo dental',     icon: BookOpen,        exact: false },
+  { href: '/medico/odontologia/finanzas',         label: 'Finanzas',            icon: DollarSign,      exact: false },
 ]
 
 export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false }: MedicoSidebarProps) {

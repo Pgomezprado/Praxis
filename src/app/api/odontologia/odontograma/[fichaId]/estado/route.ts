@@ -1,0 +1,82 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import type { EstadoDienteValor, MaterialDiente, OdontogramaEstado, SuperficiesDiente } from '@/types/database'
+
+// POST — inserta un nuevo estado para un diente
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ fichaId: string }> }
+) {
+  const { fichaId } = await params
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const { data: meData } = await supabase
+    .from('usuarios')
+    .select('clinica_id')
+    .eq('id', user.id)
+    .single()
+
+  const clinicaId = (meData as { clinica_id: string } | null)?.clinica_id
+  if (!clinicaId) return NextResponse.json({ error: 'Sin clínica' }, { status: 403 })
+
+  const body = await req.json() as {
+    numero_pieza: number
+    estado: EstadoDienteValor
+    material?: MaterialDiente
+    notas?: string
+    consulta_id?: string
+    plan_item_id?: string
+    superficies_detalle?: SuperficiesDiente | null
+  }
+
+  // Validar número de pieza FDI adulto (11-18, 21-28, 31-38, 41-48)
+  const piezasValidas = new Set([
+    11,12,13,14,15,16,17,18,
+    21,22,23,24,25,26,27,28,
+    31,32,33,34,35,36,37,38,
+    41,42,43,44,45,46,47,48,
+  ])
+  if (!piezasValidas.has(body.numero_pieza)) {
+    return NextResponse.json({ error: 'Número de pieza FDI inválido' }, { status: 400 })
+  }
+
+  // Verificar que la ficha pertenece a esta clínica
+  const { data: ficha } = await supabase
+    .from('ficha_odontologica')
+    .select('id, paciente_id')
+    .eq('id', fichaId)
+    .eq('clinica_id', clinicaId)
+    .single()
+
+  if (!ficha) return NextResponse.json({ error: 'Ficha no encontrada' }, { status: 404 })
+
+  const fichaTyped = ficha as { id: string; paciente_id: string }
+
+  const { data, error } = await supabase
+    .from('odontograma_estado')
+    .insert({
+      ficha_odontologica_id: fichaId,
+      paciente_id: fichaTyped.paciente_id,
+      clinica_id: clinicaId,
+      doctor_id: user.id,
+      consulta_id: body.consulta_id ?? null,
+      numero_pieza: body.numero_pieza,
+      estado: body.estado,
+      material: body.material ?? null,
+      notas: body.notas ?? null,
+      plan_item_id: body.plan_item_id ?? null,
+      superficies_detalle: body.superficies_detalle ?? null,
+    })
+    .select('*')
+    .single()
+
+  if (error) {
+    console.error('Error al guardar estado diente:', error)
+    return NextResponse.json({ error: 'Error al guardar estado' }, { status: 500 })
+  }
+
+  return NextResponse.json({ estado: data as OdontogramaEstado }, { status: 201 })
+}

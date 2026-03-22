@@ -19,6 +19,8 @@ export interface Clinica {
   plan: string
   activa: boolean
   created_at: string
+  // Campo agregado en migración 027
+  tipo_especialidad: TipoEspecialidad | null
 }
 
 export interface Usuario {
@@ -90,7 +92,7 @@ export interface Arancel {
   id: string
   clinica_id: string
   nombre: string
-  tipo_cita: 'primera_consulta' | 'control' | 'urgencia' | 'otro' | null
+  tipo_cita: 'primera_consulta' | 'control' | 'urgencia' | 'otro' | 'odontologia' | null
   especialidad_id: string | null
   precio_particular: number
   // Campos agregados en migración 026
@@ -98,14 +100,40 @@ export interface Arancel {
   doctor_id?: string | null
   activo: boolean
   created_at: string
+  // Campos agregados en migración 029 — odontología
+  codigo_fonasa?: string | null
+  aplica_pieza_dentaria?: boolean
+  categoria_dental?: string | null
 }
+
+// Alias para prestaciones dentales (subconjunto tipado de Arancel)
+export interface ArancelDental extends Arancel {
+  tipo_cita: 'odontologia'
+  categoria_dental: string
+  aplica_pieza_dentaria: boolean
+}
+
+export const CATEGORIAS_DENTALES = [
+  'Diagnóstico',
+  'Prevención',
+  'Operatoria',
+  'Endodoncia',
+  'Exodoncia',
+  'Prótesis',
+  'Implantología',
+  'Periodoncia',
+  'Estética',
+  'Otro',
+] as const
+
+export type CategoriaDental = typeof CATEGORIAS_DENTALES[number]
 
 export interface Pago {
   id: string
   clinica_id: string
   cobro_id: string
   monto: number
-  medio_pago: 'efectivo' | 'tarjeta'
+  medio_pago: 'efectivo' | 'tarjeta' | 'transferencia'
   referencia: string | null
   fecha_pago: string
   registrado_por: string
@@ -128,11 +156,14 @@ export interface Cobro {
   creado_por: string
   activo: boolean
   created_at: string
+  // Campo agregado en migración 030 — vinculación con presupuesto dental
+  presupuesto_dental_id?: string | null
   // Joins opcionales
   paciente?: Pick<Paciente, 'id' | 'nombre' | 'rut'>
   doctor?: Pick<Usuario, 'id' | 'nombre' | 'especialidad'>
   cita?: Pick<Cita, 'id' | 'folio' | 'tipo' | 'fecha' | 'hora_inicio'>
   pagos?: Pago[]
+  presupuesto?: Pick<PresupuestoDental, 'id' | 'numero_presupuesto' | 'total'>
 }
 
 export interface Cita {
@@ -243,6 +274,133 @@ export interface SesionPaquete {
   registrado_por: string | null
   activo: boolean
   created_at: string
+}
+
+// ── Odontología ────────────────────────────────────────────────────────────────
+
+export type TipoEspecialidad = 'medicina_general' | 'odontologia' | 'mixta'
+
+export type EstadoDienteValor =
+  | 'sano'
+  | 'caries'
+  | 'obturado'
+  | 'extraccion_indicada'
+  | 'ausente'
+  | 'corona'
+  | 'implante'
+  | 'tratamiento_conducto'
+  | 'fractura'
+  | 'en_tratamiento'
+
+export type MaterialDiente = 'resina' | 'amalgama' | 'ceramica' | 'metal' | 'temporal'
+
+export type EstadoSuperficie = 'sana' | 'caries' | 'obturada' | 'sin_registro'
+
+export interface SuperficiesDiente {
+  oclusal?: EstadoSuperficie
+  vestibular?: EstadoSuperficie
+  palatino?: EstadoSuperficie
+  mesial?: EstadoSuperficie
+  distal?: EstadoSuperficie
+}
+
+export interface EstadoDiente {
+  estado: EstadoDienteValor
+  material?: MaterialDiente
+  notas?: string
+  superficies?: SuperficiesDiente
+}
+
+export interface FichaOdontologica {
+  id: string
+  paciente_id: string
+  clinica_id: string
+  denticion: 'permanente' | 'temporal'
+  antecedentes_dentales: string | null
+  ultima_radiografia: string | null
+  dentista_tratante_id: string | null
+  activo: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface OdontogramaEstado {
+  id: string
+  ficha_odontologica_id: string
+  paciente_id: string
+  clinica_id: string
+  doctor_id: string
+  consulta_id: string | null
+  numero_pieza: number
+  estado: EstadoDienteValor
+  material: MaterialDiente | null
+  notas: string | null
+  plan_item_id: string | null
+  superficies_detalle: SuperficiesDiente | null
+  created_at: string
+}
+
+export type EstadoPlan = 'borrador' | 'propuesto' | 'aprobado' | 'en_curso' | 'completado' | 'cancelado'
+
+export interface PlanTratamiento {
+  id: string
+  ficha_odontologica_id: string
+  paciente_id: string
+  clinica_id: string
+  doctor_id: string
+  nombre: string
+  estado: EstadoPlan
+  fecha_propuesta: string | null
+  fecha_aprobacion: string | null
+  total_estimado: number
+  notas: string | null
+  activo: boolean
+  created_at: string
+  updated_at: string
+  // Joins opcionales
+  items?: PlanTratamientoItem[]
+}
+
+export type EstadoPlanItem = 'pendiente' | 'en_proceso' | 'completado' | 'cancelado'
+
+export interface PlanTratamientoItem {
+  id: string
+  plan_tratamiento_id: string
+  clinica_id: string
+  numero_pieza: number | null
+  nombre_procedimiento: string
+  precio_unitario: number
+  cantidad: number
+  precio_total: number
+  estado: EstadoPlanItem
+  orden: number
+  notas: string | null
+  activo: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type EstadoPresupuesto = 'borrador' | 'enviado' | 'aceptado' | 'rechazado' | 'vencido'
+
+export interface PresupuestoDental {
+  id: string
+  plan_tratamiento_id: string
+  paciente_id: string
+  clinica_id: string
+  doctor_id: string
+  numero_presupuesto: string
+  total: number
+  vigencia_dias: number
+  estado: EstadoPresupuesto
+  fecha_envio: string | null
+  fecha_aceptacion: string | null
+  aceptado_por: string | null
+  notas_condiciones: string | null
+  activo: boolean
+  created_at: string
+  updated_at: string
+  // Joins opcionales
+  plan?: Pick<PlanTratamiento, 'id' | 'nombre' | 'items'>
 }
 
 export type Database = {
