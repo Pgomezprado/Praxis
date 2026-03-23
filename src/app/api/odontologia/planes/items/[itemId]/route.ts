@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { PlanTratamientoItem, EstadoPlanItem, EstadoDienteValor } from '@/types/database'
 
+// Procedimientos que requieren consentimiento informado (Ley 20.584 Art. 14)
+const PALABRAS_INVASIVAS = [
+  'extracción', 'extraccion',
+  'implante',
+  'conducto', 'endodoncia',
+  'cirugía', 'cirugia',
+]
+
+function esInvasivo(nombreProcedimiento: string): boolean {
+  const lower = nombreProcedimiento.toLowerCase()
+  return PALABRAS_INVASIVAS.some((palabra) => lower.includes(palabra))
+}
+
 // PUT — actualiza estado de un ítem
 export async function PUT(
   req: NextRequest,
@@ -41,6 +54,35 @@ export async function PUT(
     .single()
 
   if (!itemActual) return NextResponse.json({ error: 'Ítem no encontrado' }, { status: 404 })
+
+  // ── Bloqueo por consentimiento informado (Ley 20.584 Art. 14) ─────────────
+  // Si se intenta marcar como completado un procedimiento invasivo, verificar
+  // que existe consentimiento registrado antes de proceder.
+  if (body.estado === 'completado') {
+    const nombreActual = (body.nombre_procedimiento ?? (itemActual as PlanTratamientoItem).nombre_procedimiento)
+    if (esInvasivo(nombreActual)) {
+      const { data: consentimiento } = await supabase
+        .from('consentimiento_odontologico')
+        .select('id')
+        .eq('plan_item_id', itemId)
+        .eq('clinica_id', clinicaId)
+        .limit(1)
+        .single()
+
+      if (!consentimiento) {
+        return NextResponse.json(
+          {
+            error: 'Este procedimiento requiere consentimiento informado registrado antes de marcarlo como completado',
+            requiere_consentimiento: true,
+            plan_item_id: itemId,
+            nombre_procedimiento: nombreActual,
+          },
+          { status: 409 }
+        )
+      }
+    }
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   // Calcular nuevo precio_total si se actualiza precio o cantidad
   const updatePayload: Partial<PlanTratamientoItem> & { precio_total?: number } = { ...body }
