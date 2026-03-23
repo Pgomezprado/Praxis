@@ -158,6 +158,8 @@ export interface Cobro {
   created_at: string
   // Campo agregado en migración 030 — vinculación con presupuesto dental
   presupuesto_dental_id?: string | null
+  // Campo agregado en migración 034 — exención IVA (Ley 21.420, Art. 13 N°6 D.L. 825)
+  exento_iva?: boolean
   // Joins opcionales
   paciente?: Pick<Paciente, 'id' | 'nombre' | 'rut'>
   doctor?: Pick<Usuario, 'id' | 'nombre' | 'especialidad'>
@@ -401,6 +403,22 @@ export interface PresupuestoDental {
   updated_at: string
   // Joins opcionales
   plan?: Pick<PlanTratamiento, 'id' | 'nombre' | 'items'>
+}
+
+// ── Consentimiento informado odontológico (Ley 20.584 Art. 14) ──────────────
+
+export interface ConsentimientoOdontologico {
+  id: string
+  clinica_id: string
+  paciente_id: string
+  plan_tratamiento_id: string
+  plan_item_id: string | null
+  procedimiento: string
+  descripcion_riesgos: string | null
+  consentido_por: string
+  metodo: string // 'verbal_registrado' | 'escrito_fisico' | 'digital'
+  doctor_id: string
+  created_at: string
 }
 
 export type Database = {

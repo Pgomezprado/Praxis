@@ -22,6 +22,16 @@ export async function GET(
   const clinicaId = (meData as { clinica_id: string } | null)?.clinica_id
   if (!clinicaId) return NextResponse.json({ error: 'Sin clínica' }, { status: 403 })
 
+  // Obtener paciente_id desde la ficha para incluirlo en el audit_log
+  const { data: fichaData } = await supabase
+    .from('ficha_odontologica')
+    .select('paciente_id')
+    .eq('id', fichaId)
+    .eq('clinica_id', clinicaId)
+    .single()
+
+  const pacienteId = (fichaData as { paciente_id: string } | null)?.paciente_id ?? null
+
   // Obtener último estado por diente usando DISTINCT ON
   const { data, error } = await supabase.rpc('get_odontograma_actual', {
     p_ficha_id: fichaId,
@@ -55,6 +65,16 @@ export async function GET(
         }
       }
     }
+
+    // Audit log — acceso de lectura al odontograma (Decreto 41 MINSAL)
+    await supabase.from('audit_log').insert({
+      usuario_id: user.id,
+      paciente_id: pacienteId,
+      clinica_id: clinicaId,
+      accion: 'odontograma_visto',
+      detalle: { ficha_odontologica_id: fichaId, tabla_afectada: 'odontograma_estado' },
+    })
+
     return NextResponse.json({ estados })
   }
 
@@ -67,6 +87,15 @@ export async function GET(
       notas: row.notas ?? undefined,
     }
   }
+
+  // Audit log — acceso de lectura al odontograma (Decreto 41 MINSAL)
+  await supabase.from('audit_log').insert({
+    usuario_id: user.id,
+    paciente_id: pacienteId,
+    clinica_id: clinicaId,
+    accion: 'odontograma_visto',
+    detalle: { ficha_odontologica_id: fichaId, tabla_afectada: 'odontograma_estado' },
+  })
 
   return NextResponse.json({ estados })
 }

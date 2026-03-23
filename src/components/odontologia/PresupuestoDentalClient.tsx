@@ -532,9 +532,14 @@ export function PresupuestoDentalClient({
         </div>
 
         {/* Total */}
-        <div className="px-5 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-          <span className="text-sm font-semibold text-slate-600 uppercase tracking-wider">Total</span>
-          <span className="text-xl font-bold text-slate-900">{formatCLP(presupuesto.total)}</span>
+        <div className="px-5 py-4 bg-slate-50 border-t border-slate-200">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-slate-600 uppercase tracking-wider">Total</span>
+            <span className="text-xl font-bold text-slate-900">{formatCLP(presupuesto.total)}</span>
+          </div>
+          <p className="text-xs text-slate-500 mt-1">
+            Prestación de salud dental exenta de IVA según Art. 13 N°6 del D.L. 825
+          </p>
         </div>
       </div>
 
