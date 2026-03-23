@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, ChevronRight, FileText, CheckCircle2, Loader2, Search, Sparkles } from 'lucide-react'
+import { Plus, ChevronRight, FileText, CheckCircle2, Loader2, Search, Sparkles, ShieldCheck, X } from 'lucide-react'
 import { OdontogramaSVG } from './OdontogramaSVG'
 import { ModalEstadoDiente } from './ModalEstadoDiente'
 import type { EstadoDiente, EstadoDienteValor, FichaOdontologica, PlanTratamiento, PlanTratamientoItem, ArancelDental } from '@/types/database'
@@ -439,6 +439,148 @@ function ResumenHallazgos({ estados, generandoPlan, onGenerarPlan }: ResumenHall
   )
 }
 
+// ── Modal de consentimiento informado (Ley 20.584 Art. 14) ────────────────────
+
+interface ModalConsentimientoProps {
+  itemId: string
+  nombreProcedimiento: string
+  onConfirmar: (datos: { consentido_por: string; metodo: string; descripcion_riesgos?: string }) => Promise<void>
+  onCancelar: () => void
+}
+
+function ModalConsentimiento({ itemId: _itemId, nombreProcedimiento, onConfirmar, onCancelar }: ModalConsentimientoProps) {
+  const [consentidoPor, setConsentidoPor] = useState('')
+  const [metodo, setMetodo] = useState('verbal_registrado')
+  const [observaciones, setObservaciones] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleConfirmar(e: React.FormEvent) {
+    e.preventDefault()
+    if (!consentidoPor.trim()) {
+      setError('El nombre del paciente o representante es requerido')
+      return
+    }
+    setGuardando(true)
+    setError('')
+    try {
+      await onConfirmar({
+        consentido_por: consentidoPor.trim(),
+        metodo,
+        descripcion_riesgos: observaciones.trim() || undefined,
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al registrar consentimiento')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        {/* Cabecera */}
+        <div className="flex items-start justify-between p-5 border-b border-slate-100">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center flex-shrink-0">
+              <ShieldCheck className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-slate-900">Registrar consentimiento informado</h2>
+              <p className="text-xs text-slate-500 mt-0.5">Ley 20.584, Art. 14</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onCancelar}
+            className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-100"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Cuerpo */}
+        <form onSubmit={handleConfirmar} className="p-5 space-y-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+            <p className="text-sm text-amber-800">
+              El procedimiento <span className="font-semibold">{nombreProcedimiento}</span> requiere
+              que quede registrado el consentimiento informado del paciente.
+            </p>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-700 block mb-1.5">
+              Nombre del paciente o representante <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={consentidoPor}
+              onChange={(e) => setConsentidoPor(e.target.value)}
+              placeholder="Ej: Juan Pérez González"
+              className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-700 block mb-1.5">
+              Método de consentimiento <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={metodo}
+              onChange={(e) => setMetodo(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="verbal_registrado">Verbal registrado por profesional</option>
+              <option value="escrito_fisico">Documento físico firmado</option>
+              <option value="digital">Digital</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-700 block mb-1.5">
+              Observaciones <span className="text-slate-400 font-normal">(opcional)</span>
+            </label>
+            <textarea
+              value={observaciones}
+              onChange={(e) => setObservaciones(e.target.value)}
+              placeholder="Riesgos explicados, preguntas del paciente, etc."
+              rows={3}
+              className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+          </div>
+
+          {error && (
+            <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onCancelar}
+              disabled={guardando}
+              className="flex-1 py-2.5 text-sm font-medium text-slate-600 border border-slate-300 rounded-xl hover:bg-slate-50 disabled:opacity-60 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={guardando}
+              className="flex-1 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+            >
+              {guardando
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Registrando...</>
+                : <><ShieldCheck className="w-3.5 h-3.5" />Registrar y completar</>
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ── Componente principal ───────────────────────────────────────────────────────
 
 export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaProps) {
@@ -456,8 +598,17 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
   const [planExpandido, setPlanExpandido] = useState<string | null>(null)
   const [generandoPresupuesto, setGenerandoPresupuesto] = useState<string | null>(null)
   const [presupuestoUrl, setPresupuestoUrl] = useState<Record<string, string>>({})
+  const [errorPresupuesto, setErrorPresupuesto] = useState<string | null>(null)
   const [cargandoDetallePlan, setCargandoDetallePlan] = useState<string | null>(null)
   const [generandoPlanAuto, setGenerandoPlanAuto] = useState(false)
+  const [completandoItem, setCompletandoItem] = useState<string | null>(null)
+
+  // Modal de consentimiento informado
+  const [modalConsentimiento, setModalConsentimiento] = useState<{
+    itemId: string
+    planId: string
+    nombreProcedimiento: string
+  } | null>(null)
 
   // ── Cargar datos iniciales ─────────────────────────────────────────────────
 
@@ -611,17 +762,113 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
 
   async function handleGenerarPresupuesto(planId: string) {
     setGenerandoPresupuesto(planId)
+    setErrorPresupuesto(null)
     try {
       const res = await fetch('/api/odontologia/presupuestos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan_tratamiento_id: planId }),
       })
-      if (!res.ok) return
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string }
+        setErrorPresupuesto(body.error ?? 'Error al generar el presupuesto. Intenta nuevamente.')
+        return
+      }
       const { presupuesto } = await res.json() as { presupuesto: { id: string } }
       setPresupuestoUrl((prev) => ({ ...prev, [planId]: presupuesto.id }))
+    } catch {
+      setErrorPresupuesto('Error de conexión al generar el presupuesto.')
     } finally {
       setGenerandoPresupuesto(null)
+    }
+  }
+
+  // Marcar ítem como completado — con bloqueo de consentimiento para procedimientos invasivos
+  async function handleCompletarItem(itemId: string, planId: string, nombreProcedimiento: string) {
+    setCompletandoItem(itemId)
+    try {
+      const res = await fetch(`/api/odontologia/planes/items/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: 'completado' }),
+      })
+
+      if (res.status === 409) {
+        // El procedimiento requiere consentimiento informado
+        const body = await res.json() as { requiere_consentimiento?: boolean }
+        if (body.requiere_consentimiento) {
+          setModalConsentimiento({ itemId, planId, nombreProcedimiento })
+          return
+        }
+      }
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string }
+        console.error('Error al completar ítem:', body.error)
+        return
+      }
+
+      const { item } = await res.json() as { item: PlanTratamientoItem }
+      // Actualizar estado del ítem en el plan local
+      setPlanes((prev) => prev.map((p) => {
+        if (p.id !== planId) return p
+        return {
+          ...p,
+          items: (p.items ?? []).map((i) => i.id === itemId ? { ...i, ...item } : i),
+        }
+      }))
+    } finally {
+      setCompletandoItem(null)
+    }
+  }
+
+  // Registrar consentimiento y luego completar el ítem
+  async function handleRegistrarConsentimiento(datos: {
+    consentido_por: string
+    metodo: string
+    descripcion_riesgos?: string
+  }) {
+    if (!modalConsentimiento) return
+
+    const { itemId, planId, nombreProcedimiento } = modalConsentimiento
+
+    // 1. Registrar consentimiento
+    const resConsent = await fetch('/api/odontologia/consentimiento', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        plan_item_id: itemId,
+        procedimiento: nombreProcedimiento,
+        consentido_por: datos.consentido_por,
+        metodo: datos.metodo,
+        descripcion_riesgos: datos.descripcion_riesgos,
+      }),
+    })
+
+    if (!resConsent.ok) {
+      const body = await resConsent.json().catch(() => ({})) as { error?: string }
+      throw new Error(body.error ?? 'Error al registrar el consentimiento')
+    }
+
+    // 2. Cerrar modal antes del segundo PUT
+    setModalConsentimiento(null)
+
+    // 3. Volver a completar el ítem (ahora pasará el bloqueo)
+    const resPut = await fetch(`/api/odontologia/planes/items/${itemId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado: 'completado' }),
+    })
+
+    if (resPut.ok) {
+      const { item } = await resPut.json() as { item: PlanTratamientoItem }
+      setPlanes((prev) => prev.map((p) => {
+        if (p.id !== planId) return p
+        return {
+          ...p,
+          items: (p.items ?? []).map((i) => i.id === itemId ? { ...i, ...item } : i),
+        }
+      }))
     }
   }
 
@@ -746,7 +993,7 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
                         {(plan.items ?? []).filter((i) => i.activo).map((item) => (
                           <div
                             key={item.id}
-                            className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50"
+                            className="flex items-center justify-between py-2 px-2 rounded-lg hover:bg-slate-50"
                           >
                             <div className="flex-1 min-w-0">
                               <p className="text-sm text-slate-700 truncate">{item.nombre_procedimiento}</p>
@@ -758,9 +1005,22 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
                               <span className="text-sm font-medium text-slate-800 whitespace-nowrap">
                                 {formatCLP(item.precio_total)}
                               </span>
-                              {item.estado === 'completado' && (
+                              {item.estado === 'completado' ? (
                                 <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                              )}
+                              ) : item.estado !== 'cancelado' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCompletarItem(item.id, plan.id, item.nombre_procedimiento)}
+                                  disabled={completandoItem === item.id}
+                                  title="Marcar como completado"
+                                  className="p-1 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 disabled:opacity-40 transition-colors flex-shrink-0"
+                                >
+                                  {completandoItem === item.id
+                                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                                    : <CheckCircle2 className="w-4 h-4" />
+                                  }
+                                </button>
+                              ) : null}
                             </div>
                           </div>
                         ))}
@@ -797,6 +1057,11 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
                           </button>
                         )}
                       </div>
+                      {errorPresupuesto && generandoPresupuesto !== plan.id && (
+                        <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mt-1">
+                          {errorPresupuesto}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -815,6 +1080,16 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
           fichaId={ficha.id}
           onGuardado={handleEstadoGuardado}
           onCerrar={() => setDienteSeleccionado(null)}
+        />
+      )}
+
+      {/* Modal de consentimiento informado — Ley 20.584 Art. 14 */}
+      {modalConsentimiento && (
+        <ModalConsentimiento
+          itemId={modalConsentimiento.itemId}
+          nombreProcedimiento={modalConsentimiento.nombreProcedimiento}
+          onConfirmar={handleRegistrarConsentimiento}
+          onCancelar={() => setModalConsentimiento(null)}
         />
       )}
     </div>

@@ -55,6 +55,47 @@ export async function POST(
 
   const fichaTyped = ficha as { id: string; paciente_id: string }
 
+  // Validar transición de estado clínico
+  const { data: estadoActualRow } = await supabase
+    .from('odontograma_estado')
+    .select('estado')
+    .eq('ficha_odontologica_id', fichaId)
+    .eq('numero_pieza', body.numero_pieza)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const estadoActual = (estadoActualRow as { estado: EstadoDienteValor } | null)?.estado ?? null
+  const nuevoEstado = body.estado
+
+  if (estadoActual !== null) {
+    let transicionValida = true
+
+    if (estadoActual === 'ausente') {
+      // Diente ausente solo puede recibir implante o corrección de ausente
+      if (nuevoEstado !== 'implante' && nuevoEstado !== 'ausente') {
+        transicionValida = false
+      }
+    } else if (estadoActual === 'implante') {
+      // Implante puede recibir corona o fractura documentada como ausente
+      if (nuevoEstado !== 'corona' && nuevoEstado !== 'ausente') {
+        transicionValida = false
+      }
+    } else {
+      // Desde cualquier otro estado no se puede ir a sano directo si hay implante/ausente previo
+      // (este bloque cubre sano, caries, obturado, fractura, tratamiento_conducto, corona)
+      // Todas las transiciones son válidas excepto ausente→sano e implante→sano
+      // ya cubiertas por los bloques anteriores — no hay restricción adicional aquí
+    }
+
+    if (!transicionValida) {
+      return NextResponse.json(
+        { error: `Transición de estado no permitida: un diente ${estadoActual} no puede pasar a ${nuevoEstado}` },
+        { status: 422 }
+      )
+    }
+  }
+
   const { data, error } = await supabase
     .from('odontograma_estado')
     .insert({
@@ -78,5 +119,22 @@ export async function POST(
     return NextResponse.json({ error: 'Error al guardar estado' }, { status: 500 })
   }
 
-  return NextResponse.json({ estado: data as OdontogramaEstado }, { status: 201 })
+  const estadoCreado = data as OdontogramaEstado
+
+  // Audit log — modificación del odontograma (Decreto 41 MINSAL)
+  await supabase.from('audit_log').insert({
+    usuario_id: user.id,
+    paciente_id: fichaTyped.paciente_id,
+    clinica_id: clinicaId,
+    accion: 'odontograma_modificado',
+    detalle: {
+      tabla_afectada: 'odontograma_estado',
+      registro_id: estadoCreado.id,
+      ficha_odontologica_id: fichaId,
+      numero_pieza: body.numero_pieza,
+      estado: body.estado,
+    },
+  })
+
+  return NextResponse.json({ estado: estadoCreado }, { status: 201 })
 }
