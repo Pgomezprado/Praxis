@@ -10,8 +10,18 @@ export async function PUT(
   const { presupuestoId } = await params
   const supabase = await createClient()
 
-  // Esta ruta puede ser llamada sin sesión (el paciente acepta desde un link)
-  // Si hay sesión, verificamos la clínica; si no, solo validamos que el presupuesto exista
+  // TODO: si se requiere aceptación por email sin login, implementar token firmado (HMAC-SHA256)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const { data: meData } = await supabase
+    .from('usuarios')
+    .select('clinica_id')
+    .eq('id', user.id)
+    .single()
+
+  const clinicaId = (meData as { clinica_id: string } | null)?.clinica_id
+  if (!clinicaId) return NextResponse.json({ error: 'Sin clínica' }, { status: 403 })
 
   const body = await req.json() as { aceptado_por: string }
 
@@ -19,28 +29,17 @@ export async function PUT(
     return NextResponse.json({ error: 'El nombre de quien acepta es requerido' }, { status: 400 })
   }
 
-  // Intentar obtener sesión (opcional para este endpoint)
-  const { data: { user } } = await supabase.auth.getUser()
+  if (body.aceptado_por.trim().length > 255) {
+    return NextResponse.json({ error: 'El nombre de quien acepta no puede superar 255 caracteres' }, { status: 400 })
+  }
 
-  let presupuestoQuery = supabase
+  const { data: presupuestoData } = await supabase
     .from('presupuesto_dental')
     .select('id, plan_tratamiento_id, estado, clinica_id')
     .eq('id', presupuestoId)
+    .eq('clinica_id', clinicaId)
     .eq('activo', true)
-
-  if (user) {
-    const { data: meData } = await supabase
-      .from('usuarios')
-      .select('clinica_id')
-      .eq('id', user.id)
-      .single()
-    const clinicaId = (meData as { clinica_id: string } | null)?.clinica_id
-    if (clinicaId) {
-      presupuestoQuery = presupuestoQuery.eq('clinica_id', clinicaId)
-    }
-  }
-
-  const { data: presupuestoData } = await presupuestoQuery.single()
+    .single()
 
   if (!presupuestoData) {
     return NextResponse.json({ error: 'Presupuesto no encontrado' }, { status: 404 })
@@ -53,11 +52,15 @@ export async function PUT(
     clinica_id: string
   }
 
-  if (presupuesto.estado === 'aceptado') {
-    return NextResponse.json({ error: 'El presupuesto ya fue aceptado' }, { status: 409 })
-  }
-  if (presupuesto.estado === 'rechazado' || presupuesto.estado === 'vencido') {
-    return NextResponse.json({ error: 'El presupuesto no está disponible para aceptar' }, { status: 409 })
+  if (presupuesto.estado !== 'enviado') {
+    const mensajes: Record<string, string> = {
+      aceptado:  'El presupuesto ya fue aceptado',
+      rechazado: 'El presupuesto fue rechazado y no puede aceptarse',
+      vencido:   'El presupuesto está vencido y no puede aceptarse',
+      borrador:  'El presupuesto debe estar enviado antes de poder aceptarse',
+    }
+    const msg = mensajes[presupuesto.estado] ?? 'El presupuesto no está disponible para aceptar'
+    return NextResponse.json({ error: msg }, { status: 409 })
   }
 
   // Marcar presupuesto como aceptado

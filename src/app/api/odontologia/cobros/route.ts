@@ -15,7 +15,6 @@ interface BodyCrearCobro {
   monto_neto: number
   concepto: string
   paciente_id: string
-  doctor_id: string
   pago?: PagoInicial
 }
 
@@ -24,18 +23,18 @@ interface BodyCrearCobro {
 export async function POST(req: Request) {
   try {
     const body = await req.json() as BodyCrearCobro
-    const { presupuesto_dental_id, monto_neto, concepto, paciente_id, doctor_id, pago } = body
+    const { presupuesto_dental_id, monto_neto, concepto, paciente_id, pago } = body
 
     // Validar campos obligatorios
-    if (!presupuesto_dental_id || !paciente_id || !doctor_id || !concepto) {
+    if (!presupuesto_dental_id || !paciente_id || !concepto) {
       return Response.json(
-        { error: 'presupuesto_dental_id, paciente_id, doctor_id y concepto son obligatorios' },
+        { error: 'presupuesto_dental_id, paciente_id y concepto son obligatorios' },
         { status: 400 }
       )
     }
 
-    if (typeof monto_neto !== 'number' || monto_neto < 0) {
-      return Response.json({ error: 'monto_neto debe ser un número mayor o igual a 0' }, { status: 400 })
+    if (typeof monto_neto !== 'number' || monto_neto <= 0) {
+      return Response.json({ error: 'monto_neto debe ser un número mayor a 0' }, { status: 400 })
     }
 
     if (pago) {
@@ -69,18 +68,19 @@ export async function POST(req: Request) {
     }
 
     const clinicaId = me.clinica_id
+    // doctor_id siempre es el usuario autenticado — nunca se acepta del body
+    const doctor_id = user.id
 
-    // Verificar que paciente y médico pertenecen a la clínica
-    const [{ data: pacienteValido }, { data: doctorValido }] = await Promise.all([
-      supabase.from('pacientes').select('id').eq('id', paciente_id).eq('clinica_id', clinicaId).single(),
-      supabase.from('usuarios').select('id').eq('id', doctor_id).eq('clinica_id', clinicaId).single(),
-    ])
+    // Verificar que el paciente pertenece a la clínica
+    const { data: pacienteValido } = await supabase
+      .from('pacientes')
+      .select('id')
+      .eq('id', paciente_id)
+      .eq('clinica_id', clinicaId)
+      .single()
 
     if (!pacienteValido) {
       return Response.json({ error: 'Paciente no pertenece a esta clínica' }, { status: 403 })
-    }
-    if (!doctorValido) {
-      return Response.json({ error: 'Médico no pertenece a esta clínica' }, { status: 403 })
     }
 
     // Verificar que el presupuesto existe, pertenece a la clínica y está aceptado
@@ -128,7 +128,7 @@ export async function POST(req: Request) {
     if (folioError) throw folioError
     const folio = folioData as string
 
-    // Crear cobro
+    // Crear cobro — exento de IVA según Art. 13 N°6 del D.L. 825 (Ley 21.420)
     const { data: cobroDb, error: cobroError } = await supabase
       .from('cobros')
       .insert({
@@ -145,6 +145,7 @@ export async function POST(req: Request) {
         notas: null,
         creado_por: user.id,
         activo: true,
+        exento_iva: true,
       })
       .select('id, folio_cobro, clinica_id, paciente_id, doctor_id, concepto, monto_neto, estado, activo, created_at')
       .single()
