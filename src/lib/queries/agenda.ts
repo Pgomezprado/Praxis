@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { mapCitaDb } from '@/lib/utils/mapCita'
 import type { MockCita } from '@/types/domain'
 
-export type MedicoAgenda = { id: string; nombre: string; especialidad: string }
+export type MedicoAgenda = { id: string; nombre: string; especialidad: string; duracion_consulta: number }
 
 export async function getClinicsId() {
   const supabase = await createClient()
@@ -69,7 +69,7 @@ export async function getMedicos(clinicaId: string): Promise<MedicoAgenda[]> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('usuarios')
-    .select('id, nombre, especialidad')
+    .select('id, nombre, especialidad, duracion_consulta')
     .eq('clinica_id', clinicaId)
     .or('rol.eq.doctor,es_doctor.eq.true')
     .eq('activo', true)
@@ -79,5 +79,6 @@ export async function getMedicos(clinicaId: string): Promise<MedicoAgenda[]> {
     id: d.id,
     nombre: d.nombre,
     especialidad: d.especialidad ?? '',
+    duracion_consulta: (d as { duracion_consulta: number | null }).duracion_consulta ?? 30,
   }))
 }
