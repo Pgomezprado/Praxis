@@ -404,7 +404,7 @@ function TabDashboard({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-700">
-                  {['Clínica', 'Plan', 'Estado', 'Vence gratis', 'Médicos', 'Citas 30d', 'Último pago', 'Total pagado'].map(h => (
+                  {['Clínica', 'Plan', 'Estado', 'Vence gratis', 'Médicos', 'Pacientes', 'Citas 30d', 'Último pago', 'Total pagado'].map(h => (
                     <th key={h} className="text-left py-3 px-4 text-xs font-medium text-slate-400 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -424,6 +424,7 @@ function TabDashboard({
                         {c.fecha_fin_gratis ? formatFecha(c.fecha_fin_gratis) : <span className="text-slate-600">—</span>}
                       </td>
                       <td className="py-3 px-4 text-slate-300 text-center">{c.medicos_activos}</td>
+                      <td className="py-3 px-4 text-slate-300 text-center">{c.total_pacientes ?? 0}</td>
                       <td className="py-3 px-4 text-center">
                         <span className={c.citas_30_dias === 0 ? 'text-red-400' : 'text-slate-300'}>{c.citas_30_dias}</span>
                       </td>
