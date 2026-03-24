@@ -33,6 +33,9 @@ import {
   Send,
   Mail,
   Pencil,
+  KeyRound,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -1468,6 +1471,156 @@ function ModalEditarEmail({ usuario, onClose, onActualizado }: ModalEditarEmailP
   )
 }
 
+// ─── Modal: Contraseña temporal ───────────────────────────────────────────────
+
+type ModalContrasenaTempProps = {
+  usuario: UsuarioData
+  onClose: () => void
+}
+
+function ModalContrasenaTemp({ usuario, onClose }: ModalContrasenaTempProps) {
+  const [password, setPassword] = useState('')
+  const [mostrar, setMostrar] = useState(false)
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+  const [exito, setExito] = useState(false)
+
+  async function handleConfirmar(e: React.FormEvent) {
+    e.preventDefault()
+    setError('')
+
+    if (!password || password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres')
+      return
+    }
+
+    setGuardando(true)
+    try {
+      const res = await fetch(`/api/superadmin/usuarios/${usuario.id}/password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
+      const data = await res.json() as { ok?: boolean; error?: string }
+
+      if (!res.ok) {
+        setError(data.error ?? 'Error al actualizar la contraseña')
+        return
+      }
+
+      setExito(true)
+    } catch {
+      setError('Error de red. Intenta nuevamente.')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+      <div className="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-sm p-6 space-y-5">
+        {/* Cabecera */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h3 className="text-white font-semibold">Contraseña temporal</h3>
+            <p className="text-slate-400 text-sm mt-0.5">{usuario.nombre}</p>
+          </div>
+          <button onClick={onClose} className="p-1 rounded hover:bg-slate-700 text-slate-400">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Info del usuario */}
+        <div className="bg-slate-700/50 rounded-xl px-4 py-3 flex items-center gap-2">
+          <KeyRound className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <div>
+            <p className="text-xs text-slate-400">Usuario</p>
+            <p className="text-sm text-white font-medium">{usuario.email}</p>
+          </div>
+        </div>
+
+        {exito ? (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-emerald-300 font-medium">Contraseña actualizada</p>
+                <p className="text-xs text-slate-400 mt-0.5">El usuario ya puede iniciar sesión con la contraseña temporal.</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 rounded-xl text-sm font-medium bg-slate-700 text-white hover:bg-slate-600 transition-colors"
+            >
+              Cerrar
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleConfirmar} className="space-y-4">
+            <div>
+              <label className={labelCls}>Nueva contraseña temporal *</label>
+              <div className="relative">
+                <input
+                  type={mostrar ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Mínimo 8 caracteres"
+                  autoComplete="new-password"
+                  className={`${inputCls} pr-10`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setMostrar(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
+                  tabIndex={-1}
+                >
+                  {mostrar ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {password.length > 0 && password.length < 8 && (
+                <p className="text-xs text-amber-400 mt-1.5">
+                  {8 - password.length} caracteres más requeridos
+                </p>
+              )}
+            </div>
+
+            <div className="bg-slate-700/40 border border-slate-600/50 rounded-xl px-4 py-3">
+              <p className="text-xs text-slate-400">
+                El usuario podrá ingresar con esta contraseña inmediatamente. Se recomienda pedirle que la cambie en su primer inicio de sesión.
+              </p>
+            </div>
+
+            {error && (
+              <p className="text-sm text-red-400 bg-red-500/10 px-4 py-3 rounded-xl border border-red-500/20">
+                {error}
+              </p>
+            )}
+
+            <div className="flex gap-3 pt-1">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={guardando || password.length < 8}
+                className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+              >
+                {guardando ? <Spinner /> : <KeyRound className="w-3.5 h-3.5" />}
+                {guardando ? 'Actualizando...' : 'Confirmar'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Tab: Usuarios ────────────────────────────────────────────────────────────
 
 function TabUsuarios({
@@ -1484,8 +1637,9 @@ function TabUsuarios({
   const [enviandoId, setEnviandoId] = useState<string | null>(null)
   const [feedbackEnvio, setFeedbackEnvio] = useState<Record<string, { ok: boolean; msg: string }>>({})
   const [modalEmail, setModalEmail] = useState<UsuarioData | null>(null)
+  const [modalContrasena, setModalContrasena] = useState<UsuarioData | null>(null)
 
-  async function reenviarInvitacion(usuario: UsuarioData) {
+  async function enviarAcceso(usuario: UsuarioData) {
     setEnviandoId(usuario.id)
     setFeedbackEnvio(prev => {
       const next = { ...prev }
@@ -1493,14 +1647,15 @@ function TabUsuarios({
       return next
     })
     try {
-      const res = await fetch('/api/superadmin/usuarios/reenviar-invitacion', {
+      const res = await fetch(`/api/superadmin/usuarios/${usuario.id}/enviar-acceso`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: usuario.email }),
       })
-      const data = await res.json() as { ok?: boolean; error?: string }
+      const data = await res.json() as { ok?: boolean; tipo?: string; error?: string }
       if (res.ok && data.ok) {
-        setFeedbackEnvio(prev => ({ ...prev, [usuario.id]: { ok: true, msg: 'Invitación enviada' } }))
+        const msg = data.tipo === 'recuperacion'
+          ? 'Email de recuperación enviado'
+          : 'Invitación enviada'
+        setFeedbackEnvio(prev => ({ ...prev, [usuario.id]: { ok: true, msg } }))
       } else {
         setFeedbackEnvio(prev => ({ ...prev, [usuario.id]: { ok: false, msg: data.error ?? 'Error al enviar' } }))
       }
@@ -1596,13 +1751,21 @@ function TabUsuarios({
                             {u.activo ? 'Desactivar' : 'Activar'}
                           </button>
                           <button
-                            onClick={() => reenviarInvitacion(u)}
+                            onClick={() => enviarAcceso(u)}
                             disabled={enviandoId === u.id}
-                            title="Reenviar invitación"
+                            title="Enviar acceso"
                             className="text-xs font-medium text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-1 whitespace-nowrap disabled:opacity-50"
                           >
                             {enviandoId === u.id ? <Spinner /> : <Send className="w-3.5 h-3.5" />}
-                            Reenviar
+                            Enviar acceso
+                          </button>
+                          <button
+                            onClick={() => setModalContrasena(u)}
+                            title="Establecer contraseña temporal"
+                            className="text-xs font-medium text-violet-400 hover:text-violet-300 transition-colors flex items-center gap-1 whitespace-nowrap"
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />
+                            Contraseña temporal
                           </button>
                           <button
                             onClick={() => setModalEmail(u)}
@@ -1653,12 +1816,19 @@ function TabUsuarios({
                 </span>
                 <div className="flex items-center gap-2 flex-wrap justify-end">
                   <button
-                    onClick={() => reenviarInvitacion(u)}
+                    onClick={() => enviarAcceso(u)}
                     disabled={enviandoId === u.id}
                     className="text-xs font-medium px-3 py-1.5 rounded-lg border border-sky-500/30 text-sky-400 hover:bg-sky-500/10 transition-colors disabled:opacity-50 flex items-center gap-1"
                   >
                     {enviandoId === u.id ? <Spinner /> : <Send className="w-3 h-3" />}
-                    Reenviar
+                    Enviar acceso
+                  </button>
+                  <button
+                    onClick={() => setModalContrasena(u)}
+                    className="text-xs font-medium px-3 py-1.5 rounded-lg border border-violet-500/30 text-violet-400 hover:bg-violet-500/10 transition-colors flex items-center gap-1"
+                  >
+                    <KeyRound className="w-3 h-3" />
+                    Contraseña
                   </button>
                   <button
                     onClick={() => setModalEmail(u)}
@@ -1700,6 +1870,14 @@ function TabUsuarios({
             onActualizado({ ...modalEmail, email: emailNuevo })
             setModalEmail(prev => prev ? { ...prev, email: emailNuevo } : null)
           }}
+        />
+      )}
+
+      {/* Modal contraseña temporal */}
+      {modalContrasena && (
+        <ModalContrasenaTemp
+          usuario={modalContrasena}
+          onClose={() => setModalContrasena(null)}
         />
       )}
     </div>
