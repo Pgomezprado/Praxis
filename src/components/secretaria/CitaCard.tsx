@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { MoreVertical, XCircle, PlayCircle, CheckCircle2, Loader2, CheckCheck, FileText, DollarSign, Package } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { XCircle, PlayCircle, CheckCircle2, Loader2, CheckCheck, FileText, DollarSign, Package, Clock } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
-import { ModalCobro } from './ModalCobro'
 import type { MockCita } from '@/types/domain'
 
 interface CitaCardProps {
@@ -15,6 +15,10 @@ interface CitaCardProps {
   onEstadoCambiado?: (id: string, nuevoEstado: MockCita['estado']) => void
   /** Si el paciente tiene un paquete activo con este médico, indica las sesiones restantes */
   sesionesRestantesPaquete?: number
+  /** True si esta cita ya tiene un cobro registrado (no anulado) */
+  yaCobrada?: boolean
+  /** Callback para abrir el flujo de cambio de hora */
+  onCambioHora?: (id: string) => void
 }
 
 const ESTADO_BADGE: Record<
@@ -34,12 +38,11 @@ const TIPO_LABEL: Record<MockCita['tipo'], string> = {
   urgencia: 'Urgencia',
 }
 
-export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoCambiado, sesionesRestantesPaquete }: CitaCardProps) {
-  const [menuOpen, setMenuOpen] = useState(false)
+export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoCambiado, sesionesRestantesPaquete, yaCobrada = false, onCambioHora }: CitaCardProps) {
+  const router = useRouter()
   const [estadoLocal, setEstadoLocal] = useState(cita.estado)
   const [loading, setLoading] = useState(false)
-  const [modalCobroOpen, setModalCobroOpen] = useState(false)
-  const [cobrada, setCobrada] = useState(false)
+  const [cobrada, setCobrada] = useState(yaCobrada)
 
   const { label, variant } = ESTADO_BADGE[estadoLocal]
   const isCancelada = estadoLocal === 'cancelada'
@@ -47,7 +50,6 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
   const isCompletada = estadoLocal === 'completada'
 
   async function cambiarEstado(nuevoEstado: MockCita['estado']) {
-    setMenuOpen(false)
     setLoading(true)
     const prev = estadoLocal
     setEstadoLocal(nuevoEstado)
@@ -69,28 +71,7 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
     }
   }
 
-  // Acciones disponibles según rol y estado
-  const acciones: { icon: React.ElementType; label: string; estado: MockCita['estado']; danger?: boolean }[] = []
-
-  if (esDoctor) {
-    // Doctor: puede iniciar y completar consultas
-    if (estadoLocal === 'confirmada' || estadoLocal === 'pendiente') {
-      acciones.push({ icon: PlayCircle, label: 'Iniciar consulta', estado: 'en_consulta' })
-      acciones.push({ icon: XCircle, label: 'Cancelar cita', estado: 'cancelada', danger: true })
-    }
-    if (estadoLocal === 'en_consulta') {
-      acciones.push({ icon: CheckCircle2, label: 'Marcar completada', estado: 'completada' })
-    }
-  } else {
-    // Secretaria: solo puede confirmar y cancelar
-    if (estadoLocal === 'pendiente') {
-      acciones.push({ icon: CheckCheck, label: 'Confirmar cita', estado: 'confirmada' })
-      acciones.push({ icon: XCircle, label: 'Cancelar cita', estado: 'cancelada', danger: true })
-    }
-    if (estadoLocal === 'confirmada') {
-      acciones.push({ icon: XCircle, label: 'Cancelar cita', estado: 'cancelada', danger: true })
-    }
-  }
+  const puedeActuar = !isCancelada && !isCompletada
 
   return (
     <div
@@ -142,6 +123,11 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   {label}
                 </span>
+              ) : estadoLocal === 'confirmada' ? (
+                <span className="flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  {label}
+                </span>
               ) : (
                 label
               )}
@@ -176,7 +162,7 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
               </span>
             ) : (
               <button
-                onClick={() => setModalCobroOpen(true)}
+                onClick={() => router.push(`/cobro/${cita.id}`)}
                 title="Registrar cobro"
                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
               >
@@ -197,52 +183,61 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
             </Link>
           )}
 
-          {acciones.length > 0 && !loading && (
-            <>
+          {puedeActuar && !loading && (
+            <div className="flex items-center gap-0.5">
+              {/* Confirmar — solo si pendiente */}
+              {estadoLocal === 'pendiente' && (
+                <button
+                  onClick={() => cambiarEstado('confirmada')}
+                  title="Confirmar cita"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                >
+                  <CheckCheck className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              {/* Iniciar consulta — solo médico, pendiente o confirmada */}
+              {esDoctor && (estadoLocal === 'pendiente' || estadoLocal === 'confirmada') && (
+                <button
+                  onClick={() => cambiarEstado('en_consulta')}
+                  title="Iniciar consulta"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                >
+                  <PlayCircle className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              {/* Completada */}
               <button
-                onClick={() => setMenuOpen((v) => !v)}
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-                aria-label="Acciones"
+                onClick={() => cambiarEstado('completada')}
+                title="Marcar completada"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
               >
-                <MoreVertical className="w-4 h-4" />
+                <CheckCircle2 className="w-3.5 h-3.5" />
               </button>
 
-              {menuOpen && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 top-8 z-20 w-52 bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden">
-                    {acciones.map(({ icon: Icon, label: itemLabel, estado, danger }) => (
-                      <button
-                        key={itemLabel}
-                        onClick={() => cambiarEstado(estado)}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm transition-colors ${
-                          danger
-                            ? 'text-red-600 hover:bg-red-50'
-                            : 'text-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        <Icon className="w-4 h-4 flex-shrink-0" />
-                        {itemLabel}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </>
+              {/* Cambio de hora */}
+              <button
+                onClick={() => onCambioHora?.(cita.id)}
+                title="Cambiar hora"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+              >
+                <Clock className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Anular */}
+              <button
+                onClick={() => cambiarEstado('cancelada')}
+                title="Anular cita"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <XCircle className="w-3.5 h-3.5" />
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Modal de cobro */}
-      <ModalCobro
-        open={modalCobroOpen}
-        onClose={() => setModalCobroOpen(false)}
-        cita={cita}
-        onCobrado={() => {
-          setCobrada(true)
-          setModalCobroOpen(false)
-        }}
-      />
     </div>
   )
 }

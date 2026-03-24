@@ -11,7 +11,7 @@ interface ModalNuevaCitaProps {
   open: boolean
   onClose: () => void
   onCrear: (cita: MockCita) => void
-  medicos: { id: string; nombre: string; especialidad: string }[]
+  medicos: { id: string; nombre: string; especialidad: string; duracion_consulta: number }[]
   /** Fecha, hora y médico preseleccionados (desde click en slot del timeline) */
   fechaInicial?: string
   medicoIdInicial?: string
@@ -21,7 +21,6 @@ interface ModalNuevaCitaProps {
 const TIPO_CONSULTA = [
   { value: 'primera_consulta', label: 'Primera consulta' },
   { value: 'control', label: 'Control' },
-  { value: 'urgencia', label: 'Urgencia' },
 ] as const
 
 function getToday() {
@@ -41,7 +40,6 @@ export function ModalNuevaCita({
   const [medicoId, setMedicoId] = useState(medicoIdInicial ?? '')
   const [fecha, setFecha] = useState(fechaInicial ?? getToday())
   const [slot, setSlot] = useState('')
-  const [duracion, setDuracion] = useState(30)
   const [motivo, setMotivo] = useState('')
   const [tipo, setTipo] = useState<MockCita['tipo']>('control')
   const [enviarEmail, setEnviarEmail] = useState(true)
@@ -58,7 +56,6 @@ export function ModalNuevaCita({
       setMedicoId(medicoIdInicial ?? '')
       setFecha(fechaInicial ?? getToday())
       setSlot(horaInicial ?? '')
-      setDuracion(30)
       setMotivo('')
       setTipo('control')
       setEnviarEmail(true)
@@ -106,6 +103,10 @@ export function ModalNuevaCita({
     return dias[new Date(y, m - 1, d).getDay()]
   }
 
+  const medico = medicos.find((m) => m.id === medicoId)
+  // La duración viene del médico seleccionado; fallback 30 min si aún no hay médico
+  const duracion = medico?.duracion_consulta ?? 30
+
   // Calcular slots disponibles desde horario real (o fallback 09:00–18:00)
   const slotsDisponibles = medicoId && fecha
     ? (() => {
@@ -114,15 +115,13 @@ export function ModalNuevaCita({
         if (configDia && !configDia.activo) return []
         const horaInicio = configDia?.horaInicio ?? '09:00'
         const horaFin = configDia?.horaFin ?? '18:00'
-        // Slots de colación se marcan como ocupados
+        // Slots de colación se marcan como ocupados (usan la misma duración para consistencia)
         const colacionOcupados = configDia?.tieneColacion
-          ? generarSlots(fecha, configDia.colacionInicio, configDia.colacionFin, []).map(s => s.hora)
+          ? generarSlots(fecha, configDia.colacionInicio, configDia.colacionFin, [], duracion).map(s => s.hora)
           : []
-        return generarSlots(fecha, horaInicio, horaFin, [...slotsOcupados, ...colacionOcupados])
+        return generarSlots(fecha, horaInicio, horaFin, [...slotsOcupados, ...colacionOcupados], duracion)
       })()
     : []
-
-  const medico = medicos.find((m) => m.id === medicoId)
 
   // Calcular hora fin según slot + duración
   function calcularHoraFin(horaInicio: string, minutos: number): string {
@@ -292,24 +291,6 @@ export function ModalNuevaCita({
                     )}
                   </div>
 
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 mb-2">Duración</p>
-                    <div className="flex gap-2">
-                      {[15, 30, 45, 60].map((min) => (
-                        <button
-                          key={min}
-                          onClick={() => setDuracion(min)}
-                          className={`flex-1 py-2 rounded-xl text-sm font-medium transition-all ${
-                            duracion === min
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                          }`}
-                        >
-                          {min}min
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                 </>
               )}
             </div>
@@ -346,26 +327,6 @@ export function ModalNuevaCita({
                 </div>
               </div>
 
-              <div className="space-y-2.5 pt-1">
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={enviarEmail}
-                    onChange={(e) => setEnviarEmail(e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-slate-700">Enviar confirmación por email al paciente</span>
-                </label>
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={enviarSms}
-                    onChange={(e) => setEnviarSms(e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-slate-700">Enviar recordatorio SMS 24h antes</span>
-                </label>
-              </div>
             </div>
           </section>
         </div>

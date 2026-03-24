@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, List, CalendarRange, Plus, CheckCircle2 } from 'lucide-react'
 import { ModalNuevaCita } from './ModalNuevaCita'
+import { ModalCambioHora } from './ModalCambioHora'
+import { DrawerDetalleCita } from './DrawerDetalleCita'
 import type { MockCita } from '@/types/domain'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -97,17 +99,18 @@ const MEDICO_COLOR: Record<string, string> = {
 
 interface Props {
   allCitas: MockCita[]
-  medicos: { id: string; nombre: string; especialidad: string }[]
+  medicos: { id: string; nombre: string; especialidad: string; duracion_consulta: number }[]
   fecha: string
   medicoId: string
   listPath?: string
   semanaPath?: string
   hideMedicoFilter?: boolean
+  esDoctor?: boolean
 }
 
 type Toast = { folio: string; paciente: string }
 
-export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPath = '/agenda/hoy', semanaPath = '/agenda/semana', hideMedicoFilter = false }: Props) {
+export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPath = '/agenda/hoy', semanaPath = '/agenda/semana', hideMedicoFilter = false, esDoctor = false }: Props) {
   const router = useRouter()
   const today = getToday()
   const monday = getMonday(fecha)
@@ -117,7 +120,11 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
   const [citasLocales, setCitasLocales] = useState<MockCita[]>(allCitas)
   const [filtroMedico, setFiltroMedico] = useState(medicoId)
   const [modalOpen, setModalOpen] = useState(false)
+  const [fechaModalNueva, setFechaModalNueva] = useState(fecha)
   const [toast, setToast] = useState<Toast | null>(null)
+  const [citaSeleccionada, setCitaSeleccionada] = useState<MockCita | null>(null)
+  const [modalCambioHoraOpen, setModalCambioHoraOpen] = useState(false)
+  const [citaCambioHora, setCitaCambioHora] = useState<MockCita | null>(null)
 
   function buildUrl(base: string, newFecha: string, newMedico: string): string {
     const params = new URLSearchParams()
@@ -144,6 +151,25 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
     setCitasLocales((prev) => [...prev, cita])
     setToast({ folio: cita.folio, paciente: cita.pacienteNombre })
     setTimeout(() => setToast(null), 4000)
+  }
+
+  function handleEstadoCambiado(id: string, nuevoEstado: MockCita['estado']) {
+    setCitasLocales((prev) => prev.map((c) => c.id === id ? { ...c, estado: nuevoEstado } : c))
+  }
+
+  function handleAbrirCambioHora(id: string) {
+    const cita = citasLocales.find(c => c.id === id) ?? null
+    setCitaCambioHora(cita)
+    setModalCambioHoraOpen(true)
+  }
+
+  function handleCambioHoraDone(id: string, nuevaFecha: string, horaInicio: string, horaFin: string) {
+    setCitasLocales((prev) => prev.map((c) => c.id === id ? { ...c, fecha: nuevaFecha, horaInicio, horaFin } : c))
+  }
+
+  function abrirNuevaCitaEnDia(dia: string) {
+    setFechaModalNueva(dia)
+    setModalOpen(true)
   }
 
   const totalSemana = weekDays.reduce((sum, d) => sum + citasDia(d).length, 0)
@@ -315,17 +341,18 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
 
                 {/* Appointments */}
                 <div
+                  onClick={() => citas.length === 0 && abrirNuevaCitaEnDia(dia)}
                   className={`flex-1 min-h-[460px] p-1.5 space-y-1.5 ${
                     isToday
                       ? 'bg-blue-50/30'
                       : isWeekend
                       ? 'bg-slate-50/50'
                       : 'bg-white'
-                  }`}
+                  } ${citas.length === 0 ? 'cursor-pointer hover:bg-slate-50/80 transition-colors group' : ''}`}
                 >
                   {citas.length === 0 ? (
                     <div className="pt-10 text-center">
-                      <p className="text-xs text-slate-300">—</p>
+                      <p className="text-xs text-slate-300 group-hover:text-slate-400 transition-colors">+</p>
                     </div>
                   ) : (
                     citas.map((cita) => {
@@ -337,16 +364,22 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
                       return (
                         <div
                           key={cita.id}
-                          className={`rounded-lg p-2 border transition-colors ${
+                          onClick={() => setCitaSeleccionada(cita)}
+                          className={`rounded-lg p-2 border transition-all cursor-pointer ${
                             isCancelled
-                              ? 'border-red-100 bg-red-50/50 opacity-60'
+                              ? 'border-red-100 bg-red-50/50 opacity-60 hover:opacity-80'
                               : isCompleted
-                              ? 'border-slate-100 bg-slate-50 opacity-60'
+                              ? 'border-slate-100 bg-slate-50 opacity-60 hover:opacity-80'
                               : isToday
-                              ? 'border-blue-100 bg-white hover:border-blue-300 hover:shadow-sm cursor-pointer'
-                              : 'border-slate-100 bg-white hover:border-slate-300 hover:shadow-sm cursor-pointer'
+                              ? 'border-blue-100 bg-white hover:border-blue-300 hover:shadow-sm'
+                              : 'border-slate-100 bg-white hover:border-slate-300 hover:shadow-sm'
                           }`}
                         >
+                          {/* Borde izquierdo para pendientes */}
+                          {cita.estado === 'pendiente' && (
+                            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-amber-400 rounded-l-lg" />
+                          )}
+
                           {/* Time */}
                           <p
                             className={`text-xs font-bold tabular-nums ${
@@ -400,14 +433,38 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
         </div>
       </div>
 
+      {/* Drawer detalle de cita */}
+      <DrawerDetalleCita
+        cita={citaSeleccionada}
+        esDoctor={esDoctor}
+        onClose={() => setCitaSeleccionada(null)}
+        onEstadoCambiado={(id, estado) => {
+          handleEstadoCambiado(id, estado)
+          setCitaSeleccionada((prev) => prev ? { ...prev, estado } : null)
+        }}
+        onCambioHora={(id) => {
+          setCitaSeleccionada(null)
+          handleAbrirCambioHora(id)
+        }}
+      />
+
       {/* Modal nueva cita */}
       <ModalNuevaCita
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onCrear={handleCrearCita}
         medicos={medicos}
-        fechaInicial={fecha}
+        fechaInicial={fechaModalNueva}
         medicoIdInicial={filtroMedico || undefined}
+      />
+
+      {/* Modal cambio de hora */}
+      <ModalCambioHora
+        open={modalCambioHoraOpen}
+        onClose={() => setModalCambioHoraOpen(false)}
+        cita={citaCambioHora}
+        medicos={medicos}
+        onCambiado={handleCambioHoraDone}
       />
 
       {/* Toast */}
