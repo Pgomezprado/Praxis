@@ -5,18 +5,21 @@ import { CheckCircle2 } from 'lucide-react'
 import { AgendaToolbar } from './AgendaToolbar'
 import { ListaDia } from './ListaDia'
 import { ModalNuevaCita } from './ModalNuevaCita'
+import { ModalCambioHora } from './ModalCambioHora'
 import type { MockCita } from '@/types/domain'
 
 interface AgendaHoyClientProps {
   citasIniciales: MockCita[]
   allCitas: MockCita[]
-  medicos: { id: string; nombre: string; especialidad: string }[]
+  medicos: { id: string; nombre: string; especialidad: string; duracion_consulta: number }[]
   fecha: string
   medicoId: string
   listPath?: string
   semanaPath?: string
   hideMedicoFilter?: boolean
   esDoctor?: boolean
+  /** IDs de citas que ya tienen cobro registrado (no anulado) */
+  citasCobradas?: string[]
 }
 
 type Toast = { folio: string; paciente: string }
@@ -31,11 +34,15 @@ export function AgendaHoyClient({
   semanaPath,
   hideMedicoFilter,
   esDoctor = false,
+  citasCobradas = [],
 }: AgendaHoyClientProps) {
+  const cobradosSet = new Set(citasCobradas)
   const [modalOpen, setModalOpen] = useState(false)
   const [horaPreseleccionada, setHoraPreseleccionada] = useState<string | undefined>(undefined)
   const [citasLocales, setCitasLocales] = useState<MockCita[]>(citasIniciales)
   const [toast, setToast] = useState<Toast | null>(null)
+  const [modalCambioHoraOpen, setModalCambioHoraOpen] = useState(false)
+  const [citaCambioHora, setCitaCambioHora] = useState<MockCita | null>(null)
 
   // Sincronizar cuando cambia la fecha/médico (el padre re-renderiza con nuevas props)
   useEffect(() => {
@@ -51,6 +58,18 @@ export function AgendaHoyClient({
   function handleEstadoCambiado(id: string, nuevoEstado: MockCita['estado']) {
     setCitasLocales((prev) =>
       prev.map((c) => (c.id === id ? { ...c, estado: nuevoEstado } : c))
+    )
+  }
+
+  function handleAbrirCambioHora(id: string) {
+    const cita = citasLocales.find(c => c.id === id) ?? null
+    setCitaCambioHora(cita)
+    setModalCambioHoraOpen(true)
+  }
+
+  function handleCambioHoraDone(id: string, nuevaFecha: string, horaInicio: string, horaFin: string) {
+    setCitasLocales((prev) =>
+      prev.map((c) => c.id === id ? { ...c, fecha: nuevaFecha, horaInicio, horaFin } : c)
     )
   }
 
@@ -73,7 +92,9 @@ export function AgendaHoyClient({
           citas={citasLocales}
           showMedico={!medicoId}
           esDoctor={esDoctor}
+          citasCobradas={cobradosSet}
           onEstadoCambiado={handleEstadoCambiado}
+          onCambioHora={handleAbrirCambioHora}
           onNuevaCita={(hora) => { setHoraPreseleccionada(hora); setModalOpen(true) }}
         />
       </div>
@@ -86,6 +107,14 @@ export function AgendaHoyClient({
         fechaInicial={fecha}
         medicoIdInicial={medicoId || undefined}
         horaInicial={horaPreseleccionada}
+      />
+
+      <ModalCambioHora
+        open={modalCambioHoraOpen}
+        onClose={() => setModalCambioHoraOpen(false)}
+        cita={citaCambioHora}
+        medicos={medicos}
+        onCambiado={handleCambioHoraDone}
       />
 
       {/* Toast */}
