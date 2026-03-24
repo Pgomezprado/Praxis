@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CreditCard, Banknote, Loader2, CheckCircle2, Package, AlertCircle } from 'lucide-react'
+import { ArrowLeft, CreditCard, Banknote, Building2, Loader2, CheckCircle2, Package, AlertCircle } from 'lucide-react'
 import type { MockCita } from '@/types/domain'
 import type { Arancel, PaquetePaciente } from '@/types/database'
 
@@ -27,7 +27,7 @@ export function CobroClient({ cita, aranceles, paqueteActivo }: CobroClientProps
   const [arancelSeleccionado, setArancelSeleccionado] = useState(arancelInicial?.id ?? '')
   const [concepto, setConcepto] = useState(arancelInicial?.nombre ?? TIPO_LABEL[cita.tipo])
   const [monto, setMonto] = useState(arancelInicial ? String(arancelInicial.precio_particular) : '')
-  const [medioPago, setMedioPago] = useState<'efectivo' | 'tarjeta'>('efectivo')
+  const [medioPago, setMedioPago] = useState<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo')
   const [referencia, setReferencia] = useState('')
   const [usarPaquete, setUsarPaquete] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -256,7 +256,7 @@ export function CobroClient({ cita, aranceles, paqueteActivo }: CobroClientProps
               <label className="block text-sm font-medium text-slate-700 mb-2">
                 Medio de pago <span className="text-red-500">*</span>
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => setMedioPago('efectivo')}
@@ -283,21 +283,34 @@ export function CobroClient({ cita, aranceles, paqueteActivo }: CobroClientProps
                   <CreditCard className="w-4 h-4" />
                   Tarjeta
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setMedioPago('transferencia')}
+                  disabled={loading}
+                  className={`flex items-center justify-center gap-2 py-3.5 rounded-xl border text-sm font-medium transition-colors ${
+                    medioPago === 'transferencia'
+                      ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                      : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <Building2 className="w-4 h-4" />
+                  Transfer.
+                </button>
               </div>
             </div>
 
-            {/* Voucher tarjeta */}
-            {medioPago === 'tarjeta' && (
+            {/* Voucher / referencia */}
+            {(medioPago === 'tarjeta' || medioPago === 'transferencia') && (
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  N° voucher (opcional)
+                  {medioPago === 'tarjeta' ? 'N° voucher (opcional)' : 'N° operación (opcional)'}
                 </label>
                 <input
                   type="text"
                   value={referencia}
                   onChange={e => setReferencia(e.target.value)}
                   disabled={loading}
-                  placeholder="Ej: 123456"
+                  placeholder={medioPago === 'tarjeta' ? 'Ej: 123456' : 'Ej: 00123456'}
                   className="w-full text-sm rounded-xl border border-slate-200 px-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -309,7 +322,7 @@ export function CobroClient({ cita, aranceles, paqueteActivo }: CobroClientProps
                 <p className="text-sm text-blue-900">
                   <span className="font-bold text-base">${montoNum.toLocaleString('es-CL')}</span>
                   <span className="text-blue-400 mx-2">·</span>
-                  <span className="font-medium">{medioPago === 'efectivo' ? 'Efectivo' : 'Tarjeta'}</span>
+                  <span className="font-medium">{medioPago === 'efectivo' ? 'Efectivo' : medioPago === 'tarjeta' ? 'Tarjeta' : 'Transferencia'}</span>
                   <span className="text-blue-400 mx-2">·</span>
                   <span className="text-blue-700">{cita.pacienteNombre}</span>
                 </p>

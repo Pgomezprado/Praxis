@@ -43,7 +43,7 @@ function ExitoContent() {
         </div>
         <h1 className="text-2xl font-bold text-slate-900">¡Cita confirmada!</h1>
         <p className="text-slate-500 mt-2 text-sm">
-          Recibirás un email de confirmación en <span className="font-medium text-slate-700">{email}</span>
+          Guarda el folio de tu cita como comprobante.
         </p>
       </div>
 

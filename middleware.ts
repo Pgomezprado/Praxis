@@ -75,6 +75,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
+  // Si el usuario tiene contraseña temporal, bloquearlo en /nueva-contrasena
+  if (user && !isPublicPage && !isLoginPage && !pathname.startsWith('/nueva-contrasena')) {
+    const debeCambiar = user.user_metadata?.debe_cambiar_password === true
+    if (debeCambiar) {
+      return NextResponse.redirect(new URL('/nueva-contrasena', request.url))
+    }
+  }
+
   if (user && needsRoleCheck) {
     // Consultar rol solo cuando la ruta lo requiere — evita query en cada request
     const { data: usuario } = await supabase

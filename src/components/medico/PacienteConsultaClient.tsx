@@ -575,16 +575,18 @@ export function PacienteConsultaClient({
                   />
                 </div>
 
-                {/* Medicamentos (campo legacy — separados por coma) */}
+                {/* Medicamentos en tratamiento activo — quedan en el historial clínico del paciente */}
                 <div>
                   <label className="text-sm font-medium text-slate-700 block mb-1.5">
-                    Medicamentos clínicos
-                    <span className="text-xs font-normal text-slate-400 ml-1">(separados por coma)</span>
+                    Medicamentos en tratamiento activo
                   </label>
+                  <p className="text-xs text-slate-400 mb-1.5">
+                    Fármacos que el paciente ya toma (no los de esta receta). Aparecerán en el historial y en el resumen IA.
+                  </p>
                   <input
                     {...register('medicamentos')}
                     type="text"
-                    placeholder="Ej: Enalapril 10mg, Metformina 850mg"
+                    placeholder="Ej: Enalapril 10mg, Metformina 850mg (separados por coma)"
                     className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>

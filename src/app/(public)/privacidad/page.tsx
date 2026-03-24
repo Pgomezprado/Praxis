@@ -46,7 +46,7 @@ export default function PrivacidadPage() {
               </p>
               <p className="mt-2">
                 Para consultas sobre privacidad, puedes escribirnos a{' '}
-                <a href="mailto:gomezpablo.mayor@gmail.com" className="text-blue-600 underline">gomezpablo.mayor@gmail.com</a>.
+                <a href="mailto:privacidad@praxisapp.cl" className="text-blue-600 underline">privacidad@praxisapp.cl</a>.
               </p>
             </section>
 
@@ -146,8 +146,8 @@ export default function PrivacidadPage() {
               </ul>
               <p className="mt-2">
                 Para ejercer estos derechos, dirígete a la clínica que gestionó tu atención (responsable del dato) o escríbenos a{' '}
-                <a href="mailto:gomezpablo.mayor@gmail.com" className="text-blue-600 underline">gomezpablo.mayor@gmail.com</a>.
-                Te responderemos en un plazo máximo de <strong>30 días hábiles</strong>.
+                <a href="mailto:privacidad@praxisapp.cl" className="text-blue-600 underline">privacidad@praxisapp.cl</a>.
+                Te responderemos en un plazo máximo de <strong>10 días hábiles</strong>.
               </p>
             </section>
 
@@ -156,7 +156,7 @@ export default function PrivacidadPage() {
               <h2 className="text-lg font-semibold text-slate-900 mb-2">Ejercer tus derechos ARCO</h2>
               <p className="text-sm text-slate-600 mb-1">
                 Puedes ejercer tus derechos de Acceso, Rectificación, Cancelación u Oposición enviando el siguiente formulario.
-                Te responderemos al correo indicado en un plazo de <strong>30 días hábiles</strong>.
+                Te responderemos al correo indicado en un plazo de <strong>10 días hábiles</strong>.
               </p>
               <FormularioArco />
             </section>
@@ -198,7 +198,7 @@ export default function PrivacidadPage() {
         {' · '}
         <Link href="/privacidad" className="underline">Política de Privacidad</Link>
         {' · '}
-        <a href="mailto:gomezpablo.mayor@gmail.com" className="underline">gomezpablo.mayor@gmail.com</a>
+        <a href="mailto:privacidad@praxisapp.cl" className="underline">privacidad@praxisapp.cl</a>
       </footer>
     </div>
   )

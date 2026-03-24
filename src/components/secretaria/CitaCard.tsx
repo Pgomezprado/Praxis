@@ -43,6 +43,7 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
   const [estadoLocal, setEstadoLocal] = useState(cita.estado)
   const [loading, setLoading] = useState(false)
   const [cobrada, setCobrada] = useState(yaCobrada)
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false)
 
   const { label, variant } = ESTADO_BADGE[estadoLocal]
   const isCancelada = estadoLocal === 'cancelada'
@@ -225,9 +226,9 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
                 <Clock className="w-3.5 h-3.5" />
               </button>
 
-              {/* Anular */}
+              {/* Anular — abre modal de confirmación */}
               <button
-                onClick={() => cambiarEstado('cancelada')}
+                onClick={() => setMostrarConfirmacion(true)}
                 title="Anular cita"
                 className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
               >
@@ -238,6 +239,42 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
         </div>
       </div>
 
+      {/* Modal de confirmación — Anular cita */}
+      {mostrarConfirmacion && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setMostrarConfirmacion(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 w-full max-w-sm"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-semibold text-slate-900 mb-1">¿Anular esta cita?</h2>
+            <p className="text-sm text-slate-500 mb-5">
+              {cita.pacienteNombre}
+              {cita.horaInicio ? ` · ${cita.horaInicio}` : ''}
+              . Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setMostrarConfirmacion(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setMostrarConfirmacion(false)
+                  cambiarEstado('cancelada')
+                }}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors"
+              >
+                Sí, anular
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

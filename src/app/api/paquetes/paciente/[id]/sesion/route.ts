@@ -65,6 +65,7 @@ export async function POST(
         .from('sesiones_paquete')
         .select('id')
         .eq('cita_id', cita_id)
+        .eq('clinica_id', meTyped.clinica_id)
         .eq('activo', true)
         .single()
 

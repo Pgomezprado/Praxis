@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
-import { Eye, EyeOff, CheckCircle2, Lock } from 'lucide-react'
+import { Eye, EyeOff, CheckCircle2, Lock, AlertTriangle } from 'lucide-react'
 
 export default function NuevaContrasenaPage() {
   return (
@@ -26,7 +26,9 @@ function NuevaContrasenaContent() {
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
   const [listo, setListo] = useState(false)
-  const [sesionValida, setSesionValida] = useState<boolean | null>(null)
+  // null = cargando, false = sin sesión, 'temporal' = cambio obligatorio, 'recovery' = reset voluntario
+  const [tipoSesion, setTipoSesion] = useState<null | false | 'temporal' | 'recovery'>(null)
+  const [rolUsuario, setRolUsuario] = useState<string | null>(null)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,7 +38,24 @@ function NuevaContrasenaContent() {
   useEffect(() => {
     async function verificar() {
       const { data: { user } } = await supabase.auth.getUser()
-      setSesionValida(!!user)
+      if (!user) {
+        setTipoSesion(false)
+        return
+      }
+
+      // Detectar si viene de contraseña temporal
+      const debeCambiar = user.user_metadata?.debe_cambiar_password === true
+      setTipoSesion(debeCambiar ? 'temporal' : 'recovery')
+
+      // Obtener rol para saber a dónde redirigir después
+      const { data: usuarioRow } = await supabase
+        .from('usuarios')
+        .select('rol')
+        .eq('id', user.id)
+        .single()
+      if (usuarioRow) {
+        setRolUsuario((usuarioRow as { rol: string }).rol)
+      }
     }
     verificar()
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -46,12 +65,19 @@ function NuevaContrasenaContent() {
   const coinciden = password === confirmar
   const canGuardar = passwordOk && coinciden
 
+  function destino(rol: string | null): string {
+    if (rol === 'doctor') return '/medico/inicio'
+    if (rol === 'admin_clinica') return '/admin'
+    return '/inicio'
+  }
+
   async function handleGuardar(e: React.FormEvent) {
     e.preventDefault()
     if (!canGuardar) return
     setGuardando(true)
     setError('')
 
+    // Actualizar la contraseña
     const { error: updateError } = await supabase.auth.updateUser({ password })
 
     if (updateError) {
@@ -60,22 +86,31 @@ function NuevaContrasenaContent() {
       return
     }
 
+    // Si era contraseña temporal, limpiar el flag en los metadatos
+    if (tipoSesion === 'temporal') {
+      await supabase.auth.updateUser({
+        data: { debe_cambiar_password: false },
+      })
+    }
+
     setListo(true)
-    setTimeout(() => router.push('/login'), 2000)
+
+    // Redirigir al dashboard correspondiente
+    setTimeout(() => router.push(destino(rolUsuario)), 2000)
   }
 
-  if (sesionValida === null) {
+  if (tipoSesion === null) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="text-center">
           <div className="w-8 h-8 rounded-full border-4 border-blue-600 border-t-transparent animate-spin mx-auto mb-3" />
-          <p className="text-sm text-slate-500">Verificando link…</p>
+          <p className="text-sm text-slate-500">Verificando sesión…</p>
         </div>
       </div>
     )
   }
 
-  if (!sesionValida) {
+  if (tipoSesion === false) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 max-w-sm w-full text-center">
@@ -105,7 +140,7 @@ function NuevaContrasenaContent() {
             <CheckCircle2 className="w-6 h-6 text-emerald-500" />
           </div>
           <h1 className="text-lg font-semibold text-slate-900 mb-2">Contraseña actualizada</h1>
-          <p className="text-sm text-slate-500">Redirigiendo al inicio de sesión…</p>
+          <p className="text-sm text-slate-500">Redirigiendo al sistema…</p>
         </div>
       </div>
     )
@@ -126,9 +161,21 @@ function NuevaContrasenaContent() {
             </div>
             <h2 className="text-xl font-bold text-slate-900">Nueva contraseña</h2>
             <p className="text-sm text-slate-500 mt-1.5">
-              Elige una contraseña segura para tu cuenta.
+              {tipoSesion === 'temporal'
+                ? 'Debes establecer una contraseña personal antes de continuar.'
+                : 'Elige una contraseña segura para tu cuenta.'}
             </p>
           </div>
+
+          {/* Aviso de contraseña temporal */}
+          {tipoSesion === 'temporal' && (
+            <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-5">
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700 leading-relaxed">
+                Estás usando una contraseña temporal. Por seguridad debes reemplazarla ahora.
+              </p>
+            </div>
+          )}
 
           <form onSubmit={handleGuardar} className="space-y-4">
             <div>

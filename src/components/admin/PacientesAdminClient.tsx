@@ -328,7 +328,7 @@ export function PacientesAdminClient({ pacientesIniciales }: Props) {
 
                   {/* Acciones */}
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-0.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                       <button
                         title="Ver ficha"
                         onClick={() => router.push(`/pacientes/${p.id}`)}

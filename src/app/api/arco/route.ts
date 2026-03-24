@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { validarRut } from '@/lib/utils/formatters'
 
 // Tipos de solicitud ARCO (Acceso, Rectificación, Cancelación, Oposición)
 // Ley 19.628 Art. 12 y Ley 20.584 Art. 12-13
@@ -30,6 +31,11 @@ export async function POST(req: Request) {
     const tiposValidos = ['acceso', 'rectificacion', 'cancelacion', 'oposicion']
     if (!tiposValidos.includes(tipo)) {
       return Response.json({ error: 'Tipo de solicitud inválido' }, { status: 400 })
+    }
+
+    // Validar RUT chileno (dígito verificador)
+    if (!validarRut(rut)) {
+      return Response.json({ error: 'RUT inválido. Verifícalo e intenta nuevamente.' }, { status: 400 })
     }
 
     const supabase = createAdminClient()
@@ -119,8 +125,8 @@ export async function POST(req: Request) {
       </table>
       <div style="margin-top:24px;padding:14px;background:#fefce8;border:1px solid #fef08a;border-radius:10px;">
         <p style="margin:0;font-size:13px;color:#854d0e;">
-          <strong>Acción requerida:</strong> Responder al titular en un plazo máximo de 30 días hábiles
-          conforme a la Ley 19.628.
+          <strong>Acción requerida:</strong> Responder al titular en un plazo máximo de 10 días hábiles
+          conforme a la Ley 19.628 Art. 12.
         </p>
       </div>
     </div>

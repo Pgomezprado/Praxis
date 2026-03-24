@@ -1,4 +1,4 @@
-import { crearTokenSuperadmin } from '@/lib/superadmin/auth'
+import { crearTokenSuperadmin, registrarTokenSuperadmin } from '@/lib/superadmin/auth'
 
 // Rate limiting: máximo 5 intentos fallidos por IP en 15 minutos
 const intentosFallidosPorIp = new Map<string, { count: number; resetAt: number }>()
@@ -58,6 +58,9 @@ export async function POST(req: Request) {
     }
 
     const token = await crearTokenSuperadmin(superadminSecret)
+
+    // Registrar hash en DB para permitir invalidación (logout)
+    await registrarTokenSuperadmin(token)
 
     // Cookie httpOnly firmada, expira en 1 hora
     const response = Response.json({ ok: true })

@@ -122,6 +122,7 @@ export async function POST(
     .from('plan_tratamiento')
     .update({ total_estimado: nuevoTotal })
     .eq('id', planId)
+    .eq('clinica_id', clinicaId)
 
   return NextResponse.json({ item: item as PlanTratamientoItem }, { status: 201 })
 }

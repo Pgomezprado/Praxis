@@ -55,8 +55,18 @@ export async function POST(req: Request) {
   try {
     const { password, aceptaTerminos } = await req.json()
 
-    if (!password || password.length < 8) {
-      return Response.json({ error: 'La contraseña debe tener al menos 8 caracteres' }, { status: 400 })
+    const passwordValida =
+      typeof password === 'string' &&
+      password.length >= 10 &&
+      /[A-Z]/.test(password) &&
+      /[0-9]/.test(password) &&
+      /[!@#$%^&*()_+\-=[\]{}|;':,./<>?]/.test(password)
+
+    if (!password || !passwordValida) {
+      return Response.json(
+        { error: 'La contraseña debe tener al menos 10 caracteres, una mayúscula, un número y un carácter especial.' },
+        { status: 400 }
+      )
     }
 
     // Validar que el usuario aceptó los términos

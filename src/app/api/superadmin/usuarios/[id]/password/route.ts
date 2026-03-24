@@ -42,8 +42,11 @@ export async function POST(
       return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
-    // Actualizar contraseña via Supabase Admin API
-    const { error: errorUpdate } = await supabase.auth.admin.updateUserById(id, { password })
+    // Actualizar contraseña y marcar que debe cambiarla en el primer login
+    const { error: errorUpdate } = await supabase.auth.admin.updateUserById(id, {
+      password,
+      user_metadata: { debe_cambiar_password: true },
+    })
 
     if (errorUpdate) {
       console.error('[password] Error actualizando contraseña:', errorUpdate.message)

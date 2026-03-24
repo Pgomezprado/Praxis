@@ -198,7 +198,7 @@ export default function TerminosPage() {
                 El contrato es de duración indefinida, con renovación mensual automática. Cualquiera de las partes puede terminarlo según lo siguiente:
               </p>
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li><strong>Terminación por el Cliente:</strong> mediante aviso escrito a <a href="mailto:gomezpablo.mayor@gmail.com" className="text-blue-600 underline">gomezpablo.mayor@gmail.com</a> con al menos <strong>30 días de anticipación</strong>. No habrá reembolso de períodos ya facturados.</li>
+                <li><strong>Terminación por el Cliente:</strong> mediante aviso escrito a <a href="mailto:privacidad@praxisapp.cl" className="text-blue-600 underline">privacidad@praxisapp.cl</a> con al menos <strong>30 días de anticipación</strong>. No habrá reembolso de períodos ya facturados.</li>
                 <li><strong>Terminación inmediata por Praxis</strong> ante: incumplimiento grave de estos términos, mora superior a 30 días, actividad ilícita comprobada, o quiebra del Cliente.</li>
               </ul>
               <p className="mt-2">
@@ -231,7 +231,7 @@ export default function TerminosPage() {
               <h2 className="text-lg font-semibold text-slate-900 mb-3">14. Contacto</h2>
               <p>Para consultas legales o contractuales, puede contactarnos en:</p>
               <ul className="list-none pl-0 mt-2 space-y-1">
-                <li>Correo: <a href="mailto:gomezpablo.mayor@gmail.com" className="text-blue-600 underline">gomezpablo.mayor@gmail.com</a></li>
+                <li>Correo: <a href="mailto:privacidad@praxisapp.cl" className="text-blue-600 underline">privacidad@praxisapp.cl</a></li>
                 <li>Sitio web: <a href="https://praxisapp.cl" className="text-blue-600 underline">praxisapp.cl</a></li>
                 <li>Domicilio: Alonso de Ercilla 3100, Ñuñoa, Santiago, Chile</li>
               </ul>
@@ -247,7 +247,7 @@ export default function TerminosPage() {
         {' · '}
         <Link href="/privacidad" className="underline">Política de Privacidad</Link>
         {' · '}
-        <a href="mailto:gomezpablo.mayor@gmail.com" className="underline">gomezpablo.mayor@gmail.com</a>
+        <a href="mailto:privacidad@praxisapp.cl" className="underline">privacidad@praxisapp.cl</a>
       </footer>
     </div>
   )

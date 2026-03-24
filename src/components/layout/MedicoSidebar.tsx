@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { LayoutDashboard, CalendarDays, LogOut, Stethoscope, ShieldCheck, BookOpen, DollarSign, Users } from 'lucide-react'
+import { LayoutDashboard, CalendarDays, LogOut, Stethoscope, ShieldCheck, BookOpen, DollarSign, Users, X } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 
 interface MedicoSidebarProps {
@@ -12,9 +12,10 @@ interface MedicoSidebarProps {
   especialidad?: string
   esAdmin?: boolean
   tieneOdontologia?: boolean
+  onClose?: () => void
 }
 
-export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false, tieneOdontologia = false }: MedicoSidebarProps) {
+export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false, tieneOdontologia = false, onClose }: MedicoSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -35,10 +36,14 @@ export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false,
     router.refresh()
   }
 
+  function handleNavClick() {
+    onClose?.()
+  }
+
   return (
     <aside className="w-64 min-h-screen bg-slate-900 text-white flex flex-col">
       {/* Logo */}
-      <div className="p-6 border-b border-slate-700/60">
+      <div className="p-6 border-b border-slate-700/60 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <Stethoscope className="w-4 h-4 text-white" />
@@ -48,6 +53,15 @@ export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false,
             <p className="text-slate-400 text-xs">Sistema clínico</p>
           </div>
         </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="lg:hidden p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            aria-label="Cerrar menú"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Doctor identity card */}
@@ -72,6 +86,7 @@ export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false,
             <Link
               key={item.href}
               href={item.href}
+              onClick={handleNavClick}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-blue-600 text-white'
@@ -90,6 +105,7 @@ export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false,
         {esAdmin && (
           <Link
             href="/admin"
+            onClick={handleNavClick}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-amber-400 hover:bg-slate-800 hover:text-amber-300 transition-colors"
           >
             <ShieldCheck className="w-4 h-4 flex-shrink-0" />

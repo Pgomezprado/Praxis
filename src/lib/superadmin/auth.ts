@@ -2,13 +2,39 @@
 // Usa exclusivamente Web Crypto API (crypto.subtle) — compatible con Edge Runtime (middleware)
 // y con API routes de Node.js. No importa 'crypto' de Node.js.
 //
-// NOTA: el token no incluye nonce/componente aleatorio (solo timestamp de expiración).
-// Esto es aceptado para el piloto de un solo proceso/servidor.
+// El token incluye un nonce aleatorio (UUID) para evitar ataques de replay:
+// dos sesiones creadas en el mismo segundo producen tokens distintos.
+// Los hashes SHA-256 de los tokens activos se almacenan en superadmin_tokens
+// para permitir invalidación explícita (logout).
+
+import { createClient } from '@supabase/supabase-js'
+
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
+
+/**
+ * Calcula el hash SHA-256 de un token como string hexadecimal.
+ * Usado para almacenar y consultar en superadmin_tokens.
+ */
+async function hashToken(token: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(token)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
 
 /**
  * Verifica el token HMAC-SHA256 de la cookie superadmin_session.
  * Lee la cookie desde el header 'cookie' de la request.
  * Compatible con NextRequest y Request estándar.
+ * Además de verificar la firma HMAC, comprueba que el hash del token
+ * exista en superadmin_tokens y no haya expirado (permite logout explícito).
  */
 export async function verificarSesionSuperadmin(req: Request): Promise<boolean> {
   const superadminSecret = process.env.SUPERADMIN_SECRET
@@ -21,21 +47,23 @@ export async function verificarSesionSuperadmin(req: Request): Promise<boolean> 
 
   const token = match[1]
   const parts = token.split('.')
-  if (parts.length !== 2) return false
+  if (parts.length !== 3) return false
 
-  const [tokenDataB64, firma] = parts
+  const [tokenDataB64, , firma] = parts
 
   try {
     // Decodificar el payload (base64url → utf-8)
-    // atob solo maneja base64 estándar — convertir base64url primero
     const base64Estandar = tokenDataB64.replace(/-/g, '+').replace(/_/g, '/')
     const payload = atob(base64Estandar)
 
-    // Verificar formato del payload
+    // Verificar formato del payload: superadmin:<expires_ms>:<nonce>
     if (!payload.startsWith('superadmin:')) return false
 
+    const partesPaylod = payload.split(':')
+    if (partesPaylod.length !== 3) return false
+
     // Verificar expiración
-    const expiresStr = payload.split(':')[1]
+    const expiresStr = partesPaylod[1]
     const expires = parseInt(expiresStr, 10)
     if (isNaN(expires) || Date.now() > expires) return false
 
@@ -60,7 +88,20 @@ export async function verificarSesionSuperadmin(req: Request): Promise<boolean> 
     for (let i = 0; i < firma.length; i++) {
       diff |= firma.charCodeAt(i) ^ firmaEsperada.charCodeAt(i)
     }
-    return diff === 0
+    if (diff !== 0) return false
+
+    // Verificar que el hash del token exista en superadmin_tokens (no fue invalidado)
+    const tokenHash = await hashToken(token)
+    const supabase = getAdminClient()
+    const { data } = await supabase
+      .from('superadmin_tokens')
+      .select('token_hash')
+      .eq('token_hash', tokenHash)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle()
+
+    return data !== null
+
   } catch {
     return false
   }
@@ -68,12 +109,16 @@ export async function verificarSesionSuperadmin(req: Request): Promise<boolean> 
 
 /**
  * Genera un token HMAC-SHA256 firmado que expira en 1 hora.
- * Usa Web Crypto API — compatible con Edge Runtime y Node.js.
- * Payload: base64url(superadmin:<expires_ms>) + . + firma_hex
+ * Incluye un nonce UUID aleatorio para evitar ataques de replay.
+ * Payload: base64url(superadmin:<expires_ms>:<nonce>) + . + base64url(nonce) + . + firma_hex
+ *
+ * Nota: el nonce también se incluye en el segundo segmento (sin firma) para
+ * que el token tenga 3 partes separadas por '.', distinguible del formato antiguo.
  */
 export async function crearTokenSuperadmin(secret: string): Promise<string> {
   const expires = Date.now() + 60 * 60 * 1000 // 1 hora
-  const payload = `superadmin:${expires}`
+  const nonce = crypto.randomUUID()
+  const payload = `superadmin:${expires}:${nonce}`
 
   const encoder = new TextEncoder()
   const keyData = encoder.encode(secret)
@@ -95,5 +140,37 @@ export async function crearTokenSuperadmin(secret: string): Promise<string> {
     .replace(/\//g, '_')
     .replace(/=/g, '')
 
-  return `${tokenDataB64}.${firma}`
+  // Codificar nonce en base64url como segundo segmento
+  const nonceB64 = btoa(nonce)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '')
+
+  return `${tokenDataB64}.${nonceB64}.${firma}`
+}
+
+/**
+ * Inserta el hash SHA-256 del token en superadmin_tokens.
+ * Debe llamarse justo después de generar un token exitosamente en el login.
+ */
+export async function registrarTokenSuperadmin(token: string): Promise<void> {
+  const tokenHash = await hashToken(token)
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+  const supabase = getAdminClient()
+  await supabase
+    .from('superadmin_tokens')
+    .insert({ token_hash: tokenHash, expires_at: expiresAt })
+}
+
+/**
+ * Elimina el hash SHA-256 del token de superadmin_tokens.
+ * Debe llamarse en el logout para invalidar el token inmediatamente.
+ */
+export async function revocarTokenSuperadmin(token: string): Promise<void> {
+  const tokenHash = await hashToken(token)
+  const supabase = getAdminClient()
+  await supabase
+    .from('superadmin_tokens')
+    .delete()
+    .eq('token_hash', tokenHash)
 }

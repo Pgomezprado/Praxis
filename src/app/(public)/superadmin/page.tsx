@@ -1546,7 +1546,7 @@ function ModalContrasenaTemp({ usuario, onClose }: ModalContrasenaTempProps) {
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm text-emerald-300 font-medium">Contraseña actualizada</p>
-                <p className="text-xs text-slate-400 mt-0.5">El usuario ya puede iniciar sesión con la contraseña temporal.</p>
+                <p className="text-xs text-slate-400 mt-0.5">Al ingresar, el usuario deberá establecer una contraseña personal.</p>
               </div>
             </div>
             <button
@@ -1587,7 +1587,7 @@ function ModalContrasenaTemp({ usuario, onClose }: ModalContrasenaTempProps) {
 
             <div className="bg-slate-700/40 border border-slate-600/50 rounded-xl px-4 py-3">
               <p className="text-xs text-slate-400">
-                El usuario podrá ingresar con esta contraseña inmediatamente. Se recomienda pedirle que la cambie en su primer inicio de sesión.
+                El usuario deberá cambiar esta contraseña al ingresar por primera vez.
               </p>
             </div>
 

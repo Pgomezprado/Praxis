@@ -51,7 +51,7 @@ export async function POST(req: Request) {
 
     const meTyped = me as { clinica_id: string; rol: string }
 
-    if (meTyped.rol !== 'doctor' && meTyped.rol !== 'admin_clinica') {
+    if (meTyped.rol !== 'doctor' && meTyped.rol !== 'admin_clinica' && meTyped.rol !== 'recepcionista') {
       return Response.json({ error: 'Sin permisos para registrar cobros' }, { status: 403 })
     }
 
@@ -130,14 +130,14 @@ export async function POST(req: Request) {
       .single()
 
     if (pagoError) {
-      // Rollback: eliminar el cobro recién creado para evitar cobros huérfanos
+      // Rollback: marcar el cobro como anulado (soft delete — nunca DELETE en tablas médicas)
       await supabase
         .from('cobros')
-        .delete()
+        .update({ activo: false, estado: 'anulado' })
         .eq('id', cobro.id)
         .eq('clinica_id', meTyped.clinica_id)
 
-      console.error('Error al registrar pago (cobro eliminado):', pagoError)
+      console.error('Error al registrar pago (cobro anulado):', pagoError)
       return Response.json({ error: 'Error al registrar el pago. El cobro fue revertido.' }, { status: 500 })
     }
 

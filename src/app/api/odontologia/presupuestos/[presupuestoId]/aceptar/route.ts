@@ -106,6 +106,7 @@ export async function PUT(
       fecha_aprobacion: new Date().toISOString().split('T')[0],
     })
     .eq('id', presupuesto.plan_tratamiento_id)
+    .eq('clinica_id', clinicaId)
 
   return NextResponse.json({ presupuesto: data as PresupuestoDental })
 }

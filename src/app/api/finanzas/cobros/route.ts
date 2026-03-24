@@ -78,7 +78,7 @@ export async function POST(req: Request) {
 
     const meTyped = me as { clinica_id: string; rol: string }
 
-    if (meTyped.rol !== 'doctor' && meTyped.rol !== 'admin_clinica') {
+    if (meTyped.rol !== 'doctor' && meTyped.rol !== 'admin_clinica' && meTyped.rol !== 'recepcionista') {
       return Response.json({ error: 'Sin permisos para crear cobros' }, { status: 403 })
     }
 

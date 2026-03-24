@@ -62,16 +62,18 @@ export async function POST(req: Request) {
 
     const clinicaId = (usuario as { clinica_id: string }).clinica_id
 
-    // Validar que la consulta pertenece a la clínica del médico autenticado
+    // Validar que la consulta pertenece a la clínica Y al médico autenticado
+    // Previene que un médico emita recetas sobre consultas de otro colega del mismo tenant
     const { data: consultaValida } = await supabase
       .from('consultas')
       .select('id')
       .eq('id', consulta_id)
       .eq('clinica_id', clinicaId)
+      .eq('medico_id', user.id)
       .single()
 
     if (!consultaValida) {
-      return Response.json({ error: 'Consulta no encontrada' }, { status: 404 })
+      return Response.json({ error: 'No autorizado para emitir receta sobre esta consulta' }, { status: 403 })
     }
 
     // Validar que el paciente pertenece a la clínica
