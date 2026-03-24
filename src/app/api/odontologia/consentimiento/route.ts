@@ -19,6 +19,24 @@ export async function POST(req: NextRequest) {
   const clinicaId = (meData as { clinica_id: string } | null)?.clinica_id
   if (!clinicaId) return NextResponse.json({ error: 'Sin clínica asociada' }, { status: 403 })
 
+  // Verificar que la clínica tiene odontología habilitada
+  const { data: clinicaCheck } = await supabase
+    .from('clinicas')
+    .select('tipo_especialidad')
+    .eq('id', clinicaId)
+    .single()
+
+  const clinicaCheckTyped = clinicaCheck as { tipo_especialidad: string | null } | null
+  const tieneOdonto =
+    clinicaCheckTyped?.tipo_especialidad === 'odontologia' ||
+    clinicaCheckTyped?.tipo_especialidad === 'mixta'
+  if (!tieneOdonto) {
+    return NextResponse.json(
+      { error: 'Módulo de odontología no disponible para esta clínica' },
+      { status: 403 }
+    )
+  }
+
   const body = await req.json() as {
     plan_item_id: string
     procedimiento: string
@@ -111,6 +129,24 @@ export async function GET(req: NextRequest) {
 
   const clinicaId = (meData as { clinica_id: string } | null)?.clinica_id
   if (!clinicaId) return NextResponse.json({ error: 'Sin clínica asociada' }, { status: 403 })
+
+  // Verificar que la clínica tiene odontología habilitada
+  const { data: clinicaCheckGet } = await supabase
+    .from('clinicas')
+    .select('tipo_especialidad')
+    .eq('id', clinicaId)
+    .single()
+
+  const clinicaCheckGetTyped = clinicaCheckGet as { tipo_especialidad: string | null } | null
+  const tieneOdontoGet =
+    clinicaCheckGetTyped?.tipo_especialidad === 'odontologia' ||
+    clinicaCheckGetTyped?.tipo_especialidad === 'mixta'
+  if (!tieneOdontoGet) {
+    return NextResponse.json(
+      { error: 'Módulo de odontología no disponible para esta clínica' },
+      { status: 403 }
+    )
+  }
 
   const planItemId = req.nextUrl.searchParams.get('plan_item_id')
   if (!planItemId) {

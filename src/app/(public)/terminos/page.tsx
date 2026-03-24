@@ -2,8 +2,8 @@ import { Stethoscope } from 'lucide-react'
 import Link from 'next/link'
 
 export const metadata = {
-  title: 'Términos de Uso — Praxis',
-  description: 'Términos y condiciones de uso del sistema Praxis.',
+  title: 'Términos y Condiciones — Praxis',
+  description: 'Términos y condiciones de servicio de PraxisApp.',
 }
 
 export default function TerminosPage() {
@@ -29,112 +29,212 @@ export default function TerminosPage() {
 
           <div className="mb-8">
             <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-2">Legal</p>
-            <h1 className="text-3xl font-bold text-slate-900 mb-3">Términos de Uso</h1>
-            <p className="text-slate-500 text-sm">Última actualización: 17 de marzo de 2026</p>
+            <h1 className="text-3xl font-bold text-slate-900 mb-3">Términos y Condiciones de Servicio</h1>
+            <p className="text-slate-500 text-sm">Versión v1.0 · Última actualización: 22 de marzo de 2026</p>
           </div>
 
           <div className="prose prose-slate max-w-none space-y-8 text-slate-700 text-sm leading-relaxed">
 
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">1. Descripción del servicio</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">1. Partes del Contrato</h2>
               <p>
-                Praxis es una plataforma SaaS de historia clínica electrónica (HCE) que permite a clínicas y consultorios médicos en Chile gestionar fichas de pacientes, citas, evoluciones clínicas y agendamiento en línea. El servicio es accesible en <strong>praxisapp.cl</strong>.
+                El presente contrato se celebra entre <strong>Praxis SpA</strong> (RUT 78.383.804-4, domicilio en Alonso de Ercilla 3100, Ñuñoa, Santiago, representada por Pablo Ignacio Gómez Prado, en adelante <strong>"Praxis"</strong>) y el <strong>Cliente</strong>, entendido como la clínica, consultorio o profesional de salud que accede o utiliza la plataforma PraxisApp.
+              </p>
+              <p className="mt-2">
+                La aceptación de estos términos ocurre en el momento de crear una cuenta en la plataforma o de hacer uso del servicio, lo que sea primero. Si el Cliente no acepta estos términos, deberá abstenerse de utilizar PraxisApp.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">2. Partes del contrato</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">2. Objeto del Servicio</h2>
+              <p>
+                PraxisApp es un sistema de historia clínica electrónica (HCE) entregado como servicio en la nube (SaaS), accesible en <strong>praxisapp.cl</strong>. El servicio incluye, entre otras funcionalidades:
+              </p>
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li><strong>Praxis:</strong> proveedor del software y la infraestructura tecnológica.</li>
-                <li><strong>Clínica cliente:</strong> establecimiento de salud que contrata el servicio. Actúa como responsable del tratamiento de datos de sus pacientes.</li>
-                <li><strong>Usuarios:</strong> médicos, recepcionistas y administradores que acceden al sistema con credenciales otorgadas por la clínica.</li>
-                <li><strong>Pacientes:</strong> personas que utilizan el portal público de agendamiento o cuyas fichas son gestionadas por la clínica.</li>
+                <li>Gestión de fichas de pacientes.</li>
+                <li>Agenda médica y agendamiento en línea.</li>
+                <li>Notas clínicas, diagnósticos y recetas.</li>
+                <li>Módulo odontológico con odontograma digital.</li>
+                <li>Cobros y aranceles.</li>
+                <li>Resúmenes clínicos asistidos por inteligencia artificial (con consentimiento expreso del paciente).</li>
+                <li>Administración de usuarios y roles.</li>
+                <li>Registro de auditoría (audit log) inmutable.</li>
+              </ul>
+              <p className="mt-2">
+                Praxis tiene como objetivo una disponibilidad del servicio del <strong>99% mensual</strong>, excluyendo ventanas de mantenimiento programado (avisadas con al menos 48 horas de anticipación) y casos de fuerza mayor.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">3. Planes y Precios</h2>
+              <p>Los planes vigentes al momento de la suscripción son los siguientes:</p>
+
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-700 border-b border-slate-200">Plan</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-700 border-b border-slate-200">Descripción</th>
+                      <th className="text-left px-4 py-3 font-semibold text-slate-700 border-b border-slate-200">Precio mensual</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-slate-100">
+                      <td className="px-4 py-3 font-medium text-slate-900">Odontólogo</td>
+                      <td className="px-4 py-3 text-slate-600">1 odontólogo</td>
+                      <td className="px-4 py-3 text-slate-900">$20.000 CLP + IVA</td>
+                    </tr>
+                    <tr className="border-b border-slate-100">
+                      <td className="px-4 py-3 font-medium text-slate-900">Pequeño</td>
+                      <td className="px-4 py-3 text-slate-600">1 a 2 médicos</td>
+                      <td className="px-4 py-3 text-slate-900">$59.000 CLP + IVA</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 font-medium text-slate-900">Mediano</td>
+                      <td className="px-4 py-3 text-slate-600">3 o más médicos</td>
+                      <td className="px-4 py-3 text-slate-900">$129.000 CLP + IVA</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <ul className="list-disc pl-5 mt-4 space-y-1">
+                <li>Los <strong>primeros 2 meses son gratuitos</strong> a modo de onboarding. El cobro comienza a partir del tercer mes.</li>
+                <li>El cobro es mensual y anticipado.</li>
+                <li>Praxis podrá ajustar los precios con un aviso de al menos <strong>30 días de anticipación</strong>.</li>
+                <li>La mora en el pago faculta a Praxis a suspender el acceso al servicio hasta regularización.</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">3. Responsabilidades de la clínica</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">4. Obligaciones de Praxis</h2>
+              <p>Praxis se compromete a:</p>
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>Garantizar que el uso del sistema cumple con la normativa vigente, incluyendo la Ley N° 20.584 y el Decreto 41 del MINSAL.</li>
-                <li>Obtener el consentimiento informado de sus pacientes para el tratamiento de datos de salud, cuando sea requerido.</li>
+                <li>Mantener el servicio operativo y accesible conforme al objetivo de disponibilidad establecido.</li>
+                <li>Realizar respaldos (backups) diarios de la base de datos.</li>
+                <li>Implementar medidas de seguridad técnicas y organizativas adecuadas, incluyendo cifrado en tránsito (TLS), aislamiento por clínica mediante Row Level Security (RLS) y registro de auditoría inmutable.</li>
+                <li>Tratar los datos del Cliente únicamente según las instrucciones de este y los fines del contrato.</li>
+                <li>Notificar al Cliente sobre brechas de seguridad que afecten sus datos en un plazo máximo de <strong>72 horas</strong> desde su detección.</li>
+                <li>Prestar soporte técnico a través de los canales definidos.</li>
+                <li>Informar con al menos 30 días de anticipación cualquier cambio sustancial en el servicio o estos términos.</li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">5. Obligaciones del Cliente</h2>
+              <p>El Cliente se compromete a:</p>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li>Proporcionar datos verídicos al momento del registro y mantenerlos actualizados.</li>
                 <li>Mantener la confidencialidad de las credenciales de acceso de sus usuarios.</li>
-                <li>No solicitar la eliminación de fichas clínicas en contravención del Decreto 41 del MINSAL.</li>
-                <li>Asegurar que los registros clínicos introducidos en el sistema sean verídicos y correspondan a atenciones médicas reales.</li>
+                <li>Utilizar el servicio exclusivamente para la atención clínica en Chile.</li>
+                <li>Obtener los consentimientos necesarios de sus pacientes para el tratamiento de datos de salud, incluyendo el consentimiento para el uso de funciones de inteligencia artificial.</li>
+                <li>Cumplir la <strong>Ley N° 20.584</strong>, el <strong>Decreto 41 del MINSAL</strong> y la <strong>Ley N° 19.628</strong>.</li>
+                <li>Pagar oportunamente las tarifas del plan contratado.</li>
+                <li>Designar un responsable interno para la administración del sistema.</li>
+                <li>No realizar acciones que comprometan la seguridad del servicio o de otros clientes.</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">4. Responsabilidades de Praxis</h2>
-              <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>Mantener la plataforma operativa y disponible con un objetivo de disponibilidad del 99% mensual.</li>
-                <li>Implementar medidas de seguridad técnicas y organizativas adecuadas para proteger los datos.</li>
-                <li>Notificar a la clínica en caso de brechas de seguridad que afecten sus datos.</li>
-                <li>No acceder a los datos clínicos de los pacientes salvo para soporte técnico autorizado y bajo registro de auditoría.</li>
-                <li>Conservar los datos durante los plazos exigidos por el Decreto 41 del MINSAL, incluso si la clínica termina el contrato.</li>
-              </ul>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">6. Prohibiciones</h2>
+              <p>Queda expresamente prohibido al Cliente y sus usuarios:</p>
+              <ol className="list-decimal pl-5 mt-2 space-y-1">
+                <li>Ceder, sublicenciar o transferir el acceso al servicio a terceros no autorizados.</li>
+                <li>Utilizar el sistema para fines distintos a la atención clínica.</li>
+                <li>Intentar acceder a datos de otras clínicas o pacientes que no correspondan a su organización.</li>
+                <li>Aplicar ingeniería inversa, descompilar o intentar obtener el código fuente de la plataforma.</li>
+                <li>Usar bots, scrapers u herramientas automatizadas para extraer datos del sistema.</li>
+                <li>Comercializar el acceso a la plataforma o los reportes generados por esta.</li>
+                <li>Cargar contenido ilegal, fraudulento o que infrinja derechos de terceros.</li>
+                <li>Compartir credenciales de acceso entre distintos usuarios.</li>
+              </ol>
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">5. Uso aceptable</h2>
-              <p>Está prohibido:</p>
-              <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>Acceder al sistema con credenciales de otro usuario.</li>
-                <li>Exportar o compartir datos de pacientes para fines distintos a la atención clínica.</li>
-                <li>Intentar vulnerar la seguridad del sistema o acceder a datos de otras clínicas.</li>
-                <li>Introducir información falsa o fraudulenta en fichas clínicas.</li>
-                <li>Usar el sistema para actividades que vulneren la Ley N° 20.584 o el Decreto 41 del MINSAL.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">6. Asistencia de inteligencia artificial</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">7. Propiedad Intelectual</h2>
               <p>
-                Praxis ofrece funciones de resumen clínico asistido por IA (Anthropic Claude). El uso de estas funciones está sujeto a las siguientes condiciones:
+                La plataforma PraxisApp, incluyendo su código fuente, diseño, interfaces y documentación, es propiedad exclusiva de <strong>Praxis SpA</strong>. El uso del servicio otorga al Cliente una licencia de uso no exclusiva, intransferible y revocable, limitada a los fines del contrato.
               </p>
-              <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>El resumen generado por IA es un <strong>apoyo al criterio médico</strong> y no constituye un diagnóstico clínico.</li>
-                <li>La responsabilidad profesional por el contenido de la ficha clínica recae exclusivamente en el médico tratante.</li>
-                <li>El médico debe revisar y validar cualquier contenido generado por IA antes de incorporarlo a la ficha del paciente.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">7. Terminación del contrato y datos</h2>
-              <p>
-                Al terminar la relación contractual:
-              </p>
-              <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>La clínica puede solicitar una exportación completa de sus datos en formato CSV dentro de los 30 días siguientes a la terminación.</li>
-                <li>Praxis mantendrá los datos clínicos en custodia por los plazos exigidos por el Decreto 41 del MINSAL, sin que puedan ser eliminados permanentemente.</li>
-                <li>El acceso operativo al sistema será desactivado en la fecha de término del contrato.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">8. Limitación de responsabilidad</h2>
-              <p>
-                Praxis no será responsable por daños derivados de:
-              </p>
-              <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>Uso incorrecto del sistema por parte de la clínica o sus usuarios.</li>
-                <li>Decisiones clínicas tomadas con base en resúmenes generados por IA.</li>
-                <li>Interrupciones del servicio por causas de fuerza mayor o fallas en proveedores de infraestructura.</li>
-                <li>Pérdida de datos causada por acciones de la propia clínica o sus usuarios.</li>
-              </ul>
-            </section>
-
-            <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">9. Modificaciones</h2>
-              <p>
-                Praxis puede actualizar estos términos notificando a las clínicas con al menos 30 días de anticipación por correo electrónico. El uso continuado del servicio tras la notificación implica aceptación de los nuevos términos.
+              <p className="mt-2">
+                Los <strong>datos clínicos</strong> ingresados en el sistema pertenecen en todo momento al Cliente. Praxis podrá utilizar datos agregados y anonimizados (sin posibilidad de identificar a pacientes o clínicas) para mejorar el servicio y desarrollar nuevas funcionalidades.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">10. Ley aplicable y jurisdicción</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">8. Confidencialidad</h2>
               <p>
-                Estos términos se rigen por las leyes de la República de Chile. Cualquier controversia será sometida a la jurisdicción de los tribunales ordinarios de justicia de la ciudad de Santiago, Chile.
+                Ambas partes se comprometen a mantener en estricta reserva toda información confidencial a la que accedan en virtud del contrato, incluyendo datos clínicos, información comercial, técnica y de negocio.
               </p>
+              <p className="mt-2">Las obligaciones de confidencialidad incluyen:</p>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li>No divulgar la información a terceros sin autorización expresa.</li>
+                <li>Usar la información únicamente para los fines del contrato.</li>
+                <li>Aplicar medidas de diligencia razonable para protegerla.</li>
+              </ul>
+              <p className="mt-2">
+                Las excepciones aplican cuando la información es de dominio público, existe un mandato legal de divulgación, o fue desarrollada de forma independiente. Estas obligaciones se mantienen vigentes por <strong>5 años</strong> después de la terminación del contrato.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">9. Limitación de Responsabilidad</h2>
+              <p>Praxis no será responsable por daños derivados de:</p>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li>Uso incorrecto del sistema por parte del Cliente o sus usuarios.</li>
+                <li>Fallas en proveedores externos de infraestructura o eventos de fuerza mayor.</li>
+                <li>Decisiones clínicas tomadas por profesionales de la salud, con o sin apoyo del sistema.</li>
+                <li>Daños causados por el uso de funciones de inteligencia artificial.</li>
+                <li>Pérdida de datos causada por actos u omisiones del propio Cliente.</li>
+                <li>Daños indirectos, consecuenciales, lucro cesante o pérdida de datos no atribuibles directamente a Praxis.</li>
+              </ul>
+              <p className="mt-2">
+                En todo caso, la responsabilidad máxima de Praxis ante el Cliente se limita al equivalente de <strong>3 mensualidades del plan contratado</strong>.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">10. Duración y Terminación</h2>
+              <p>
+                El contrato es de duración indefinida, con renovación mensual automática. Cualquiera de las partes puede terminarlo según lo siguiente:
+              </p>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li><strong>Terminación por el Cliente:</strong> mediante aviso escrito a <a href="mailto:gomezpablo.mayor@gmail.com" className="text-blue-600 underline">gomezpablo.mayor@gmail.com</a> con al menos <strong>30 días de anticipación</strong>. No habrá reembolso de períodos ya facturados.</li>
+                <li><strong>Terminación inmediata por Praxis</strong> ante: incumplimiento grave de estos términos, mora superior a 30 días, actividad ilícita comprobada, o quiebra del Cliente.</li>
+              </ul>
+              <p className="mt-2">
+                Tras la terminación: el acceso operativo será deshabilitado, el Cliente tendrá <strong>30 días</strong> para exportar sus datos, y las cláusulas de confidencialidad y propiedad intelectual continuarán vigentes.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">11. Modificaciones a los Términos</h2>
+              <p>
+                Praxis podrá actualizar estos términos notificando al Cliente con al menos <strong>30 días de anticipación</strong> por correo electrónico. El uso continuado del servicio tras la notificación implica aceptación de los nuevos términos. Si el Cliente no acepta las modificaciones, podrá terminar el contrato conforme a la cláusula anterior.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">12. Cesión del Contrato</h2>
+              <p>
+                El Cliente no podrá ceder ni transferir sus derechos u obligaciones bajo este contrato sin autorización previa y escrita de Praxis. Praxis podrá ceder el contrato a una sociedad relacionada o a quien adquiera su negocio, notificando al Cliente con al menos 30 días de anticipación.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">13. Ley Aplicable y Jurisdicción</h2>
+              <p>
+                Este contrato se rige por las leyes de la República de Chile. Cualquier controversia derivada de su interpretación, aplicación o cumplimiento será sometida a la jurisdicción de los tribunales ordinarios de justicia de la ciudad de Santiago, Chile.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">14. Contacto</h2>
+              <p>Para consultas legales o contractuales, puede contactarnos en:</p>
+              <ul className="list-none pl-0 mt-2 space-y-1">
+                <li>Correo: <a href="mailto:gomezpablo.mayor@gmail.com" className="text-blue-600 underline">gomezpablo.mayor@gmail.com</a></li>
+                <li>Sitio web: <a href="https://praxisapp.cl" className="text-blue-600 underline">praxisapp.cl</a></li>
+                <li>Domicilio: Alonso de Ercilla 3100, Ñuñoa, Santiago, Chile</li>
+              </ul>
             </section>
 
           </div>
@@ -142,7 +242,12 @@ export default function TerminosPage() {
       </main>
 
       <footer className="text-center py-8 text-xs text-slate-400">
-        © 2026 Praxis · <Link href="/privacidad" className="underline">Política de privacidad</Link> · <a href="mailto:contacto@praxisapp.cl" className="underline">contacto@praxisapp.cl</a>
+        © 2026 Praxis ·{' '}
+        <Link href="/terminos" className="underline">Términos y Condiciones</Link>
+        {' · '}
+        <Link href="/privacidad" className="underline">Política de Privacidad</Link>
+        {' · '}
+        <a href="mailto:gomezpablo.mayor@gmail.com" className="underline">gomezpablo.mayor@gmail.com</a>
       </footer>
     </div>
   )

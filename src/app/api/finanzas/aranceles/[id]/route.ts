@@ -49,7 +49,7 @@ export async function PATCH(
       }
       updates.precio_particular = Math.round(precio_particular)
     }
-    if (tipo_cita !== undefined) updates.tipo_cita = tipo_cita
+    if (tipo_cita !== undefined) updates.tipo_cita = tipo_cita || null
 
     if (Object.keys(updates).length === 0) {
       return Response.json({ error: 'No hay campos para actualizar' }, { status: 400 })
@@ -68,7 +68,11 @@ export async function PATCH(
     return Response.json({ arancel: data as Arancel })
   } catch (error) {
     console.error('Error en PATCH /api/finanzas/aranceles/[id]:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    const msg =
+      error instanceof Error
+        ? error.message
+        : (error as { message?: string })?.message ?? 'Error interno'
+    return Response.json({ error: msg }, { status: 500 })
   }
 }
 
@@ -122,6 +126,10 @@ export async function DELETE(
     return Response.json({ ok: true })
   } catch (error) {
     console.error('Error en DELETE /api/finanzas/aranceles/[id]:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    const msg =
+      error instanceof Error
+        ? error.message
+        : (error as { message?: string })?.message ?? 'Error interno'
+    return Response.json({ error: msg }, { status: 500 })
   }
 }

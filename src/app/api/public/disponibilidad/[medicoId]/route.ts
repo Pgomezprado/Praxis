@@ -47,13 +47,15 @@ export async function GET(
 
     const { data: doctor } = await supabase
       .from('usuarios')
-      .select('id')
+      .select('id, duracion_consulta')
       .eq('id', medicoId)
       .eq('clinica_id', clinica.id)
       .eq('activo', true)
       .single()
 
     if (!doctor) return Response.json({ error: 'Médico no encontrado' }, { status: 404 })
+
+    const duracionDoctor = (doctor as { id: string; duracion_consulta: number | null }).duracion_consulta ?? 30
 
     // Obtener horario del médico (ya validado que pertenece a esta clínica)
     const { data: horarioDb } = await supabase
@@ -91,14 +93,15 @@ export async function GET(
 
       const ocupados = (citasDb ?? []).map(c => c.hora_inicio)
       const colacionOcupados = configDia.tieneColacion
-        ? generarSlots(fecha, configDia.colacionInicio, configDia.colacionFin, []).map(s => s.hora)
+        ? generarSlots(fecha, configDia.colacionInicio, configDia.colacionFin, [], duracionDoctor).map(s => s.hora)
         : []
 
       const slots = generarSlots(
         fecha,
         configDia.horaInicio,
         configDia.horaFin,
-        [...ocupados, ...colacionOcupados]
+        [...ocupados, ...colacionOcupados],
+        duracionDoctor
       )
 
       return Response.json({ slots })

@@ -11,6 +11,7 @@ import { ResumenIA } from '@/components/paciente/ResumenIA'
 import { HistorialCitas } from '@/components/paciente/HistorialCitas'
 import { SeccionReceta } from '@/components/consulta/SeccionReceta'
 import { abrirVentanaImpresion } from '@/components/consulta/RecetaImprimible'
+import { TabOdontologia } from '@/components/odontologia/TabOdontologia'
 import type { MedicamentoItem } from '@/components/consulta/SeccionReceta'
 import type { MockConsulta } from '@/types/domain'
 import type { CitaPaciente } from '@/components/paciente/HistorialCitas'
@@ -61,6 +62,7 @@ type Props = {
   citas?: CitaPaciente[]
   clinica: DatosClinica
   medico: DatosMedico
+  tieneOdontologia?: boolean
 }
 
 // ── form schema ───────────────────────────────────────────────────────────────
@@ -92,8 +94,10 @@ export function PacienteConsultaClient({
   citas = [],
   clinica,
   medico,
+  tieneOdontologia = false,
 }: Props) {
   const router = useRouter()
+  const [tabActiva, setTabActiva] = useState<'clinica' | 'odontologia'>('clinica')
   const [consultasLocales, setConsultasLocales] = useState<MockConsulta[]>(consultas)
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -143,6 +147,15 @@ export function PacienteConsultaClient({
         const body = await res.json() as { consulta?: { id: string } }
         const idConsulta = body.consulta?.id ?? null
         setConsultaGuardadaId(idConsulta)
+
+        // Marcar la cita como completada automáticamente
+        if (citaContext?.id) {
+          await fetch(`/api/citas/${citaContext.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ estado: 'completada' }),
+          })
+        }
 
         const nuevaConsulta: MockConsulta = {
           id: idConsulta ?? `c-new-${Date.now()}`,
@@ -283,7 +296,42 @@ export function PacienteConsultaClient({
         )}
       </div>
 
-      {/* ── Layout responsive: 1 col mobile / 2 col tablet / 3 col desktop ── */}
+      {/* ── Pestañas (solo si hay módulo odontología) ── */}
+      {tieneOdontologia && (
+        <div className="flex gap-1 mb-5 bg-slate-100 rounded-xl p-1 w-fit">
+          <button
+            onClick={() => setTabActiva('clinica')}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              tabActiva === 'clinica'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Consulta clínica
+          </button>
+          <button
+            onClick={() => setTabActiva('odontologia')}
+            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+              tabActiva === 'odontologia'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Odontograma
+          </button>
+        </div>
+      )}
+
+      {/* ── Tab: Odontología ── */}
+      {tieneOdontologia && tabActiva === 'odontologia' && (
+        <TabOdontologia
+          pacienteId={paciente.id}
+          pacienteNombre={paciente.nombre}
+        />
+      )}
+
+      {/* ── Tab: Consulta clínica (contenido original) ── */}
+      {(tabActiva === 'clinica' || !tieneOdontologia) && (
       <div className="grid grid-cols-1 md:grid-cols-[240px_1fr] lg:grid-cols-[260px_1fr_320px] gap-5 items-start">
 
         {/* ── LEFT — datos del paciente ── */}
@@ -626,6 +674,8 @@ export function PacienteConsultaClient({
         </aside>
 
       </div>
+      )}
+
     </div>
   )
 }

@@ -1,67 +1,40 @@
 import { createClient } from '@/lib/supabase/server'
-import type { Cobro } from '@/types/database'
+import type { Cobro, Pago } from '@/types/database'
 
-// GET /api/finanzas/cobros — listar cobros con filtros opcionales
-export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const estado = searchParams.get('estado')
-    const fechaDesde = searchParams.get('fecha_desde')
-    const fechaHasta = searchParams.get('fecha_hasta')
-
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return Response.json({ error: 'No autorizado' }, { status: 401 })
-
-    const { data: me } = await supabase
-      .from('usuarios')
-      .select('clinica_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!me) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
-
-    let query = supabase
-      .from('cobros')
-      .select(`
-        id, folio_cobro, clinica_id, cita_id, paciente_id, doctor_id, arancel_id,
-        concepto, monto_neto, estado, notas, creado_por, activo, created_at,
-        paciente:pacientes!cobros_paciente_id_fkey ( id, nombre, rut ),
-        doctor:usuarios!cobros_doctor_id_fkey ( id, nombre, especialidad )
-      `)
-      .eq('clinica_id', me.clinica_id)
-      .eq('activo', true)
-      .order('created_at', { ascending: false })
-
-    if (estado) query = query.eq('estado', estado)
-    if (fechaDesde) query = query.gte('created_at', fechaDesde)
-    if (fechaHasta) query = query.lte('created_at', fechaHasta + 'T23:59:59')
-
-    const { data, error } = await query
-    if (error) throw error
-
-    return Response.json({ cobros: data as unknown as Cobro[] })
-  } catch (error) {
-    console.error('Error en GET /api/finanzas/cobros:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
-  }
-}
-
-// POST /api/finanzas/cobros — crear cobro
+// POST /api/finanzas/cobros/registrar — crea cobro y pago en una operación atómica
+// Si el pago falla, el cobro se elimina antes de retornar error.
+// Solo pueden usar este endpoint usuarios con rol doctor o admin_clinica.
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { cita_id, paciente_id, doctor_id, arancel_id, concepto, monto_neto, notas } = body
+    const {
+      cita_id,
+      paciente_id,
+      doctor_id,
+      arancel_id,
+      concepto,
+      monto_neto,
+      notas,
+      medio_pago,
+      referencia,
+      fecha_pago,
+    } = body
 
+    // Validaciones de campos obligatorios
     if (!paciente_id || !doctor_id || !concepto || monto_neto === undefined || monto_neto === null) {
       return Response.json(
         { error: 'paciente_id, doctor_id, concepto y monto_neto son obligatorios' },
         { status: 400 }
       )
     }
-
-    if (typeof monto_neto !== 'number' || monto_neto < 0) {
-      return Response.json({ error: 'monto_neto debe ser un número entero mayor o igual a 0' }, { status: 400 })
+    if (typeof monto_neto !== 'number' || monto_neto <= 0) {
+      return Response.json({ error: 'monto_neto debe ser un número mayor a 0' }, { status: 400 })
+    }
+    if (!medio_pago) {
+      return Response.json({ error: 'medio_pago es obligatorio' }, { status: 400 })
+    }
+    if (!['efectivo', 'tarjeta'].includes(medio_pago)) {
+      return Response.json({ error: 'medio_pago debe ser "efectivo" o "tarjeta"' }, { status: 400 })
     }
 
     const supabase = await createClient()
@@ -79,7 +52,7 @@ export async function POST(req: Request) {
     const meTyped = me as { clinica_id: string; rol: string }
 
     if (meTyped.rol !== 'doctor' && meTyped.rol !== 'admin_clinica') {
-      return Response.json({ error: 'Sin permisos para crear cobros' }, { status: 403 })
+      return Response.json({ error: 'Sin permisos para registrar cobros' }, { status: 403 })
     }
 
     // Verificar que paciente y médico pertenecen a la clínica
@@ -116,7 +89,8 @@ export async function POST(req: Request) {
     if (folioError) throw folioError
     const folio = folioData as string
 
-    const { data, error } = await supabase
+    // PASO 1 — Crear cobro en estado pendiente
+    const { data: cobroData, error: cobroError } = await supabase
       .from('cobros')
       .insert({
         folio_cobro: folio,
@@ -132,6 +106,47 @@ export async function POST(req: Request) {
         creado_por: user.id,
         activo: true,
       })
+      .select('id, folio_cobro, clinica_id, cita_id, paciente_id, doctor_id, arancel_id, concepto, monto_neto, estado, notas, creado_por, activo, created_at')
+      .single()
+
+    if (cobroError) throw cobroError
+
+    const cobro = cobroData as Cobro
+
+    // PASO 2 — Registrar el pago; si falla, eliminar el cobro (rollback)
+    const { data: pagoData, error: pagoError } = await supabase
+      .from('pagos')
+      .insert({
+        clinica_id: meTyped.clinica_id,
+        cobro_id: cobro.id,
+        monto: Math.round(monto_neto),
+        medio_pago,
+        referencia: referencia ?? null,
+        fecha_pago: fecha_pago ?? new Date().toISOString().split('T')[0],
+        registrado_por: user.id,
+        activo: true,
+      })
+      .select('id, clinica_id, cobro_id, monto, medio_pago, referencia, fecha_pago, registrado_por, activo, created_at')
+      .single()
+
+    if (pagoError) {
+      // Rollback: eliminar el cobro recién creado para evitar cobros huérfanos
+      await supabase
+        .from('cobros')
+        .delete()
+        .eq('id', cobro.id)
+        .eq('clinica_id', meTyped.clinica_id)
+
+      console.error('Error al registrar pago (cobro eliminado):', pagoError)
+      return Response.json({ error: 'Error al registrar el pago. El cobro fue revertido.' }, { status: 500 })
+    }
+
+    // PASO 3 — Marcar cobro como pagado (el monto cubre el total)
+    const { data: cobroFinal } = await supabase
+      .from('cobros')
+      .update({ estado: 'pagado' })
+      .eq('id', cobro.id)
+      .eq('clinica_id', meTyped.clinica_id)
       .select(`
         id, folio_cobro, clinica_id, cita_id, paciente_id, doctor_id, arancel_id,
         concepto, monto_neto, estado, notas, creado_por, activo, created_at,
@@ -140,11 +155,15 @@ export async function POST(req: Request) {
       `)
       .single()
 
-    if (error) throw error
-
-    return Response.json({ cobro: data as unknown as Cobro }, { status: 201 })
+    return Response.json(
+      {
+        cobro: cobroFinal as unknown as Cobro,
+        pago: pagoData as Pago,
+      },
+      { status: 201 }
+    )
   } catch (error) {
-    console.error('Error en POST /api/finanzas/cobros:', error)
+    console.error('Error en POST /api/finanzas/cobros/registrar:', error)
     return Response.json({ error: 'Error interno' }, { status: 500 })
   }
 }

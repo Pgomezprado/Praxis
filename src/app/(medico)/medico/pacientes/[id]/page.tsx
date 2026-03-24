@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { PacienteConsultaClient } from '@/components/medico/PacienteConsultaClient'
 import { calcularEdad } from '@/lib/utils/formatters'
 import type { CitaPaciente } from '@/components/paciente/HistorialCitas'
+import type { TipoEspecialidad } from '@/types/database'
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -48,10 +49,10 @@ export default async function MedicoPacientePage({
   if (!meTyped?.clinica_id) notFound()
   const clinicaId = meTyped.clinica_id
 
-  // Cargar datos de la clínica (para el membrete de la receta)
+  // Cargar datos de la clínica (para el membrete de la receta y tipo de especialidad)
   const { data: clinicaDb } = await supabase
     .from('clinicas')
-    .select('nombre, direccion, ciudad, telefono')
+    .select('nombre, direccion, ciudad, telefono, tipo_especialidad')
     .eq('id', clinicaId)
     .single()
 
@@ -60,7 +61,11 @@ export default async function MedicoPacientePage({
     direccion: string | null
     ciudad: string | null
     telefono: string | null
+    tipo_especialidad: TipoEspecialidad | null
   } | null
+
+  const tieneOdontologia = clinicaTyped?.tipo_especialidad === 'odontologia'
+    || clinicaTyped?.tipo_especialidad === 'mixta'
 
   // Cargar paciente — filtrado por clinica_id del médico autenticado
   const { data: pacienteDb } = await supabase
@@ -178,6 +183,7 @@ export default async function MedicoPacientePage({
           rut: meTyped.rut,
           especialidad: meTyped.especialidad,
         }}
+        tieneOdontologia={tieneOdontologia}
       />
     </div>
   )

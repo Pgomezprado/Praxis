@@ -20,3 +20,8 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Cuando hay un modal abierto, los sticky headers quedan por debajo del overlay */
+body.modal-abierto .sticky {
+  z-index: 0 !important;
+}

@@ -37,8 +37,9 @@ export function generarFolio(): string {
   return `PRX-${anio}-${ts}${rand}`
 }
 
-// Genera slots de 30 min entre hora inicio y fin para una fecha
-export function generarSlots(fecha: string, horaInicio: string, horaFin: string, ocupados: string[]): SlotDisponible[] {
+// Genera slots entre hora inicio y fin para una fecha.
+// El parámetro `duracion` (en minutos) define el intervalo entre slots; por defecto 30.
+export function generarSlots(fecha: string, horaInicio: string, horaFin: string, ocupados: string[], duracion = 30): SlotDisponible[] {
   const slots: SlotDisponible[] = []
   const [hIni, mIni] = horaInicio.split(':').map(Number)
   const [hFin, mFin] = horaFin.split(':').map(Number)
@@ -51,7 +52,7 @@ export function generarSlots(fecha: string, horaInicio: string, horaFin: string,
     const m = String(minutos % 60).padStart(2, '0')
     const hora = `${h}:${m}`
     slots.push({ fecha, hora, disponible: !ocupados.includes(hora) })
-    minutos += 30
+    minutos += duracion
   }
 
   return slots

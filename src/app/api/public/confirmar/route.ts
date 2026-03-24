@@ -110,13 +110,15 @@ export async function POST(req: Request) {
     // Verificar que el médico pertenece a la clínica
     const { data: doctor } = await supabase
       .from('usuarios')
-      .select('id, nombre')
+      .select('id, nombre, duracion_consulta')
       .eq('id', medicoId)
       .eq('clinica_id', clinica.id)
       .eq('activo', true)
       .single()
 
     if (!doctor) return Response.json({ error: 'Médico no encontrado' }, { status: 404 })
+
+    const duracionDoctor = (doctor as { id: string; nombre: string; duracion_consulta: number | null }).duracion_consulta ?? 30
 
     // Buscar o crear paciente por RUT
     let pacienteId: string
@@ -159,9 +161,9 @@ export async function POST(req: Request) {
       return Response.json({ error: 'El horario ya no está disponible. Por favor elige otro.' }, { status: 409 })
     }
 
-    // Calcular hora fin (30 min por defecto para portal público)
+    // Calcular hora fin según la duración configurada del médico
     const [h, m] = hora.split(':').map(Number)
-    const total = h * 60 + m + 30
+    const total = h * 60 + m + duracionDoctor
     const horaFin = `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 
     // Crear la cita
@@ -198,19 +200,19 @@ export async function POST(req: Request) {
     const clinicaDireccion = (clinica as { direccion?: string }).direccion ?? ''
     const clinicaCiudad    = (clinica as { ciudad?: string }).ciudad ?? ''
 
-    // Enviar email de confirmación (no bloquea la respuesta)
-    void enviarConfirmacionCita({
-      to: email,
-      pacienteNombre: nombre,
-      folio: cita.folio,
-      medicoNombre: doctor.nombre,
-      especialidad: '',
-      fecha,
-      hora,
-      clinicaNombre,
-      clinicaDireccion,
-      clinicaCiudad,
-    })
+    // Email de confirmación deshabilitado temporalmente (reactivar cuando el piloto esté estable)
+    // void enviarConfirmacionCita({
+    //   to: email,
+    //   pacienteNombre: nombre,
+    //   folio: cita.folio,
+    //   medicoNombre: doctor.nombre,
+    //   especialidad: '',
+    //   fecha,
+    //   hora,
+    //   clinicaNombre,
+    //   clinicaDireccion,
+    //   clinicaCiudad,
+    // })
 
     return Response.json({
       folio: cita.folio,

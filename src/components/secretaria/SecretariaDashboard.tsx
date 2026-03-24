@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import {
-  CalendarDays, Clock, CheckCircle2, XCircle, Users,
+  CalendarDays, Clock, CheckCircle2, Users,
   Plus, Search, ArrowRight, Stethoscope, AlertCircle,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
@@ -28,7 +28,7 @@ type Props = {
   proximasCitas: MockCita[]
   equipo: MedicoEquipo[]
   clinicaNombre: string
-  medicos?: { id: string; nombre: string; especialidad: string }[]
+  medicos?: { id: string; nombre: string; especialidad: string; duracion_consulta: number }[]
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -61,12 +61,12 @@ const ESTADO_CONFIG: Record<EstadoMedicoHoy, { label: string; dot: string; badge
   },
 }
 
-const ESTADO_CITA_BADGE: Record<MockCita['estado'], { label: string; cls: string }> = {
-  confirmada:   { label: 'Confirmada',  cls: 'bg-blue-50 text-blue-700 border border-blue-200' },
-  pendiente:    { label: 'Pendiente',   cls: 'bg-amber-50 text-amber-700 border border-amber-200' },
-  en_consulta:  { label: 'En consulta', cls: 'bg-emerald-50 text-emerald-700 border border-emerald-200' },
-  completada:   { label: 'Completada',  cls: 'bg-slate-100 text-slate-500 border border-slate-200' },
-  cancelada:    { label: 'Cancelada',   cls: 'bg-red-50 text-red-600 border border-red-200' },
+const ESTADO_CITA_BADGE: Record<MockCita['estado'], { label: string; cls: string; dot?: string }> = {
+  confirmada:  { label: 'Confirmada',  cls: 'bg-emerald-100 text-emerald-800 border border-emerald-300', dot: 'bg-emerald-500 animate-pulse' },
+  pendiente:   { label: 'Pendiente',   cls: 'bg-amber-100 text-amber-800 border border-amber-300' },
+  en_consulta: { label: 'En consulta', cls: 'bg-emerald-100 text-emerald-800 border border-emerald-300', dot: 'bg-emerald-500 animate-pulse' },
+  completada:  { label: 'Completada',  cls: 'bg-slate-700 text-white border border-slate-600' },
+  cancelada:   { label: 'Cancelada',   cls: 'bg-red-100 text-red-800 border border-red-300' },
 }
 
 // ── componente ───────────────────────────────────────────────────────────────
@@ -171,9 +171,9 @@ export function SecretariaDashboard({ kpis, proximasCitas, equipo, clinicaNombre
             </div>
             <Link
               href="/agenda/hoy"
-              className="text-xs font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors"
             >
-              Ver todas <ArrowRight className="w-3 h-3" />
+              Ver agenda de hoy <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
 
@@ -212,7 +212,8 @@ export function SecretariaDashboard({ kpis, proximasCitas, equipo, clinicaNombre
                     </p>
 
                     {/* Estado */}
-                    <span className={`flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${badge.cls}`}>
+                    <span className={`flex-shrink-0 inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${badge.cls}`}>
+                      {badge.dot && <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${badge.dot}`} />}
                       {badge.label}
                     </span>
                   </div>
@@ -264,21 +265,21 @@ export function SecretariaDashboard({ kpis, proximasCitas, equipo, clinicaNombre
 
       {/* ── Acciones rápidas ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <button
-          onClick={() => setModalCitaOpen(true)}
+        {/* Agenda de hoy — primer botón, el más prominente */}
+        <Link
+          href="/agenda/hoy"
           className="flex flex-col gap-2 p-4 rounded-2xl border text-left transition-colors bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
         >
-          <Plus className="w-5 h-5" />
+          <CalendarDays className="w-5 h-5" />
           <div>
-            <p className="text-sm font-semibold leading-tight">Nueva cita</p>
-            <p className="text-xs mt-0.5 text-blue-200">Agendar paciente</p>
+            <p className="text-sm font-semibold leading-tight">Agenda de hoy</p>
+            <p className="text-xs mt-0.5 text-blue-200">Ver todas las citas</p>
           </div>
-        </button>
+        </Link>
 
         {[
-          { href: '/pacientes',   icon: Search,       label: 'Buscar paciente', desc: 'Ficha y antecedentes' },
-          { href: '/agenda/hoy',  icon: CalendarDays,  label: 'Ver agenda',      desc: 'Vista del día' },
-          { href: '/agenda/hoy',  icon: XCircle,       label: 'Cancelaciones',   desc: 'Gestionar canceladas' },
+          { href: '/agenda/semana', icon: CalendarDays, label: 'Agenda semanal',  desc: 'Vista de la semana'    },
+          { href: '/pacientes',     icon: Search,        label: 'Buscar paciente', desc: 'Ficha y antecedentes' },
         ].map(({ href, icon: Icon, label, desc }) => (
           <Link
             key={label}
@@ -292,6 +293,18 @@ export function SecretariaDashboard({ kpis, proximasCitas, equipo, clinicaNombre
             </div>
           </Link>
         ))}
+
+        {/* Nueva cita — botón de acción */}
+        <button
+          onClick={() => setModalCitaOpen(true)}
+          className="flex flex-col gap-2 p-4 rounded-2xl border text-left transition-colors bg-white hover:bg-slate-50 text-slate-700 border-slate-200"
+        >
+          <Plus className="w-5 h-5" />
+          <div>
+            <p className="text-sm font-semibold leading-tight">Nueva cita</p>
+            <p className="text-xs mt-0.5 text-slate-400">Agendar paciente</p>
+          </div>
+        </button>
       </div>
 
       {/* Modal nueva cita */}

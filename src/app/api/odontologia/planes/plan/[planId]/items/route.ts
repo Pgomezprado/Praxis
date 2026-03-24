@@ -22,6 +22,24 @@ export async function POST(
   const clinicaId = (meData as { clinica_id: string } | null)?.clinica_id
   if (!clinicaId) return NextResponse.json({ error: 'Sin clínica' }, { status: 403 })
 
+  // Verificar que la clínica tiene odontología habilitada
+  const { data: clinicaCheck } = await supabase
+    .from('clinicas')
+    .select('tipo_especialidad')
+    .eq('id', clinicaId)
+    .single()
+
+  const clinicaCheckTyped = clinicaCheck as { tipo_especialidad: string | null } | null
+  const tieneOdonto =
+    clinicaCheckTyped?.tipo_especialidad === 'odontologia' ||
+    clinicaCheckTyped?.tipo_especialidad === 'mixta'
+  if (!tieneOdonto) {
+    return NextResponse.json(
+      { error: 'Módulo de odontología no disponible para esta clínica' },
+      { status: 403 }
+    )
+  }
+
   // Verificar que el plan pertenece a esta clínica
   const { data: plan } = await supabase
     .from('plan_tratamiento')

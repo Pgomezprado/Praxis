@@ -11,20 +11,23 @@ interface MedicoSidebarProps {
   nombre?: string
   especialidad?: string
   esAdmin?: boolean
+  tieneOdontologia?: boolean
 }
 
-const navItems = [
-  { href: '/medico/inicio',                       label: 'Inicio',              icon: LayoutDashboard, exact: true  },
-  { href: '/medico/citas',                        label: 'Mis citas',           icon: CalendarDays,    exact: false },
-  { href: '/medico/pacientes',                    label: 'Pacientes',           icon: Users,           exact: false },
-  { href: '/medico/odontologia/catalogo',         label: 'Catálogo dental',     icon: BookOpen,        exact: false },
-  { href: '/medico/odontologia/finanzas',         label: 'Finanzas',            icon: DollarSign,      exact: false },
-]
-
-export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false }: MedicoSidebarProps) {
+export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false, tieneOdontologia = false }: MedicoSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+
+  const navItems = [
+    { href: '/medico/inicio',    label: 'Inicio',      icon: LayoutDashboard, exact: true  },
+    { href: '/medico/citas',     label: 'Mis citas',   icon: CalendarDays,    exact: false },
+    { href: '/medico/pacientes', label: 'Pacientes',   icon: Users,           exact: false },
+    ...(tieneOdontologia ? [
+      { href: '/medico/odontologia/catalogo', label: 'Catálogo dental', icon: BookOpen,    exact: false },
+      { href: '/medico/odontologia/finanzas', label: 'Finanzas',        icon: DollarSign,  exact: false },
+    ] : []),
+  ]
 
   async function handleLogout() {
     await supabase.auth.signOut()

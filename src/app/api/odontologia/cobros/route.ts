@@ -67,6 +67,24 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Sin permisos' }, { status: 403 })
     }
 
+    // Verificar que la clínica tiene odontología habilitada
+    const { data: clinicaCheck } = await supabase
+      .from('clinicas')
+      .select('tipo_especialidad')
+      .eq('id', me.clinica_id)
+      .single()
+
+    const clinicaCheckTyped = clinicaCheck as { tipo_especialidad: string | null } | null
+    const tieneOdonto =
+      clinicaCheckTyped?.tipo_especialidad === 'odontologia' ||
+      clinicaCheckTyped?.tipo_especialidad === 'mixta'
+    if (!tieneOdonto) {
+      return Response.json(
+        { error: 'Módulo de odontología no disponible para esta clínica' },
+        { status: 403 }
+      )
+    }
+
     const clinicaId = me.clinica_id
     // doctor_id siempre es el usuario autenticado — nunca se acepta del body
     const doctor_id = user.id

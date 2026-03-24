@@ -77,6 +77,7 @@ export default async function InicioPage() {
     id: m.id,
     nombre: m.nombre,
     especialidad: m.especialidad ?? '',
+    duracion_consulta: (m as { duracion_consulta: number | null }).duracion_consulta ?? 30,
   }))
 
   return (

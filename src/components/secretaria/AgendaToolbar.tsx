@@ -62,7 +62,7 @@ export function AgendaToolbar({ citas, medicos, onNuevaCita, listPath = '/agenda
   const isHoy = fecha === today
 
   return (
-    <div className="sticky top-0 z-10 bg-white border-b border-slate-200 shadow-sm">
+    <div className="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
       {/* Fila 1 — controles principales */}
       <div className="max-w-[720px] mx-auto px-4 pt-3 pb-2 flex flex-wrap items-center gap-2 sm:gap-3">
         {/* Select médico */}

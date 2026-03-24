@@ -22,6 +22,19 @@ export default async function CatalogoPrestacionesPage() {
   const meTyped = me as { clinica_id: string; es_doctor: boolean; rol: string } | null
   if (meTyped?.rol !== 'doctor' && !meTyped?.es_doctor && meTyped?.rol !== 'admin_clinica') redirect('/medico/inicio')
 
+  // Verificar que la clínica tiene odontología habilitada
+  const { data: clinicaData } = await supabase
+    .from('clinicas')
+    .select('tipo_especialidad')
+    .eq('id', meTyped!.clinica_id)
+    .single()
+
+  const clinicaTyped = clinicaData as { tipo_especialidad: string | null } | null
+  const tieneOdontologia =
+    clinicaTyped?.tipo_especialidad === 'odontologia' ||
+    clinicaTyped?.tipo_especialidad === 'mixta'
+  if (!tieneOdontologia) redirect('/medico/inicio')
+
   const { data } = await supabase
     .from('aranceles')
     .select('id, clinica_id, nombre, tipo_cita, precio_particular, activo, created_at, codigo_fonasa, aplica_pieza_dentaria, categoria_dental')

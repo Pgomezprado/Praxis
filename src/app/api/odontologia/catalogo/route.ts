@@ -18,6 +18,24 @@ export async function GET() {
     if (!me) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
     const { clinica_id } = me as { clinica_id: string }
 
+    // Verificar que la clínica tiene odontología habilitada
+    const { data: clinicaCheck } = await supabase
+      .from('clinicas')
+      .select('tipo_especialidad')
+      .eq('id', clinica_id)
+      .single()
+
+    const clinicaCheckTyped = clinicaCheck as { tipo_especialidad: string | null } | null
+    const tieneOdonto =
+      clinicaCheckTyped?.tipo_especialidad === 'odontologia' ||
+      clinicaCheckTyped?.tipo_especialidad === 'mixta'
+    if (!tieneOdonto) {
+      return Response.json(
+        { error: 'Módulo de odontología no disponible para esta clínica' },
+        { status: 403 }
+      )
+    }
+
     const { data, error } = await supabase
       .from('aranceles')
       .select('id, clinica_id, nombre, tipo_cita, precio_particular, activo, created_at, codigo_fonasa, aplica_pieza_dentaria, categoria_dental')
@@ -95,6 +113,24 @@ export async function POST(req: Request) {
     // Solo doctores o admin pueden gestionar el catálogo dental
     if (!meTyped.es_doctor && meTyped.rol !== 'admin_clinica') {
       return Response.json({ error: 'Sin permiso para gestionar el catálogo' }, { status: 403 })
+    }
+
+    // Verificar que la clínica tiene odontología habilitada
+    const { data: clinicaCheck } = await supabase
+      .from('clinicas')
+      .select('tipo_especialidad')
+      .eq('id', meTyped.clinica_id)
+      .single()
+
+    const clinicaCheckTyped = clinicaCheck as { tipo_especialidad: string | null } | null
+    const tieneOdonto =
+      clinicaCheckTyped?.tipo_especialidad === 'odontologia' ||
+      clinicaCheckTyped?.tipo_especialidad === 'mixta'
+    if (!tieneOdonto) {
+      return Response.json(
+        { error: 'Módulo de odontología no disponible para esta clínica' },
+        { status: 403 }
+      )
     }
 
     const { data, error } = await supabase

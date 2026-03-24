@@ -10,17 +10,11 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await req.json()
-    const { estado } = body as { estado: EstadoCita }
-
-    if (!estado || !ESTADOS_VALIDOS.includes(estado)) {
-      return Response.json({ error: 'estado inválido' }, { status: 400 })
-    }
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return Response.json({ error: 'No autorizado' }, { status: 401 })
 
-    // Verificar que la cita pertenece a la misma clínica
     const { data: me } = await supabase
       .from('usuarios')
       .select('clinica_id')
@@ -29,9 +23,27 @@ export async function PATCH(
 
     if (!me) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
+    let updatePayload: Record<string, string>
+
+    if ('estado' in body) {
+      const { estado } = body as { estado: EstadoCita }
+      if (!estado || !ESTADOS_VALIDOS.includes(estado)) {
+        return Response.json({ error: 'estado inválido' }, { status: 400 })
+      }
+      updatePayload = { estado }
+    } else if ('fecha' in body && 'hora_inicio' in body && 'hora_fin' in body) {
+      const { fecha, hora_inicio, hora_fin } = body as { fecha: string; hora_inicio: string; hora_fin: string }
+      if (!fecha || !hora_inicio || !hora_fin) {
+        return Response.json({ error: 'fecha, hora_inicio y hora_fin son requeridos' }, { status: 400 })
+      }
+      updatePayload = { fecha, hora_inicio, hora_fin }
+    } else {
+      return Response.json({ error: 'datos inválidos' }, { status: 400 })
+    }
+
     const { data: cita, error } = await supabase
       .from('citas')
-      .update({ estado })
+      .update(updatePayload)
       .eq('id', id)
       .eq('clinica_id', me.clinica_id)
       .select()

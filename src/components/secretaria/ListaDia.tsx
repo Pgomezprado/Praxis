@@ -6,8 +6,11 @@ interface ListaDiaProps {
   citas: MockCita[]
   showMedico?: boolean
   esDoctor?: boolean
+  /** Set de IDs de citas que ya tienen cobro registrado */
+  citasCobradas?: Set<string>
   onEstadoCambiado?: (id: string, nuevoEstado: MockCita['estado']) => void
   onNuevaCita?: (hora: string) => void
+  onCambioHora?: (id: string) => void
 }
 
 // Genera slots de 30 min entre 08:00 y 20:00
@@ -26,7 +29,7 @@ function getSlotIndex(hora: string): number {
   return SLOTS_DIA.indexOf(hora)
 }
 
-export function ListaDia({ citas, showMedico = false, esDoctor = false, onEstadoCambiado, onNuevaCita }: ListaDiaProps) {
+export function ListaDia({ citas, showMedico = false, esDoctor = false, citasCobradas, onEstadoCambiado, onNuevaCita, onCambioHora }: ListaDiaProps) {
   if (citas.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
@@ -75,7 +78,17 @@ export function ListaDia({ citas, showMedico = false, esDoctor = false, onEstado
         const cita = citasByHora.get(slot)
 
         if (cita) {
-          return <CitaCard key={cita.id} cita={cita} showMedico={showMedico} esDoctor={esDoctor} onEstadoCambiado={onEstadoCambiado} />
+          return (
+            <CitaCard
+              key={cita.id}
+              cita={cita}
+              showMedico={showMedico}
+              esDoctor={esDoctor}
+              yaCobrada={citasCobradas?.has(cita.id) ?? false}
+              onEstadoCambiado={onEstadoCambiado}
+              onCambioHora={onCambioHora}
+            />
+          )
         }
 
         if (occupiedSlots.has(slot)) {

@@ -34,6 +34,24 @@ export async function PUT(
       return Response.json({ error: 'Sin permiso para editar prestaciones' }, { status: 403 })
     }
 
+    // Verificar que la clínica tiene odontología habilitada
+    const { data: clinicaCheck } = await supabase
+      .from('clinicas')
+      .select('tipo_especialidad')
+      .eq('id', meTyped.clinica_id)
+      .single()
+
+    const clinicaCheckTyped = clinicaCheck as { tipo_especialidad: string | null } | null
+    const tieneOdonto =
+      clinicaCheckTyped?.tipo_especialidad === 'odontologia' ||
+      clinicaCheckTyped?.tipo_especialidad === 'mixta'
+    if (!tieneOdonto) {
+      return Response.json(
+        { error: 'Módulo de odontología no disponible para esta clínica' },
+        { status: 403 }
+      )
+    }
+
     // Verificar que la prestación pertenece a la clínica y es de tipo odontología
     const { data: existente } = await supabase
       .from('aranceles')
@@ -106,6 +124,24 @@ export async function DELETE(
 
     if (!meTyped.es_doctor && meTyped.rol !== 'admin_clinica') {
       return Response.json({ error: 'Sin permiso para eliminar prestaciones' }, { status: 403 })
+    }
+
+    // Verificar que la clínica tiene odontología habilitada
+    const { data: clinicaCheckDel } = await supabase
+      .from('clinicas')
+      .select('tipo_especialidad')
+      .eq('id', meTyped.clinica_id)
+      .single()
+
+    const clinicaCheckDelTyped = clinicaCheckDel as { tipo_especialidad: string | null } | null
+    const tieneOdontoDel =
+      clinicaCheckDelTyped?.tipo_especialidad === 'odontologia' ||
+      clinicaCheckDelTyped?.tipo_especialidad === 'mixta'
+    if (!tieneOdontoDel) {
+      return Response.json(
+        { error: 'Módulo de odontología no disponible para esta clínica' },
+        { status: 403 }
+      )
     }
 
     // Verificar que pertenece a esta clínica y es dental

@@ -31,7 +31,7 @@ export default function PrivacidadPage() {
           <div className="mb-8">
             <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-2">Legal</p>
             <h1 className="text-3xl font-bold text-slate-900 mb-3">Política de Privacidad</h1>
-            <p className="text-slate-500 text-sm">Última actualización: 17 de marzo de 2026</p>
+            <p className="text-slate-500 text-sm">Última actualización: 22 de marzo de 2026</p>
           </div>
 
           <div className="prose prose-slate max-w-none space-y-8 text-slate-700 text-sm leading-relaxed">
@@ -42,8 +42,11 @@ export default function PrivacidadPage() {
                 Praxis es un sistema de historia clínica electrónica (HCE) desarrollado y operado como plataforma SaaS para clínicas y consultorios médicos en Chile. El servicio es accesible en <strong>praxisapp.cl</strong>.
               </p>
               <p className="mt-2">
+                <strong>Praxis SpA</strong> · RUT: 78.383.804-4 · Domicilio: Alonso de Ercilla 3100, Ñuñoa, Santiago · Representante legal: Pablo Ignacio Gómez Prado.
+              </p>
+              <p className="mt-2">
                 Para consultas sobre privacidad, puedes escribirnos a{' '}
-                <a href="mailto:privacidad@praxisapp.cl" className="text-blue-600 underline">privacidad@praxisapp.cl</a>.
+                <a href="mailto:gomezpablo.mayor@gmail.com" className="text-blue-600 underline">gomezpablo.mayor@gmail.com</a>.
               </p>
             </section>
 
@@ -63,8 +66,12 @@ export default function PrivacidadPage() {
               <p>Recopilamos únicamente los datos necesarios para la prestación del servicio:</p>
               <ul className="list-disc pl-5 mt-2 space-y-1">
                 <li><strong>Datos de pacientes:</strong> nombre completo, RUT, fecha de nacimiento, sexo, grupo sanguíneo, previsión, teléfono, email, alergias documentadas, condiciones crónicas y registros de consultas médicas.</li>
+                <li><strong>Datos odontológicos:</strong> ficha odontológica, odontograma digital, planes de tratamiento y presupuestos dentales.</li>
+                <li><strong>Datos de citas:</strong> fecha, hora, motivo, tipo, estado y consentimientos registrados.</li>
+                <li><strong>Datos financieros:</strong> registro de cobros y pagos, monto y medio de pago (sin datos bancarios directos).</li>
                 <li><strong>Datos de personal clínico:</strong> nombre, email, rol (médico, recepcionista, administrador) y especialidad.</li>
                 <li><strong>Datos de uso:</strong> registros de acceso a fichas clínicas con usuario, fecha y hora (audit log).</li>
+                <li><strong>Solicitudes ARCO:</strong> registro de solicitudes de acceso, rectificación, cancelación u oposición presentadas por titulares de datos.</li>
               </ul>
             </section>
 
@@ -81,37 +88,53 @@ export default function PrivacidadPage() {
             <section>
               <h2 className="text-lg font-semibold text-slate-900 mb-3">5. Uso de inteligencia artificial</h2>
               <p>
-                Praxis utiliza la API de <strong>Anthropic Claude</strong> (empresa domiciliada en EE.UU.) para generar resúmenes clínicos de apoyo al médico. Al utilizar esta funcionalidad, datos del historial clínico del paciente (sin incluir información de identificación directa cuando sea posible) son procesados por Anthropic bajo un Acuerdo de Procesamiento de Datos (DPA).
+                Praxis utiliza la API de <strong>Anthropic Claude</strong> (empresa domiciliada en EE.UU.) para generar resúmenes clínicos de apoyo al médico. Al utilizar esta funcionalidad, datos del historial clínico del paciente son procesados por Anthropic bajo un Acuerdo de Procesamiento de Datos (DPA). Anthropic no entrena sus modelos con datos enviados a través de la API.
               </p>
               <p className="mt-2">
-                El resumen generado por IA es un apoyo al criterio médico y <strong>no constituye un diagnóstico</strong>. La responsabilidad clínica recae siempre en el profesional de la salud. El paciente consiente explícitamente este uso al agendar su cita.
+                Esta funcionalidad requiere <strong>consentimiento expreso del paciente</strong>, el cual se registra al momento de agendar la cita. El resumen generado por IA es un apoyo al criterio médico y <strong>no constituye un diagnóstico</strong>. La responsabilidad clínica recae siempre en el profesional de la salud.
               </p>
             </section>
 
             <section>
               <h2 className="text-lg font-semibold text-slate-900 mb-3">6. Proveedores de infraestructura (subprocesadores)</h2>
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li><strong>Supabase Inc.</strong> (EE.UU.): almacenamiento de base de datos y autenticación. Los datos se almacenan en servidores con cifrado en reposo y en tránsito.</li>
-                <li><strong>Anthropic PBC</strong> (EE.UU.): procesamiento de lenguaje natural para resúmenes clínicos, bajo DPA.</li>
+                <li>
+                  <strong>Supabase Inc.</strong> (EE.UU.): almacenamiento de base de datos y autenticación. Los datos se almacenan en la <strong>región de São Paulo, Brasil</strong>, en servidores con cifrado en reposo y en tránsito. Brasil cuenta con la Ley Geral de Proteção de Dados (LGPD), considerada un nivel de protección adecuado.
+                </li>
+                <li><strong>Anthropic PBC</strong> (EE.UU.): procesamiento de lenguaje natural para resúmenes clínicos, bajo DPA. Solo se activa con consentimiento IA del paciente.</li>
                 <li><strong>Resend Inc.</strong> (EE.UU.): envío de correos electrónicos transaccionales (confirmaciones de cita, recordatorios).</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">7. Retención de datos</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">7. Transferencia Internacional de Datos</h2>
+              <p>
+                En la prestación del servicio, datos personales pueden ser transferidos fuera de Chile a los siguientes destinos:
+              </p>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li>
+                  <strong>Brasil (Supabase):</strong> los datos se almacenan en servidores ubicados en São Paulo. Brasil cuenta con la Ley Geral de Proteção de Dados (LGPD), que ofrece un nivel de protección equivalente al exigido por la normativa chilena.
+                </li>
+                <li>
+                  <strong>Estados Unidos (Anthropic):</strong> solo se transfieren datos clínicos cuando el paciente ha otorgado consentimiento expreso para el uso de inteligencia artificial. Anthropic no utiliza datos enviados a través de la API para entrenar sus modelos.
+                </li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">8. Retención de datos</h2>
               <p>
                 Conforme al <strong>Decreto 41 del MINSAL</strong>:
               </p>
               <ul className="list-disc pl-5 mt-2 space-y-1">
-                <li>Las fichas clínicas de pacientes adultos se conservan por un mínimo de <strong>15 años</strong> desde la última atención.</li>
-                <li>Las fichas de pacientes menores de edad se conservan por un mínimo de <strong>30 años desde que el paciente cumple 18 años</strong>.</li>
+                <li>Las fichas clínicas se conservan por un mínimo de <strong>48 años desde la fecha de nacimiento del paciente</strong>, conforme al Decreto 41 del MINSAL.</li>
                 <li>Los registros de auditoría (audit log) se conservan de forma indefinida.</li>
                 <li>Las fichas clínicas <strong>nunca se eliminan permanentemente</strong>; solo pueden desactivarse de la vista operativa.</li>
               </ul>
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">8. Derechos del titular (ARCO)</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">9. Derechos del titular (ARCO)</h2>
               <p>
                 Conforme a la Ley N° 19.628 y la Ley N° 20.584, tienes derecho a:
               </p>
@@ -123,7 +146,8 @@ export default function PrivacidadPage() {
               </ul>
               <p className="mt-2">
                 Para ejercer estos derechos, dirígete a la clínica que gestionó tu atención (responsable del dato) o escríbenos a{' '}
-                <a href="mailto:privacidad@praxisapp.cl" className="text-blue-600 underline">privacidad@praxisapp.cl</a>.
+                <a href="mailto:gomezpablo.mayor@gmail.com" className="text-blue-600 underline">gomezpablo.mayor@gmail.com</a>.
+                Te responderemos en un plazo máximo de <strong>30 días hábiles</strong>.
               </p>
             </section>
 
@@ -132,13 +156,13 @@ export default function PrivacidadPage() {
               <h2 className="text-lg font-semibold text-slate-900 mb-2">Ejercer tus derechos ARCO</h2>
               <p className="text-sm text-slate-600 mb-1">
                 Puedes ejercer tus derechos de Acceso, Rectificación, Cancelación u Oposición enviando el siguiente formulario.
-                Te responderemos al correo indicado en un plazo de <strong>10 días hábiles</strong>.
+                Te responderemos al correo indicado en un plazo de <strong>30 días hábiles</strong>.
               </p>
               <FormularioArco />
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">9. Seguridad</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">10. Seguridad</h2>
               <p>
                 Praxis implementa las siguientes medidas de seguridad:
               </p>
@@ -151,14 +175,14 @@ export default function PrivacidadPage() {
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">10. Notificación de brechas</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">11. Notificación de brechas</h2>
               <p>
-                En caso de una brecha de seguridad que afecte datos personales, Praxis notificará a las clínicas afectadas y, cuando corresponda, a los pacientes afectados y a la autoridad competente, en los plazos establecidos por la normativa vigente.
+                En caso de una brecha de seguridad que afecte datos personales, Praxis notificará a las clínicas afectadas dentro de un plazo de <strong>72 horas</strong> desde su detección y, cuando corresponda, a los pacientes afectados y a la autoridad competente, conforme a la normativa vigente.
               </p>
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold text-slate-900 mb-3">11. Legislación aplicable</h2>
+              <h2 className="text-lg font-semibold text-slate-900 mb-3">12. Legislación aplicable</h2>
               <p>
                 Esta política se rige por las leyes de la República de Chile, incluyendo la Ley N° 19.628, la Ley N° 20.584 y el Decreto N° 41 del Ministerio de Salud. Cualquier controversia será sometida a los tribunales ordinarios de la ciudad de Santiago.
               </p>
@@ -169,7 +193,12 @@ export default function PrivacidadPage() {
       </main>
 
       <footer className="text-center py-8 text-xs text-slate-400">
-        © 2026 Praxis · <Link href="/terminos" className="underline">Términos de uso</Link> · <a href="mailto:contacto@praxisapp.cl" className="underline">contacto@praxisapp.cl</a>
+        © 2026 Praxis ·{' '}
+        <Link href="/terminos" className="underline">Términos y Condiciones</Link>
+        {' · '}
+        <Link href="/privacidad" className="underline">Política de Privacidad</Link>
+        {' · '}
+        <a href="mailto:gomezpablo.mayor@gmail.com" className="underline">gomezpablo.mayor@gmail.com</a>
       </footer>
     </div>
   )

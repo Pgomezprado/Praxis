@@ -30,13 +30,17 @@ export async function POST(
 
     const { data: me } = await supabase
       .from('usuarios')
-      .select('clinica_id')
+      .select('clinica_id, rol')
       .eq('id', user.id)
       .single()
 
     if (!me) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
-    const meTyped = me as { clinica_id: string }
+    const meTyped = me as { clinica_id: string; rol: string }
+
+    if (meTyped.rol !== 'doctor' && meTyped.rol !== 'admin_clinica') {
+      return Response.json({ error: 'Sin permisos para registrar pagos' }, { status: 403 })
+    }
 
     // Verificar que el cobro existe y pertenece a la clínica
     const { data: cobroData } = await supabase

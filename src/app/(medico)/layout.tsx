@@ -8,17 +8,32 @@ export default async function MedicoLayout({ children }: { children: React.React
   let nombre = ''
   let especialidad = ''
   let esAdmin = false
+  let tieneOdontologia = false
 
   if (user) {
     const { data: me } = await supabase
       .from('usuarios')
-      .select('nombre, especialidad, rol')
+      .select('nombre, especialidad, rol, clinica_id')
       .eq('id', user.id)
       .single()
 
-    nombre = (me as { nombre?: string; especialidad?: string; rol?: string } | null)?.nombre ?? ''
-    especialidad = (me as { nombre?: string; especialidad?: string; rol?: string } | null)?.especialidad ?? ''
-    esAdmin = (me as { nombre?: string; especialidad?: string; rol?: string } | null)?.rol === 'admin_clinica'
+    const meTyped = me as { nombre?: string; especialidad?: string; rol?: string; clinica_id?: string } | null
+    nombre = meTyped?.nombre ?? ''
+    especialidad = meTyped?.especialidad ?? ''
+    esAdmin = meTyped?.rol === 'admin_clinica'
+
+    if (meTyped?.clinica_id) {
+      const { data: clinica } = await supabase
+        .from('clinicas')
+        .select('tipo_especialidad')
+        .eq('id', meTyped.clinica_id)
+        .single()
+
+      const clinicaTyped = clinica as { tipo_especialidad: string | null } | null
+      tieneOdontologia =
+        clinicaTyped?.tipo_especialidad === 'odontologia' ||
+        clinicaTyped?.tipo_especialidad === 'mixta'
+    }
   }
 
   const iniciales = nombre
@@ -27,7 +42,7 @@ export default async function MedicoLayout({ children }: { children: React.React
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
-      <MedicoSidebar nombre={nombre} especialidad={especialidad} esAdmin={esAdmin} />
+      <MedicoSidebar nombre={nombre} especialidad={especialidad} esAdmin={esAdmin} tieneOdontologia={tieneOdontologia} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
           <div />

@@ -26,7 +26,13 @@ export async function PATCH(
     const allowed = ['nombre', 'email', 'especialidad', 'rut', 'telefono', 'duracion_consulta', 'medicos_asignados', 'activo', 'es_doctor']
     const updates: Record<string, unknown> = {}
     for (const key of allowed) {
-      if (key in body) updates[key] = body[key]
+      if (key in body) {
+        // No sobreescribir especialidad si llega vacía o nula — conservar la existente en DB
+        if (key === 'especialidad' && (body[key] === null || body[key] === undefined || body[key] === '')) {
+          continue
+        }
+        updates[key] = body[key]
+      }
     }
 
     if (Object.keys(updates).length === 0) {

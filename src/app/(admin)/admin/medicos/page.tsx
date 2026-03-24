@@ -58,9 +58,12 @@ export default async function AdminMedicosPage() {
     citasPorDoctor.set(c.doctor_id, (citasPorDoctor.get(c.doctor_id) ?? 0) + 1)
   }
 
+  const normalize = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+
   const medicos: MockMedicoAdmin[] = (doctoresDb ?? []).map((d) => {
     const esp = especialidades.find(
-      (e) => e.nombre.toLowerCase() === (d.especialidad ?? '').toLowerCase()
+      (e) => normalize(e.nombre) === normalize(d.especialidad ?? '')
     )
     const authEntry = authUserMap.get(d.id)
     return {

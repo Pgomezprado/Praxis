@@ -69,7 +69,7 @@ export async function POST(req: Request) {
         clinica_id: meTyped.clinica_id,
         nombre: nombre.trim(),
         precio_particular: Math.round(precio_particular),
-        tipo_cita: tipo_cita ?? null,
+        tipo_cita: tipo_cita || null,
         especialidad_id: especialidad_id ?? null,
         activo: true,
       })
@@ -81,6 +81,10 @@ export async function POST(req: Request) {
     return Response.json({ arancel: data as Arancel }, { status: 201 })
   } catch (error) {
     console.error('Error en POST /api/finanzas/aranceles:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    const msg =
+      error instanceof Error
+        ? error.message
+        : (error as { message?: string })?.message ?? 'Error interno'
+    return Response.json({ error: msg }, { status: 500 })
   }
 }

@@ -91,35 +91,67 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
     setForm(prev => ({ ...prev, email: value, emailAcceso: value }))
   }
 
+  const normalize = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+
+  // Nombre de la especialidad según lo seleccionado en el select
   const especialidadNombre = especialidades.find(e => e.id === form.especialidadId)?.nombre ?? ''
+
+  // Si el select quedó vacío (especialidadId = '') pero el médico ya tenía una
+  // especialidad guardada en DB, lo permitimos guardar igual usando ese nombre como fallback
+  const tieneEspecialidad = !!form.especialidadId || (esEdicion && !!medicoEditar?.especialidad)
 
   const canGuardar =
     form.nombre.trim() &&
     form.rut.trim() &&
     !rutError &&
     form.email.trim() &&
-    form.especialidadId
+    tieneEspecialidad
 
   async function handleGuardar() {
     if (!canGuardar) return
     setGuardando(true)
     setErrorGuardar(null)
 
+    // Determinar qué nombre de especialidad enviar:
+    // 1. Si hay especialidadId seleccionado, usar su nombre desde la lista
+    // 2. Si no matcheó ninguna pero hay un nombre previo en la lista (por normalización),
+    //    buscarlo ignorando acentos
+    // 3. Fallback: el nombre que ya tenía el médico en DB (no se toca)
+    let especialidadAEnviar: string | undefined = undefined
+    if (form.especialidadId) {
+      especialidadAEnviar = especialidades.find(e => e.id === form.especialidadId)?.nombre
+    } else if (esEdicion && medicoEditar?.especialidad) {
+      // Intentar match por nombre normalizado
+      const match = especialidades.find(
+        e => normalize(e.nombre) === normalize(medicoEditar!.especialidad ?? '')
+      )
+      if (match) {
+        especialidadAEnviar = match.nombre
+      }
+      // Si no hay match, no enviamos especialidad → la API conserva la existente en DB
+    }
+
     const url = medicoEditar ? `/api/usuarios/${medicoEditar.id}` : '/api/usuarios'
     const method = medicoEditar ? 'PATCH' : 'POST'
+
+    const body: Record<string, unknown> = {
+      nombre: form.nombre.trim(),
+      email: form.email.trim(),
+      rut: form.rut,
+      telefono: form.telefono.trim(),
+      duracion_consulta: form.duracionConsulta,
+      rol: 'doctor',
+    }
+    // Solo incluir especialidad si tenemos un valor concreto para enviar
+    if (especialidadAEnviar !== undefined) {
+      body.especialidad = especialidadAEnviar
+    }
 
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nombre: form.nombre.trim(),
-        email: form.email.trim(),
-        rut: form.rut,
-        telefono: form.telefono.trim(),
-        especialidad: especialidadNombre,
-        duracion_consulta: form.duracionConsulta,
-        rol: 'doctor',
-      }),
+      body: JSON.stringify(body),
     })
 
     setGuardando(false)
@@ -138,8 +170,8 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
       clinicaId: u.clinica_id ?? '',
       nombre: u.nombre,
       rut: u.rut ?? form.rut,
-      especialidadId: form.especialidadId,
-      especialidad: u.especialidad ?? especialidadNombre,
+      especialidadId: form.especialidadId || (medicoEditar?.especialidadId ?? ''),
+      especialidad: u.especialidad ?? especialidadAEnviar ?? medicoEditar?.especialidad ?? '',
       email: u.email,
       telefono: u.telefono ?? form.telefono.trim(),
       duracionConsulta: u.duracion_consulta ?? form.duracionConsulta,

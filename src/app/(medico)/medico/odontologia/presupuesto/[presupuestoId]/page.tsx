@@ -68,10 +68,10 @@ export default async function PresupuestoDentalPage({
 
   const paciente = pacienteDb as Pick<Paciente, 'id' | 'nombre' | 'rut' | 'email' | 'telefono'>
 
-  // Cargar datos de la clínica
+  // Cargar datos de la clínica (incluye tipo_especialidad para guard de acceso)
   const { data: clinicaDb } = await supabase
     .from('clinicas')
-    .select('nombre, direccion, ciudad, telefono')
+    .select('nombre, direccion, ciudad, telefono, tipo_especialidad')
     .eq('id', clinicaId)
     .single()
 
@@ -80,7 +80,14 @@ export default async function PresupuestoDentalPage({
     direccion: string | null
     ciudad: string | null
     telefono: string | null
+    tipo_especialidad: string | null
   } | null
+
+  // Verificar que la clínica tiene odontología habilitada
+  const tieneOdontologia =
+    clinica?.tipo_especialidad === 'odontologia' ||
+    clinica?.tipo_especialidad === 'mixta'
+  if (!tieneOdontologia) notFound()
 
   // Extraer ítems del plan
   const planData = presupuesto.plan

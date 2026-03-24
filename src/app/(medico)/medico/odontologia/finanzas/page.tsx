@@ -28,6 +28,19 @@ export default async function FinanzasOdontologiaPage() {
     redirect('/medico/inicio')
   }
 
+  // Verificar que la clínica tiene odontología habilitada
+  const { data: clinicaData } = await supabase
+    .from('clinicas')
+    .select('tipo_especialidad')
+    .eq('id', me.clinica_id)
+    .single()
+
+  const clinicaTyped = clinicaData as { tipo_especialidad: string | null } | null
+  const tieneOdontologia =
+    clinicaTyped?.tipo_especialidad === 'odontologia' ||
+    clinicaTyped?.tipo_especialidad === 'mixta'
+  if (!tieneOdontologia) redirect('/medico/inicio')
+
   // Cargar datos desde la API interna
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 

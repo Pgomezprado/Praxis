@@ -1716,6 +1716,7 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
   const [clinicaNombre, setClinicaNombre] = useState('')
   const [clinicaCiudad, setClinicaCiudad] = useState('')
   const [clinicaSlug, setClinicaSlug] = useState('')
+  const [tipoEspecialidad, setTipoEspecialidad] = useState<'medicina_general' | 'odontologia' | 'mixta'>('medicina_general')
   const [admins, setAdmins] = useState<AdminFormItem[]>([{ nombre: '', email: '', rut: '' }])
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
@@ -1758,6 +1759,7 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
           clinicaNombre,
           clinicaCiudad,
           clinicaSlug,
+          tipoEspecialidad,
           admins: admins.map(a => ({
             nombre: a.nombre.trim(),
             email: a.email.trim(),
@@ -1856,6 +1858,7 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
               setClinicaNombre('')
               setClinicaCiudad('')
               setClinicaSlug('')
+              setTipoEspecialidad('medicina_general')
               setAdmins([{ nombre: '', email: '', rut: '' }])
             }}
             className="w-full py-2.5 rounded-xl text-sm font-medium bg-slate-700 text-white hover:bg-slate-600 transition-colors"
@@ -1911,6 +1914,18 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
                 placeholder="Santiago"
                 className={inputCls}
               />
+            </div>
+            <div>
+              <label className="block text-sm text-slate-300 mb-1.5">Especialidad</label>
+              <select
+                value={tipoEspecialidad}
+                onChange={e => setTipoEspecialidad(e.target.value as 'medicina_general' | 'odontologia' | 'mixta')}
+                className="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="medicina_general">Medicina general</option>
+                <option value="odontologia">Odontología</option>
+                <option value="mixta">Mixta (médico + dental)</option>
+              </select>
             </div>
           </div>
         </div>

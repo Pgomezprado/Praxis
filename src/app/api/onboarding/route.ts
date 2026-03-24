@@ -109,12 +109,12 @@ export async function POST(req: Request) {
     }
 
     // Verificar sesión superadmin por cookie httpOnly firmada
-    if (!verificarSesionSuperadmin(req)) {
+    if (!await verificarSesionSuperadmin(req)) {
       return Response.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     const body = await req.json()
-    const { clinicaNombre, clinicaCiudad, clinicaSlug } = body
+    const { clinicaNombre, clinicaCiudad, clinicaSlug, tipoEspecialidad } = body
 
     // Normalizar admins: aceptar formato nuevo (admins[]) o formato legacy (adminNombre/adminEmail)
     let admins: AdminInput[]
@@ -156,6 +156,7 @@ export async function POST(req: Request) {
         dias_agenda_adelante: 60,
         hora_apertura: '08:00',
         hora_cierre: '18:00',
+        tipo_especialidad: (tipoEspecialidad as string) ?? 'medicina_general',
       })
       .select()
       .single()

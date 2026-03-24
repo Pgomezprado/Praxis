@@ -22,6 +22,24 @@ export async function GET(
   const clinicaId = (meData as { clinica_id: string } | null)?.clinica_id
   if (!clinicaId) return NextResponse.json({ error: 'Sin clínica' }, { status: 403 })
 
+  // Verificar que la clínica tiene odontología habilitada
+  const { data: clinicaCheck } = await supabase
+    .from('clinicas')
+    .select('tipo_especialidad')
+    .eq('id', clinicaId)
+    .single()
+
+  const clinicaCheckTyped = clinicaCheck as { tipo_especialidad: string | null } | null
+  const tieneOdonto =
+    clinicaCheckTyped?.tipo_especialidad === 'odontologia' ||
+    clinicaCheckTyped?.tipo_especialidad === 'mixta'
+  if (!tieneOdonto) {
+    return NextResponse.json(
+      { error: 'Módulo de odontología no disponible para esta clínica' },
+      { status: 403 }
+    )
+  }
+
   // Buscar ficha existente
   const { data: fichaExistente } = await supabase
     .from('ficha_odontologica')
@@ -86,16 +104,41 @@ export async function POST(
   const clinicaId = (meData as { clinica_id: string } | null)?.clinica_id
   if (!clinicaId) return NextResponse.json({ error: 'Sin clínica' }, { status: 403 })
 
-  const body = await req.json() as {
+  // Verificar que la clínica tiene odontología habilitada
+  const { data: clinicaCheckPost } = await supabase
+    .from('clinicas')
+    .select('tipo_especialidad')
+    .eq('id', clinicaId)
+    .single()
+
+  const clinicaCheckPostTyped = clinicaCheckPost as { tipo_especialidad: string | null } | null
+  const tieneOdontoPost =
+    clinicaCheckPostTyped?.tipo_especialidad === 'odontologia' ||
+    clinicaCheckPostTyped?.tipo_especialidad === 'mixta'
+  if (!tieneOdontoPost) {
+    return NextResponse.json(
+      { error: 'Módulo de odontología no disponible para esta clínica' },
+      { status: 403 }
+    )
+  }
+
+  // Extraer solo campos permitidos — nunca pasar body completo para evitar mass assignment
+  const rawBody = await req.json() as Record<string, unknown>
+  const { denticion, antecedentes_dentales, ultima_radiografia, dentista_tratante_id } = rawBody as {
     denticion?: 'permanente' | 'temporal'
     antecedentes_dentales?: string
     ultima_radiografia?: string
     dentista_tratante_id?: string
   }
+  const camposEditables: Record<string, unknown> = {}
+  if (denticion !== undefined) camposEditables.denticion = denticion
+  if (antecedentes_dentales !== undefined) camposEditables.antecedentes_dentales = antecedentes_dentales
+  if (ultima_radiografia !== undefined) camposEditables.ultima_radiografia = ultima_radiografia
+  if (dentista_tratante_id !== undefined) camposEditables.dentista_tratante_id = dentista_tratante_id
 
   const { data, error } = await supabase
     .from('ficha_odontologica')
-    .update(body)
+    .update(camposEditables)
     .eq('paciente_id', pacienteId)
     .eq('clinica_id', clinicaId)
     .eq('activo', true)
