@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     // Recepcionista: solo datos de contacto y agenda
     // Médico / admin: todos los campos incluyendo datos clínicos sensibles
     const campos = esClinico
-      ? 'id, nombre, rut, email, telefono, alergias, condiciones, fecha_nac, grupo_sang, created_at'
+      ? 'id, nombre, rut, email, telefono, alergias, condiciones, fecha_nac, grupo_sang, prevision, direccion, seguro_complementario, created_at'
       : 'id, nombre, rut, email, telefono, created_at'
 
     let query = supabase
@@ -51,7 +51,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { nombre, rut, fecha_nac, grupo_sang, alergias, condiciones, email, telefono, prevision } = body
+    const { nombre, rut, fecha_nac, grupo_sang, alergias, condiciones, email, telefono, prevision, direccion, seguro_complementario } = body
 
     if (!nombre || !rut) {
       return Response.json({ error: 'nombre y rut son requeridos' }, { status: 400 })
@@ -82,6 +82,8 @@ export async function POST(req: Request) {
         email: email ?? null,
         telefono: telefono ?? null,
         prevision: prevision ?? null,
+        direccion: direccion ?? null,
+        seguro_complementario: seguro_complementario ?? null,
       })
       .select()
       .single()

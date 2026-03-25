@@ -114,6 +114,17 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
           )}
           <span>Desde {formatFecha(paciente.created_at)}</span>
         </div>
+        {/* Datos de facturación — solo si existen */}
+        {(paciente.direccion || paciente.seguro_complementario) && (
+          <div className="flex items-center gap-4 mt-1 text-sm text-slate-500 flex-wrap">
+            {paciente.direccion && (
+              <span>{paciente.direccion}</span>
+            )}
+            {paciente.seguro_complementario && (
+              <span>Seguro: {paciente.seguro_complementario}</span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Layout de 2 columnas — recepcionista no tiene acceso al formulario de consulta */}

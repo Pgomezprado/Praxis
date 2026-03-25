@@ -106,4 +106,7 @@ export type MockPacienteAdmin = {
   activo: boolean
   alergias: string[]
   condiciones: string[]
+  // Campos de facturación — migración 039
+  direccion?: string | null
+  seguro_complementario?: string | null
 }

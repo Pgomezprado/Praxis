@@ -132,6 +132,8 @@ export default async function MedicoPacientePage({
     condiciones: pacienteDb.condiciones ?? [],
     telefono: pacienteDb.telefono ?? '',
     email: pacienteDb.email ?? '',
+    direccion: pacienteDb.direccion ?? null,
+    seguro_complementario: pacienteDb.seguro_complementario ?? null,
   }
 
   // Mapear consultas al shape que espera el componente

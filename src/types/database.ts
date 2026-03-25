@@ -57,6 +57,9 @@ export interface Paciente {
   email: string | null
   telefono: string | null
   sexo: 'M' | 'F' | 'otro' | null
+  // Campos agregados en migración 039 — facturación y seguros
+  direccion: string | null
+  seguro_complementario: string | null
   consultas?: Consulta[]
 }
 

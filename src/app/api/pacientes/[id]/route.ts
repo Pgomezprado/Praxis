@@ -44,7 +44,7 @@ export async function PATCH(
     }
 
     const body = await req.json() as Record<string, unknown>
-    const { nombre, rut, fecha_nac, email, telefono, prevision, alergias, condiciones } = body
+    const { nombre, rut, fecha_nac, email, telefono, prevision, alergias, condiciones, direccion, seguro_complementario } = body
 
     // Validar campos requeridos
     if (nombre !== undefined && typeof nombre === 'string' && !nombre.trim()) {
@@ -68,6 +68,8 @@ export async function PATCH(
     if (prevision !== undefined) actualizacion.prevision = prevision ?? null
     if (alergias !== undefined) actualizacion.alergias = alergias
     if (condiciones !== undefined) actualizacion.condiciones = condiciones
+    if (direccion !== undefined) actualizacion.direccion = direccion ?? null
+    if (seguro_complementario !== undefined) actualizacion.seguro_complementario = seguro_complementario ?? null
 
     if (Object.keys(actualizacion).length === 0) {
       return Response.json({ error: 'No hay campos para actualizar' }, { status: 400 })

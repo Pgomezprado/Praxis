@@ -18,6 +18,8 @@ type FormData = {
   email: string
   telefono: string
   prevision: Prevision | ''
+  direccion: string
+  seguro_complementario: string
   alergias: string[]
   condiciones: string[]
 }
@@ -39,6 +41,8 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
     email: '',
     telefono: '',
     prevision: '',
+    direccion: '',
+    seguro_complementario: '',
     alergias: [],
     condiciones: [],
   }
@@ -59,6 +63,8 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
         email: pacienteEditar.email,
         telefono: pacienteEditar.telefono,
         prevision: pacienteEditar.prevision,
+        direccion: pacienteEditar.direccion ?? '',
+        seguro_complementario: pacienteEditar.seguro_complementario ?? '',
         alergias: [...pacienteEditar.alergias],
         condiciones: [...pacienteEditar.condiciones],
       })
@@ -124,6 +130,8 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
         email: form.email.trim(),
         telefono: form.telefono.trim() || null,
         prevision: form.prevision,
+        direccion: form.direccion.trim() || null,
+        seguro_complementario: form.seguro_complementario.trim() || null,
         alergias: form.alergias,
         condiciones: form.condiciones,
       }
@@ -167,6 +175,8 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
         email?: string | null
         telefono?: string | null
         prevision?: string | null
+        direccion?: string | null
+        seguro_complementario?: string | null
         alergias?: string[]
         condiciones?: string[]
         activo?: boolean
@@ -187,6 +197,8 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
         activo: pacienteGuardado.activo ?? true,
         alergias: pacienteGuardado.alergias ?? form.alergias,
         condiciones: pacienteGuardado.condiciones ?? form.condiciones,
+        direccion: pacienteGuardado.direccion ?? (form.direccion.trim() || null),
+        seguro_complementario: pacienteGuardado.seguro_complementario ?? (form.seguro_complementario.trim() || null),
       }
 
       onGuardar(resultado)
@@ -336,6 +348,37 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
                   </optgroup>
                   <option value="Particular">Particular</option>
                 </select>
+              </div>
+
+            </div>
+          </section>
+
+          <section>
+            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">
+              Datos de facturación
+            </h3>
+            <div className="space-y-4">
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Dirección</label>
+                <input
+                  type="text"
+                  value={form.direccion}
+                  onChange={e => set('direccion', e.target.value)}
+                  placeholder="Av. Ejemplo 123, Santiago"
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Seguro complementario</label>
+                <input
+                  type="text"
+                  value={form.seguro_complementario}
+                  onChange={e => set('seguro_complementario', e.target.value)}
+                  placeholder="Ej: Cruz Blanca, Colmena, Vida Tres..."
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
+                />
               </div>
 
             </div>

@@ -56,6 +56,7 @@ export async function getCitasByRango(
     .eq('clinica_id', clinicaId)
     .gte('fecha', desde)
     .lte('fecha', hasta)
+    .neq('estado', 'cancelada')
     .order('fecha')
     .order('hora_inicio')
 

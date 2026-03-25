@@ -11,13 +11,20 @@ import type { MockCita } from '@/types/domain'
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 function getToday(): string {
-  return new Date().toISOString().split('T')[0]
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
 }
 
 function addDays(fecha: string, days: number): string {
   const [y, m, d] = fecha.split('-').map(Number)
   const date = new Date(y, m - 1, d + days)
-  return date.toISOString().split('T')[0]
+  const yr = date.getFullYear()
+  const mo = String(date.getMonth() + 1).padStart(2, '0')
+  const da = String(date.getDate()).padStart(2, '0')
+  return `${yr}-${mo}-${da}`
 }
 
 /** Returns the Monday (lunes) of the week containing `fecha`. */
@@ -27,7 +34,10 @@ function getMonday(fecha: string): string {
   const day = date.getDay() // 0=Sun … 6=Sat
   const diff = day === 0 ? -6 : 1 - day
   date.setDate(date.getDate() + diff)
-  return date.toISOString().split('T')[0]
+  const yr = date.getFullYear()
+  const mo = String(date.getMonth() + 1).padStart(2, '0')
+  const da = String(date.getDate()).padStart(2, '0')
+  return `${yr}-${mo}-${da}`
 }
 
 function formatDayHeader(fecha: string) {
@@ -141,6 +151,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
   function citasDia(dia: string): MockCita[] {
     return citasLocales
       .filter((c) => {
+        if (c.estado === 'cancelada') return false
         if (filtroMedico && c.medicoId !== filtroMedico) return false
         return c.fecha === dia
       })
@@ -293,7 +304,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
               <div key={dia} className="flex-1 flex flex-col min-w-0">
                 {/* Day header */}
                 <div
-                  className={`px-2 py-3 text-center border-b border-slate-100 ${
+                  className={`px-2 pt-6 pb-3 text-center border-b border-slate-100 ${
                     isToday
                       ? 'bg-blue-50'
                       : isWeekend
@@ -301,13 +312,6 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
                       : 'bg-white'
                   }`}
                 >
-                  <p
-                    className={`text-xs font-bold uppercase tracking-wider ${
-                      isToday ? 'text-blue-500' : 'text-slate-400'
-                    }`}
-                  >
-                    {diaNombre}
-                  </p>
                   <div
                     className={`inline-flex items-center justify-center w-9 h-9 rounded-full mx-auto mt-1 text-xl font-bold ${
                       isToday
@@ -318,12 +322,13 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
                     {diaNum}
                   </div>
                   <p
-                    className={`text-xs mt-0.5 capitalize ${
-                      isToday ? 'text-blue-400' : 'text-slate-400'
+                    className={`text-xs font-semibold uppercase tracking-wider mt-1 ${
+                      isToday ? 'text-blue-500' : 'text-slate-400'
                     }`}
                   >
-                    {mesCorto}
+                    {diaNombre}
                   </p>
+
                   {citas.length > 0 ? (
                     <span
                       className={`inline-block mt-1.5 text-xs font-semibold px-1.5 py-0.5 rounded-full ${

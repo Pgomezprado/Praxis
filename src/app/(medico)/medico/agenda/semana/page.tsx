@@ -12,7 +12,7 @@ export default async function MedicoAgendaSemanaPage({
   searchParams: Promise<{ fecha?: string }>
 }) {
   const params = await searchParams
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
   const fecha = params.fecha ?? today
 
   const supabase = await createClient()
@@ -35,7 +35,8 @@ export default async function MedicoAgendaSemanaPage({
     </div>
   )
 
-  const base = new Date(fecha)
+  const [fy, fm, fd] = fecha.split('-').map(Number)
+  const base = new Date(fy, fm - 1, fd)  // Medianoche local, no UTC
   const diaSemana = base.getDay() === 0 ? 6 : base.getDay() - 1
   const lunes = new Date(base)
   lunes.setDate(base.getDate() - diaSemana)

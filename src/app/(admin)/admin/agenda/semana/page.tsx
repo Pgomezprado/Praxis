@@ -15,7 +15,8 @@ export default async function AdminAgendaSemanaPage({
   const medicoId = params.medico ?? ''
 
   // Calcular inicio y fin de la semana (lunes a domingo)
-  const base = new Date(fecha)
+  const [fy, fm, fd] = fecha.split('-').map(Number)
+  const base = new Date(fy, fm - 1, fd)  // Medianoche local, no UTC
   const diaSemana = base.getDay() === 0 ? 6 : base.getDay() - 1 // 0=lun
   const lunes = new Date(base)
   lunes.setDate(base.getDate() - diaSemana)

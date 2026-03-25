@@ -31,6 +31,9 @@ type Paciente = {
   condiciones: string[]
   telefono: string
   email: string
+  // Campos de facturación — migración 039
+  direccion?: string | null
+  seguro_complementario?: string | null
 }
 
 type CitaContext = {
@@ -405,6 +408,18 @@ export function PacienteConsultaClient({
                 <span className="text-xs font-medium text-slate-700 text-right">{value}</span>
               </div>
             ))}
+            {paciente.direccion && (
+              <div className="flex justify-between gap-2">
+                <span className="text-xs text-slate-400 flex-shrink-0">Dirección</span>
+                <span className="text-xs font-medium text-slate-700 text-right">{paciente.direccion}</span>
+              </div>
+            )}
+            {paciente.seguro_complementario && (
+              <div className="flex justify-between gap-2">
+                <span className="text-xs text-slate-400 flex-shrink-0">Seguro</span>
+                <span className="text-xs font-medium text-slate-700 text-right">{paciente.seguro_complementario}</span>
+              </div>
+            )}
           </div>
         </aside>
 
