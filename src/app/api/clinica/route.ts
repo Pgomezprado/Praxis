@@ -36,7 +36,13 @@ export async function PUT(req: Request) {
   const {
     nombre, rut, direccion, ciudad, telefono, email,
     timezone, dias_agenda_adelante, hora_apertura, hora_cierre,
+    tipo_especialidad,
   } = body
+
+  const TIPOS_VALIDOS = ['medicina_general', 'odontologia', 'mixta']
+  if (tipo_especialidad !== undefined && !TIPOS_VALIDOS.includes(tipo_especialidad as string)) {
+    return Response.json({ error: 'Tipo de especialidad no válido' }, { status: 400 })
+  }
 
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -52,6 +58,7 @@ export async function PUT(req: Request) {
       ...(dias_agenda_adelante !== undefined && { dias_agenda_adelante }),
       ...(hora_apertura !== undefined && { hora_apertura }),
       ...(hora_cierre !== undefined && { hora_cierre }),
+      ...(tipo_especialidad !== undefined && { tipo_especialidad }),
     })
     .eq('id', me.clinica_id)
     .select('id, nombre, slug, rut, direccion, ciudad, telefono, email, logo_url, timezone, dias_agenda_adelante, hora_apertura, hora_cierre')

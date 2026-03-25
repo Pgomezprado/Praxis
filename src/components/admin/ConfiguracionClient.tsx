@@ -8,6 +8,8 @@ import {
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
+type TipoEspecialidad = 'medicina_general' | 'odontologia' | 'mixta'
+
 type Clinica = {
   id: string
   nombre: string
@@ -21,6 +23,7 @@ type Clinica = {
   diasAgendaAdelante: number
   horaApertura: string
   horaCierre: string
+  tipoEspecialidad: TipoEspecialidad
 }
 
 type NotifConfig = {
@@ -126,6 +129,7 @@ export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, ad
           ciudad: clinica.ciudad,
           telefono: clinica.telefono,
           email: clinica.email,
+          tipo_especialidad: clinica.tipoEspecialidad,
         }),
       })
       if (!res.ok) throw new Error('Error al guardar')
@@ -289,6 +293,25 @@ export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, ad
                 onChange={e => setField('email', e.target.value)}
                 className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
               />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-slate-700 mb-1.5">Tipo de clínica</label>
+              <div className="relative">
+                <select
+                  value={clinica.tipoEspecialidad}
+                  onChange={e => setField('tipoEspecialidad', e.target.value as TipoEspecialidad)}
+                  className="w-full appearance-none px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors bg-white pr-9"
+                >
+                  <option value="medicina_general">Medicina general</option>
+                  <option value="odontologia">Odontología</option>
+                  <option value="mixta">Mixta (medicina + odontología)</option>
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              </div>
+              <p className="text-xs text-slate-400 mt-1.5">
+                Selecciona &quot;Odontología&quot; o &quot;Mixta&quot; para habilitar el odontograma y los módulos dentales.
+              </p>
             </div>
           </div>
 

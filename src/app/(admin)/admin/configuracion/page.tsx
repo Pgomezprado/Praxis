@@ -13,7 +13,7 @@ export default async function AdminConfiguracionPage() {
   const [{ data: clinicaDb }, { data: adminDb }] = await Promise.all([
     supabase
     .from('clinicas')
-    .select('id, nombre, rut, direccion, ciudad, telefono, email, logo_url, timezone, dias_agenda_adelante, hora_apertura, hora_cierre')
+    .select('id, nombre, rut, direccion, ciudad, telefono, email, logo_url, timezone, dias_agenda_adelante, hora_apertura, hora_cierre, tipo_especialidad')
     .eq('id', me.clinica_id)
     .single(),
     supabase
@@ -36,6 +36,7 @@ export default async function AdminConfiguracionPage() {
     diasAgendaAdelante: (clinicaDb as { dias_agenda_adelante?: number } | null)?.dias_agenda_adelante ?? 60,
     horaApertura: (clinicaDb as { hora_apertura?: string } | null)?.hora_apertura ?? '08:00',
     horaCierre: (clinicaDb as { hora_cierre?: string } | null)?.hora_cierre ?? '18:00',
+    tipoEspecialidad: (clinicaDb as { tipo_especialidad?: string } | null)?.tipo_especialidad as 'medicina_general' | 'odontologia' | 'mixta' ?? 'medicina_general',
   }
 
   return (

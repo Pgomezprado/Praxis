@@ -23,6 +23,8 @@ const TIPO_CONSULTA = [
   { value: 'control', label: 'Control' },
 ] as const
 
+const DURACIONES_MIN = [15, 30, 45, 60, 75, 90]
+
 function getToday() {
   return new Date().toISOString().split('T')[0]
 }
@@ -40,6 +42,8 @@ export function ModalNuevaCita({
   const [medicoId, setMedicoId] = useState(medicoIdInicial ?? '')
   const [fecha, setFecha] = useState(fechaInicial ?? getToday())
   const [slot, setSlot] = useState('')
+  const [horaManual, setHoraManual] = useState('')
+  const [duracion, setDuracion] = useState(30)
   const [motivo, setMotivo] = useState('')
   const [tipo, setTipo] = useState<MockCita['tipo']>('control')
   const [enviarEmail, setEnviarEmail] = useState(true)
@@ -56,6 +60,8 @@ export function ModalNuevaCita({
       setMedicoId(medicoIdInicial ?? '')
       setFecha(fechaInicial ?? getToday())
       setSlot(horaInicial ?? '')
+      setHoraManual('')
+      setDuracion(30)
       setMotivo('')
       setTipo('control')
       setEnviarEmail(true)
@@ -66,6 +72,7 @@ export function ModalNuevaCita({
   // Recalcular slot disponible al cambiar médico o fecha
   useEffect(() => {
     setSlot('')
+    setHoraManual('')
     setErrorSlots(false)
     setErrorCrear(null)
   }, [medicoId, fecha])
@@ -104,8 +111,13 @@ export function ModalNuevaCita({
   }
 
   const medico = medicos.find((m) => m.id === medicoId)
-  // La duración viene del médico seleccionado; fallback 30 min si aún no hay médico
-  const duracion = medico?.duracion_consulta ?? 30
+
+  // Cuando cambia el médico, inicializar la duración con la duración default del médico
+  useEffect(() => {
+    if (medico) {
+      setDuracion(medico.duracion_consulta ?? 30)
+    }
+  }, [medicoId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Calcular slots disponibles desde horario real (o fallback 09:00–18:00)
   const slotsDisponibles = medicoId && fecha
@@ -130,7 +142,9 @@ export function ModalNuevaCita({
     return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
   }
 
-  const canSubmit = paciente && medicoId && fecha && slot
+  // La hora efectiva es el slot seleccionado o la hora ingresada manualmente
+  const horaEfectiva = slot || horaManual
+  const canSubmit = paciente && medicoId && fecha && horaEfectiva
 
   async function handleCrear() {
     if (!canSubmit || !medico || !paciente) return
@@ -145,8 +159,8 @@ export function ModalNuevaCita({
         doctor_id: medicoId,
         paciente_id: paciente.id,
         fecha,
-        hora_inicio: slot,
-        hora_fin: calcularHoraFin(slot, duracion),
+        hora_inicio: horaEfectiva,
+        hora_fin: calcularHoraFin(horaEfectiva, duracion),
         motivo: motivo || 'Sin motivo especificado',
         tipo,
       }),
@@ -261,6 +275,27 @@ export function ModalNuevaCita({
                 className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
 
+              {/* Selector de duración */}
+              <div>
+                <p className="text-xs font-medium text-slate-500 mb-2">Duración de la cita</p>
+                <div className="grid grid-cols-6 gap-1.5">
+                  {DURACIONES_MIN.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setDuracion(d)}
+                      className={`py-2 rounded-xl text-xs font-medium transition-all ${
+                        duracion === d
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-700 hover:bg-blue-100 hover:text-blue-700'
+                      }`}
+                    >
+                      {d} min
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {medicoId && fecha && (
                 <>
                   <div>
@@ -275,7 +310,7 @@ export function ModalNuevaCita({
                           <button
                             key={s.hora}
                             disabled={!s.disponible}
-                            onClick={() => setSlot(s.hora)}
+                            onClick={() => { setSlot(s.hora); setHoraManual('') }}
                             className={`py-2 rounded-xl text-sm font-medium transition-all ${
                               !s.disponible
                                 ? 'bg-slate-100 text-slate-300 cursor-not-allowed'
@@ -291,6 +326,16 @@ export function ModalNuevaCita({
                     )}
                   </div>
 
+                  {/* Entrada manual de hora */}
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 mb-2">O ingresa la hora manualmente</p>
+                    <input
+                      type="time"
+                      value={horaManual}
+                      onChange={(e) => { setHoraManual(e.target.value); setSlot('') }}
+                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </>
               )}
             </div>

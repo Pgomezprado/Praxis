@@ -18,7 +18,7 @@ type FormData = {
   emailAcceso: string
 }
 
-const DURACIONES = [15, 30, 45, 60]
+const DURACIONES = [15, 30, 45, 60, 75, 90]
 
 type Props = {
   open: boolean
@@ -36,7 +36,7 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
     rut: '',
     email: '',
     telefono: '',
-    especialidadId: 'e1',
+    especialidadId: '',
     registroSIS: '',
     duracionConsulta: 30,
     emailAcceso: '',
@@ -314,6 +314,7 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
                     onChange={e => set('especialidadId', e.target.value)}
                     className="w-full appearance-none px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors bg-white pr-9"
                   >
+                    <option value="">Selecciona una especialidad</option>
                     {especialidades.map(e => (
                       <option key={e.id} value={e.id}>{e.nombre}</option>
                     ))}
