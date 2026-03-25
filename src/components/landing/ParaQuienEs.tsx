@@ -5,10 +5,10 @@ const SEGMENTOS = [
     icon: Stethoscope,
     titulo: 'Médicos',
     subtitulo: 'Más tiempo para tus pacientes',
-    gradient: 'from-blue-600 to-blue-700',
-    border: 'border-blue-100',
-    iconBg: 'bg-blue-50',
-    iconColor: 'text-blue-600',
+    gradient: 'from-blue-500 to-blue-700',
+    border: 'border-blue-200',
+    iconBg: 'bg-blue-100',
+    iconColor: 'text-blue-700',
     bullets: [
       'Ficha clínica siempre disponible',
       'Resumen IA antes de cada consulta',
@@ -19,10 +19,10 @@ const SEGMENTOS = [
     icon: ClipboardList,
     titulo: 'Secretarias',
     subtitulo: 'Agenda sin errores ni llamadas',
-    gradient: 'from-emerald-500 to-emerald-600',
-    border: 'border-emerald-100',
-    iconBg: 'bg-emerald-50',
-    iconColor: 'text-emerald-600',
+    gradient: 'from-emerald-400 to-emerald-600',
+    border: 'border-emerald-200',
+    iconBg: 'bg-emerald-100',
+    iconColor: 'text-emerald-700',
     bullets: [
       'Agenda visual por médico y día',
       'Confirmación automática al paciente',
@@ -34,10 +34,10 @@ const SEGMENTOS = [
     icon: Building2,
     titulo: 'Clínicas y centros',
     subtitulo: 'Control total de tu operación',
-    gradient: 'from-violet-500 to-violet-600',
-    border: 'border-violet-100',
-    iconBg: 'bg-violet-50',
-    iconColor: 'text-violet-600',
+    gradient: 'from-violet-500 to-violet-700',
+    border: 'border-violet-200',
+    iconBg: 'bg-violet-100',
+    iconColor: 'text-violet-700',
     bullets: [
       'Multi-médico y multi-sede',
       'Control de acceso por rol',
@@ -71,7 +71,7 @@ export function ParaQuienEs() {
                 className={`relative bg-white rounded-2xl border ${s.border} p-6 shadow-sm hover:shadow-md transition-shadow overflow-hidden`}
               >
                 {/* Accent top bar */}
-                <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${s.gradient}`} />
+                <div className={`absolute top-0 left-0 right-0 h-1.5 opacity-100 bg-gradient-to-r ${s.gradient}`} />
 
                 <div className={`w-11 h-11 rounded-xl ${s.iconBg} flex items-center justify-center mb-4`}>
                   <Icon className={`w-5 h-5 ${s.iconColor}`} />

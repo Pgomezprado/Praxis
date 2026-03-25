@@ -82,7 +82,12 @@ export function Footer() {
 
           <div className="mt-12 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-slate-600">© 2025 Praxis · Todos los derechos reservados · praxisapp.cl</p>
-            <p className="text-xs text-slate-700">Hecho en Chile 🇨🇱</p>
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <Link href="/privacidad" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+                Cumple con Ley 20.584, Ley 19.628 y normativa MINSAL
+              </Link>
+              <p className="text-xs text-slate-700">Hecho en Chile 🇨🇱</p>
+            </div>
           </div>
         </div>
       </footer>

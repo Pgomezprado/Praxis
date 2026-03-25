@@ -7,8 +7,8 @@ const PASOS = [
     titulo: 'Registra al paciente',
     descripcion: 'Ficha clínica completa con antecedentes, alergias, condiciones crónicas y grupo sanguíneo.',
     accent: 'from-blue-500 to-blue-600',
-    soft: 'bg-blue-50',
-    text: 'text-blue-600',
+    soft: 'bg-blue-100',
+    text: 'text-blue-700',
   },
   {
     num: '02',
@@ -16,8 +16,8 @@ const PASOS = [
     titulo: 'El paciente agenda su hora',
     descripcion: 'Portal de autoservicio 24/7. El paciente busca médico, elige horario y confirma desde su celular.',
     accent: 'from-emerald-500 to-emerald-600',
-    soft: 'bg-emerald-50',
-    text: 'text-emerald-600',
+    soft: 'bg-emerald-100',
+    text: 'text-emerald-700',
   },
   {
     num: '03',
@@ -25,8 +25,8 @@ const PASOS = [
     titulo: 'Registra la evolución',
     descripcion: 'Notas SOAP, diagnóstico, tratamiento y resumen IA generado automáticamente antes de la consulta.',
     accent: 'from-violet-500 to-violet-600',
-    soft: 'bg-violet-50',
-    text: 'text-violet-600',
+    soft: 'bg-violet-100',
+    text: 'text-violet-700',
   },
 ]
 
@@ -48,7 +48,7 @@ export function ComoFunciona() {
 
         <div className="relative grid sm:grid-cols-3 gap-8">
           {/* Línea conectora (solo desktop) */}
-          <div className="hidden sm:block absolute top-7 left-[calc(16.66%+1rem)] right-[calc(16.66%+1rem)] h-px bg-gradient-to-r from-blue-200 via-emerald-200 to-violet-200" />
+          <div className="hidden sm:block absolute top-7 left-[calc(16.66%+1rem)] right-[calc(16.66%+1rem)] h-px bg-gradient-to-r from-blue-400 via-emerald-400 to-violet-400" />
 
           {PASOS.map((paso) => {
             const Icon = paso.icon

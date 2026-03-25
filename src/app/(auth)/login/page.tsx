@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { CalendarDays, ShieldCheck } from 'lucide-react'
+import { CalendarDays, ShieldCheck, Mail, Lock, FileText, Sparkles } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -65,16 +65,60 @@ export default function LoginPage() {
   if (nombreUsuario !== null) {
     const primerNombre = nombreUsuario.replace(/^Dr[a]?\.\s*/i, '').split(' ')[0]
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-slate-900">Praxis</h1>
-            <p className="text-slate-500 mt-2 text-base">Sistema de historial clínico</p>
+      <div className="grid lg:grid-cols-2 min-h-screen">
+        {/* Panel izquierdo — Branding (solo desktop) */}
+        <div className="hidden lg:flex relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex-col justify-between p-12">
+          {/* Blurs decorativos */}
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-600/30 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-1/3 right-1/4 w-48 h-48 bg-indigo-600/25 rounded-full blur-3xl pointer-events-none" />
+
+          {/* Logo */}
+          <div className="relative z-10">
+            <span className="text-2xl font-bold text-white">Praxis</span>
+            <p className="text-blue-300 text-sm mt-1">Sistema clínico inteligente</p>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+          {/* Centro */}
+          <div className="relative z-10 space-y-6">
+            <div>
+              <h2 className="text-3xl font-bold text-white leading-snug">
+                Tu clínica, organizada desde el primer día.
+              </h2>
+              <p className="text-slate-400 text-sm mt-4 leading-relaxed">
+                Historia clínica, agenda y cobros en un solo lugar. Diseñado para médicos y clínicas en Chile.
+              </p>
+            </div>
+            <ul className="space-y-3">
+              <li className="flex items-center gap-2 text-slate-300 text-sm">
+                <CalendarDays className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                Agenda online para pacientes
+              </li>
+              <li className="flex items-center gap-2 text-slate-300 text-sm">
+                <FileText className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                Historia clínica electrónica
+              </li>
+              <li className="flex items-center gap-2 text-slate-300 text-sm">
+                <Sparkles className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                Resúmenes de consulta con IA
+              </li>
+            </ul>
+          </div>
+
+          {/* Footer */}
+          <p className="relative z-10 text-slate-600 text-xs">© 2025 Praxis · praxisapp.cl</p>
+        </div>
+
+        {/* Panel derecho — Selección de rol */}
+        <div className="bg-white flex items-center justify-center p-8 min-h-screen">
+          <div className="w-full max-w-sm">
+            {/* Logo mobile */}
+            <div className="lg:hidden text-center mb-8">
+              <span className="text-2xl font-bold text-slate-900">Praxis</span>
+              <p className="text-slate-500 text-sm mt-1">Sistema clínico inteligente</p>
+            </div>
+
             <p className="text-slate-500 text-sm mb-1">Bienvenida,</p>
-            <h2 className="text-xl font-semibold text-slate-800 mb-2">{primerNombre}</h2>
+            <h1 className="text-2xl font-bold text-slate-900 mb-1">{primerNombre}</h1>
             <p className="text-slate-500 text-sm mb-8">¿Cómo quieres entrar hoy?</p>
 
             <div className="space-y-3">
@@ -104,26 +148,74 @@ export default function LoginPage() {
                 </div>
               </button>
             </div>
-          </div>
 
-          <p className="text-center text-sm text-slate-400 mt-6">
-            Piloto Praxis v1.0 · praxisapp.cl
-          </p>
+            <p className="text-center text-xs text-slate-400 mt-8">
+              ¿Eres nuevo?{' '}
+              <a href="/#cta-demo" className="text-blue-600 hover:underline">
+                Solicita una demo
+              </a>
+            </p>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Praxis</h1>
-          <p className="text-slate-500 mt-2 text-base">Sistema de historial clínico</p>
+    <div className="grid lg:grid-cols-2 min-h-screen">
+      {/* Panel izquierdo — Branding (solo desktop) */}
+      <div className="hidden lg:flex relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 flex-col justify-between p-12">
+        {/* Blurs decorativos */}
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-blue-600/30 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/3 right-1/4 w-48 h-48 bg-indigo-600/25 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Logo */}
+        <div className="relative z-10">
+          <span className="text-2xl font-bold text-white">Praxis</span>
+          <p className="text-blue-300 text-sm mt-1">Sistema clínico inteligente</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
-          <h2 className="text-xl font-semibold text-slate-800 mb-6">Iniciar sesión</h2>
+        {/* Centro */}
+        <div className="relative z-10 space-y-6">
+          <div>
+            <h2 className="text-3xl font-bold text-white leading-snug">
+              Tu clínica, organizada desde el primer día.
+            </h2>
+            <p className="text-slate-400 text-sm mt-4 leading-relaxed">
+              Historia clínica, agenda y cobros en un solo lugar. Diseñado para médicos y clínicas en Chile.
+            </p>
+          </div>
+          <ul className="space-y-3">
+            <li className="flex items-center gap-2 text-slate-300 text-sm">
+              <CalendarDays className="w-4 h-4 text-blue-400 flex-shrink-0" />
+              Agenda online para pacientes
+            </li>
+            <li className="flex items-center gap-2 text-slate-300 text-sm">
+              <FileText className="w-4 h-4 text-blue-400 flex-shrink-0" />
+              Historia clínica electrónica
+            </li>
+            <li className="flex items-center gap-2 text-slate-300 text-sm">
+              <Sparkles className="w-4 h-4 text-blue-400 flex-shrink-0" />
+              Resúmenes de consulta con IA
+            </li>
+          </ul>
+        </div>
+
+        {/* Footer */}
+        <p className="relative z-10 text-slate-600 text-xs">© 2025 Praxis · praxisapp.cl</p>
+      </div>
+
+      {/* Panel derecho — Formulario */}
+      <div className="bg-white flex items-center justify-center p-8 min-h-screen">
+        <div className="w-full max-w-sm">
+          {/* Logo mobile (panel izq oculto en mobile) */}
+          <div className="lg:hidden text-center mb-8">
+            <span className="text-2xl font-bold text-slate-900">Praxis</span>
+            <p className="text-slate-500 text-sm mt-1">Sistema clínico inteligente</p>
+          </div>
+
+          <h1 className="text-2xl font-bold text-slate-900">Bienvenido de vuelta</h1>
+          <p className="text-slate-500 text-sm mt-1 mb-8">Ingresa tus credenciales para continuar</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
@@ -134,6 +226,7 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
+              iconLeft={<Mail className="w-4 h-4" />}
             />
             <Input
               label="Contraseña"
@@ -143,6 +236,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoComplete="current-password"
+              iconLeft={<Lock className="w-4 h-4" />}
             />
 
             {error && (
@@ -156,7 +250,7 @@ export default function LoginPage() {
               loading={loading}
               className="w-full mt-2"
             >
-              Ingresar
+              Ingresar a Praxis
             </Button>
           </form>
 
@@ -168,11 +262,14 @@ export default function LoginPage() {
               ¿Olvidaste tu contraseña?
             </Link>
           </div>
-        </div>
 
-        <p className="text-center text-sm text-slate-400 mt-6">
-          Piloto Praxis v1.0 · praxisapp.cl
-        </p>
+          <p className="text-center text-xs text-slate-400 mt-8">
+            ¿Eres nuevo?{' '}
+            <a href="/#cta-demo" className="text-blue-600 hover:underline">
+              Solicita una demo
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -25,8 +25,8 @@ export function HeroSection() {
         <div className="absolute inset-0 opacity-[0.04]"
           style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '32px 32px' }}
         />
-        <div className="absolute top-0 left-1/3 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-indigo-600/15 rounded-full blur-3xl" />
+        <div className="absolute top-0 left-1/3 w-96 h-96 bg-blue-600/35 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-indigo-600/30 rounded-full blur-3xl" />
 
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-28">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
@@ -39,13 +39,13 @@ export function HeroSection() {
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-[3.25rem] font-bold text-white leading-[1.1] tracking-tight">
-                El sistema clínico que{' '}
+                Historia clínica electrónica para{' '}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-                  simplifica tu consulta
+                  clínicas y consultorios privados en Chile
                 </span>
               </h1>
 
-              <p className="mt-6 text-lg text-slate-400 leading-relaxed max-w-lg">
+              <p className="mt-6 text-lg text-slate-300 leading-relaxed max-w-lg">
                 Historia clínica electrónica, agenda online y resúmenes con IA.
                 Todo en un solo lugar, diseñado para médicos chilenos.
               </p>
@@ -53,7 +53,7 @@ export function HeroSection() {
               <div className="mt-9 flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={scrollADemo}
-                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-xl transition-colors shadow-lg shadow-blue-900/40"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3.5 text-base font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-xl transition-all shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40"
                 >
                   Solicitar demo gratis
                   <ArrowRight className="w-4 h-4" />

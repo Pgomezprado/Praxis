@@ -23,7 +23,7 @@ export function Navbar() {
 
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-600">
           <button onClick={scrollADemo} className="hover:text-slate-900 transition-colors">Cómo funciona</button>
-          <button onClick={scrollADemo} className="hover:text-slate-900 transition-colors">Precios</button>
+          <a href="#precios" className="hover:text-slate-900 transition-colors">Precios</a>
           <Link href="/login" className="hover:text-slate-900 transition-colors">Iniciar sesión</Link>
         </nav>
 

@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /privacidad
+Allow: /terminos
+Allow: /agendar
+Disallow: /admin/
+Disallow: /medico/
+Disallow: /superadmin/
+Disallow: /api/
+
+Sitemap: https://praxisapp.cl/sitemap.xml
