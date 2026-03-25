@@ -142,8 +142,7 @@ export function EspecialidadesClient({ especialidadesIniciales, medicos }: Props
               </div>
 
               {/* Info */}
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>{esp.duracion_default} min / consulta</span>
+              <div className="flex items-center justify-end text-xs text-slate-500">
                 <span className={`font-medium ${tieneMedicos ? 'text-slate-700' : 'text-slate-400'}`}>
                   {medicosEsp.length} médico{medicosEsp.length !== 1 ? 's' : ''}
                 </span>

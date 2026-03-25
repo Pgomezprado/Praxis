@@ -17,7 +17,6 @@ const COLORES_PRESET = [
   '#D97706', '#059669', '#DC2626', '#7C3AED', '#0284C7',
 ]
 
-const DURACIONES = [15, 20, 30, 45, 60]
 
 type Props = {
   open: boolean
@@ -31,18 +30,15 @@ export function ModalEspecialidad({ open, onClose, onGuardar, especialidadEditar
 
   const [nombre, setNombre] = useState('')
   const [color, setColor] = useState('#3B82F6')
-  const [duracion, setDuracion] = useState(30)
   const [guardando, setGuardando] = useState(false)
 
   useEffect(() => {
     if (especialidadEditar) {
       setNombre(especialidadEditar.nombre)
       setColor(especialidadEditar.color)
-      setDuracion(especialidadEditar.duracion_default)
     } else {
       setNombre('')
       setColor('#3B82F6')
-      setDuracion(30)
     }
   }, [especialidadEditar, open])
 
@@ -58,7 +54,7 @@ export function ModalEspecialidad({ open, onClose, onGuardar, especialidadEditar
       const res = await fetch(url, {
         method: esEdicion ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: nombre.trim(), color, duracion_default: duracion }),
+        body: JSON.stringify({ nombre: nombre.trim(), color }),
       })
 
       const json = await res.json()
@@ -159,29 +155,6 @@ export function ModalEspecialidad({ open, onClose, onGuardar, especialidadEditar
             </div>
           </div>
 
-          {/* Duración default */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Duración default de consulta
-            </label>
-            <div className="flex gap-2">
-              {DURACIONES.map(d => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => setDuracion(d)}
-                  className={`flex-1 py-2 rounded-xl text-sm font-medium border transition-colors ${
-                    duracion === d
-                      ? 'bg-blue-600 text-white border-blue-600'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-600'
-                  }`}
-                >
-                  {d} min
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Preview badge */}
           <div className="flex items-center gap-2 py-2">
             <span className="text-xs text-slate-400">Vista previa:</span>
@@ -191,7 +164,6 @@ export function ModalEspecialidad({ open, onClose, onGuardar, especialidadEditar
             >
               {nombre || 'Especialidad'}
             </span>
-            <span className="text-xs text-slate-400">· {duracion} min</span>
           </div>
 
         </div>

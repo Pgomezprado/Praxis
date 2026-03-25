@@ -43,16 +43,13 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { nombre, color, duracion_default } = body
+    const { nombre, color } = body
 
     if (!nombre?.trim()) {
       return Response.json({ error: 'El nombre es requerido' }, { status: 400 })
     }
     if (!color) {
       return Response.json({ error: 'El color es requerido' }, { status: 400 })
-    }
-    if (!duracion_default || duracion_default < 5) {
-      return Response.json({ error: 'La duración debe ser al menos 5 minutos' }, { status: 400 })
     }
 
     const supabase = await createClient()
@@ -76,7 +73,6 @@ export async function POST(req: Request) {
         clinica_id: usuario.clinica_id,
         nombre: nombre.trim(),
         color,
-        duracion_default,
         activo: true,
       })
       .select('id, nombre, color, duracion_default')

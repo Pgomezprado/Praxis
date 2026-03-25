@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Users, Search, ExternalLink, UserX } from 'lucide-react'
+import { Users, Search, ExternalLink, UserX, X, Loader2 } from 'lucide-react'
 import type { EstadoPresupuesto } from '@/types/database'
 
 export interface PacienteConPresupuesto {
@@ -53,8 +53,225 @@ function formatFecha(iso: string) {
   })
 }
 
+interface FormNuevoPaciente {
+  nombre: string
+  rut: string
+  telefono: string
+  email: string
+  fecha_nac: string
+}
+
+const FORM_VACIO: FormNuevoPaciente = {
+  nombre: '',
+  rut: '',
+  telefono: '',
+  email: '',
+  fecha_nac: '',
+}
+
+interface ModalNuevoPacienteProps {
+  onCerrar: () => void
+}
+
+function ModalNuevoPaciente({ onCerrar }: ModalNuevoPacienteProps) {
+  const [form, setForm] = useState<FormNuevoPaciente>(FORM_VACIO)
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const { name, value } = e.target
+    setForm((prev) => ({ ...prev, [name]: value }))
+    setError(null)
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!form.nombre.trim() || !form.rut.trim()) {
+      setError('Nombre y RUT son obligatorios.')
+      return
+    }
+
+    setGuardando(true)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/pacientes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: form.nombre.trim(),
+          rut: form.rut.trim(),
+          telefono: form.telefono.trim() || null,
+          email: form.email.trim() || null,
+          fecha_nac: form.fecha_nac || null,
+        }),
+      })
+
+      if (res.status === 409) {
+        setError('Ya existe un paciente con ese RUT.')
+        return
+      }
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setError((body as { error?: string }).error ?? 'Error al crear el paciente.')
+        return
+      }
+
+      window.location.reload()
+    } catch {
+      setError('Error de conexión. Inténtalo nuevamente.')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    // Fondo oscuro
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCerrar()
+      }}
+    >
+      <div className="w-full max-w-md bg-white rounded-xl shadow-md border border-slate-200">
+        {/* Header modal */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+          <h2 className="text-base font-semibold text-slate-900">Nuevo paciente</h2>
+          <button
+            type="button"
+            onClick={onCerrar}
+            className="text-slate-400 hover:text-slate-600 transition-colors"
+            aria-label="Cerrar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Formulario */}
+        <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-4">
+          {/* Nombre */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="nombre" className="text-sm font-medium text-slate-700">
+              Nombre <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="nombre"
+              name="nombre"
+              type="text"
+              value={form.nombre}
+              onChange={handleChange}
+              placeholder="Ej: María González"
+              required
+              className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* RUT */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="rut" className="text-sm font-medium text-slate-700">
+              RUT <span className="text-red-500">*</span>
+            </label>
+            <input
+              id="rut"
+              name="rut"
+              type="text"
+              value={form.rut}
+              onChange={handleChange}
+              placeholder="Ej: 12.345.678-9"
+              required
+              className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Teléfono */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="telefono" className="text-sm font-medium text-slate-700">
+              Teléfono
+            </label>
+            <input
+              id="telefono"
+              name="telefono"
+              type="text"
+              value={form.telefono}
+              onChange={handleChange}
+              placeholder="Ej: +56 9 1234 5678"
+              className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Email */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="email" className="text-sm font-medium text-slate-700">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="Ej: maria@correo.cl"
+              className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Fecha de nacimiento */}
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="fecha_nac" className="text-sm font-medium text-slate-700">
+              Fecha de nacimiento
+            </label>
+            <input
+              id="fecha_nac"
+              name="fecha_nac"
+              type="date"
+              value={form.fecha_nac}
+              onChange={handleChange}
+              className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+
+          {/* Mensaje de error */}
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          {/* Acciones */}
+          <div className="flex gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onCerrar}
+              disabled={guardando}
+              className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={guardando}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-60"
+            >
+              {guardando ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Creando...
+                </>
+              ) : (
+                'Crear paciente'
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export function PacientesOdontologiaClient({ pacientes }: PacientesOdontologiaClientProps) {
   const [busqueda, setBusqueda] = useState('')
+  const [modalAbierto, setModalAbierto] = useState(false)
 
   const filtrados = useMemo(() => {
     const term = busqueda.trim().toLowerCase()
@@ -68,6 +285,11 @@ export function PacientesOdontologiaClient({ pacientes }: PacientesOdontologiaCl
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
+      {/* Modal */}
+      {modalAbierto && (
+        <ModalNuevoPaciente onCerrar={() => setModalAbierto(false)} />
+      )}
+
       {/* Header */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
@@ -76,13 +298,14 @@ export function PacientesOdontologiaClient({ pacientes }: PacientesOdontologiaCl
             {pacientes.length} {pacientes.length === 1 ? 'paciente' : 'pacientes'}
           </span>
         </div>
-        <Link
-          href="/admin/pacientes"
+        <button
+          type="button"
+          onClick={() => setModalAbierto(true)}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
         >
           <Users className="w-4 h-4" />
           Nuevo paciente
-        </Link>
+        </button>
       </div>
 
       {/* Buscador */}
