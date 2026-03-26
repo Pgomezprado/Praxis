@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, ChevronRight, FileText, CheckCircle2, Loader2, Search, Sparkles, ShieldCheck, X } from 'lucide-react'
+import { Plus, ChevronRight, FileText, CheckCircle2, Loader2, Search, Sparkles, ShieldCheck, X, Trash2 } from 'lucide-react'
 import { OdontogramaSVG } from './OdontogramaSVG'
 import { ModalEstadoDiente } from './ModalEstadoDiente'
 import type { EstadoDiente, EstadoDienteValor, FichaOdontologica, PlanTratamiento, PlanTratamientoItem, ArancelDental } from '@/types/database'
@@ -135,48 +135,63 @@ function AutocompleteCatalogo({ value, onChange, onSeleccionar }: AutocompleteCa
 
 // ── Formulario inline para nuevo plan ─────────────────────────────────────────
 
+type ItemFormData = {
+  key: string
+  nombreProc: string
+  precio: string
+  pieza: string
+  arancelId?: string
+}
+
+function itemVacio(): ItemFormData {
+  return { key: Math.random().toString(36).slice(2), nombreProc: '', precio: '', pieza: '', arancelId: undefined }
+}
+
 interface FormNuevoPlanProps {
-  onCrear: (nombre: string, primerItem: { nombre_procedimiento: string; precio_unitario: number; numero_pieza?: number; arancel_id?: string }) => Promise<void>
+  onCrear: (nombre: string, items: { nombre_procedimiento: string; precio_unitario: number; numero_pieza?: number; arancel_id?: string }[]) => Promise<void>
   onCancelar: () => void
 }
 
 function FormNuevoPlan({ onCrear, onCancelar }: FormNuevoPlanProps) {
   const [nombre, setNombre] = useState('')
-  const [nombreProc, setNombreProc] = useState('')
-  const [precio, setPrecio] = useState('')
-  const [pieza, setPieza] = useState('')
-  const [arancelId, setArancelId] = useState<string | undefined>()
+  const [items, setItems] = useState<ItemFormData[]>([itemVacio()])
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
 
-  function handleSeleccionarDelCatalogo(item: ArancelDental) {
-    setNombreProc(item.nombre)
-    setPrecio(String(item.precio_particular))
-    setArancelId(item.id)
+  function actualizarItem(key: string, campo: Partial<ItemFormData>) {
+    setItems((prev) => prev.map((it) => it.key === key ? { ...it, ...campo } : it))
   }
 
-  function handleCambioNombreProc(nuevoNombre: string) {
-    setNombreProc(nuevoNombre)
-    // Si el usuario escribe libre, desvincula del catálogo
-    setArancelId(undefined)
+  function agregarItem() {
+    setItems((prev) => [...prev, itemVacio()])
+  }
+
+  function quitarItem(key: string) {
+    setItems((prev) => prev.filter((it) => it.key !== key))
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!nombre.trim()) { setError('El nombre del plan es requerido'); return }
-    if (!nombreProc.trim()) { setError('El procedimiento es requerido'); return }
-    const precioNum = parseInt(precio.replace(/\D/g, ''), 10)
-    if (!precioNum || precioNum <= 0) { setError('El precio debe ser mayor a 0'); return }
+    if (items.length === 0) { setError('Agrega al menos un procedimiento'); return }
+
+    const itemsValidos: { nombre_procedimiento: string; precio_unitario: number; numero_pieza?: number; arancel_id?: string }[] = []
+    for (const it of items) {
+      if (!it.nombreProc.trim()) { setError('Todos los procedimientos deben tener nombre'); return }
+      const precioNum = parseInt(it.precio.replace(/\D/g, ''), 10)
+      if (!precioNum || precioNum <= 0) { setError('Todos los procedimientos deben tener precio mayor a 0'); return }
+      itemsValidos.push({
+        nombre_procedimiento: it.nombreProc.trim(),
+        precio_unitario: precioNum,
+        numero_pieza: it.pieza ? parseInt(it.pieza, 10) : undefined,
+        arancel_id: it.arancelId,
+      })
+    }
 
     setGuardando(true)
     setError('')
     try {
-      await onCrear(nombre.trim(), {
-        nombre_procedimiento: nombreProc.trim(),
-        precio_unitario: precioNum,
-        numero_pieza: pieza ? parseInt(pieza, 10) : undefined,
-        arancel_id: arancelId,
-      })
+      await onCrear(nombre.trim(), itemsValidos)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear el plan')
     } finally {
@@ -198,40 +213,74 @@ function FormNuevoPlan({ onCrear, onCancelar }: FormNuevoPlanProps) {
         />
       </div>
 
-      <div>
-        <label className="text-xs font-medium text-slate-600 block mb-1">
-          Primer procedimiento <span className="text-red-500">*</span>
-          {arancelId && <span className="ml-2 text-blue-600 font-normal">· Del catálogo</span>}
-        </label>
-        <AutocompleteCatalogo
-          value={nombreProc}
-          onChange={handleCambioNombreProc}
-          onSeleccionar={handleSeleccionarDelCatalogo}
-        />
-      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-medium text-slate-600">
+            Procedimientos <span className="text-red-500">*</span>
+          </label>
+          <span className="text-xs text-slate-400">{items.length} agregado{items.length !== 1 ? 's' : ''}</span>
+        </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-xs font-medium text-slate-600 block mb-1">Precio (CLP) <span className="text-red-500">*</span></label>
-          <input
-            value={precio}
-            onChange={(e) => setPrecio(e.target.value)}
-            placeholder="Ej: 45000"
-            inputMode="numeric"
-            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-slate-600 block mb-1">Pieza FDI <span className="text-slate-400 font-normal">(opcional)</span></label>
-          <input
-            value={pieza}
-            onChange={(e) => setPieza(e.target.value)}
-            placeholder="Ej: 16"
-            inputMode="numeric"
-            maxLength={2}
-            className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+        {items.map((it, idx) => (
+          <div key={it.key} className="bg-white border border-slate-200 rounded-lg p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-slate-500">Procedimiento {idx + 1}</span>
+              {items.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => quitarItem(it.key)}
+                  className="p-0.5 text-slate-400 hover:text-red-500 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            <AutocompleteCatalogo
+              value={it.nombreProc}
+              onChange={(v) => actualizarItem(it.key, { nombreProc: v, arancelId: undefined })}
+              onSeleccionar={(arancel) => actualizarItem(it.key, {
+                nombreProc: arancel.nombre,
+                precio: String(arancel.precio_particular),
+                arancelId: arancel.id,
+              })}
+            />
+            {it.arancelId && <span className="text-xs text-blue-600">· Del catálogo</span>}
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-slate-500 block mb-0.5">Precio (CLP) <span className="text-red-500">*</span></label>
+                <input
+                  value={it.precio}
+                  onChange={(e) => actualizarItem(it.key, { precio: e.target.value })}
+                  placeholder="Ej: 45000"
+                  inputMode="numeric"
+                  className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 block mb-0.5">Pieza FDI <span className="text-slate-400">(opc.)</span></label>
+                <input
+                  value={it.pieza}
+                  onChange={(e) => actualizarItem(it.key, { pieza: e.target.value })}
+                  placeholder="Ej: 16"
+                  inputMode="numeric"
+                  maxLength={2}
+                  className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <button
+          type="button"
+          onClick={agregarItem}
+          className="w-full py-2 text-xs font-medium text-blue-600 border border-blue-200 border-dashed rounded-lg hover:bg-blue-50 transition-colors flex items-center justify-center gap-1"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Agregar otro procedimiento
+        </button>
       </div>
 
       {error && (
@@ -602,6 +651,7 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
   const [cargandoDetallePlan, setCargandoDetallePlan] = useState<string | null>(null)
   const [generandoPlanAuto, setGenerandoPlanAuto] = useState(false)
   const [completandoItem, setCompletandoItem] = useState<string | null>(null)
+  const [eliminandoPlan, setEliminandoPlan] = useState<string | null>(null)
 
   // Modal de consentimiento informado
   const [modalConsentimiento, setModalConsentimiento] = useState<{
@@ -678,7 +728,7 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
 
   async function handleCrearPlan(
     nombre: string,
-    primerItem: { nombre_procedimiento: string; precio_unitario: number; numero_pieza?: number; arancel_id?: string }
+    itemsNuevos: { nombre_procedimiento: string; precio_unitario: number; numero_pieza?: number; arancel_id?: string }[]
   ) {
     if (!ficha) throw new Error('No hay ficha odontológica cargada')
 
@@ -694,23 +744,24 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
     }
     const { plan } = await resPlan.json() as { plan: PlanTratamiento }
 
-    // Agregar primer ítem (incluye arancel_id si vino del catálogo)
-    const resItem = await fetch(`/api/odontologia/planes/plan/${plan.id}/items`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(primerItem),
-    })
-    if (!resItem.ok) {
-      const body = await resItem.json() as { error?: string }
-      throw new Error(body.error ?? 'Error al agregar procedimiento')
+    // Agregar todos los ítems secuencialmente
+    const itemsCreados: PlanTratamientoItem[] = []
+    for (const itemData of itemsNuevos) {
+      const resItem = await fetch(`/api/odontologia/planes/plan/${plan.id}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(itemData),
+      })
+      if (!resItem.ok) {
+        const body = await resItem.json() as { error?: string }
+        throw new Error(body.error ?? 'Error al agregar procedimiento')
+      }
+      const { item } = await resItem.json() as { item: PlanTratamientoItem }
+      itemsCreados.push(item)
     }
-    const { item } = await resItem.json() as { item: PlanTratamientoItem }
 
-    const planConItems: PlanTratamiento = {
-      ...plan,
-      total_estimado: item.precio_total,
-      items: [item],
-    }
+    const totalEstimado = itemsCreados.reduce((sum, it) => sum + it.precio_total, 0)
+    const planConItems: PlanTratamiento = { ...plan, total_estimado: totalEstimado, items: itemsCreados }
     setPlanes((prev) => [planConItems, ...prev])
     setMostrarFormPlan(false)
     setPlanExpandido(plan.id)
@@ -784,6 +835,19 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
   }
 
   // Marcar ítem como completado — con bloqueo de consentimiento para procedimientos invasivos
+  async function handleEliminarPlan(planId: string) {
+    if (!window.confirm('¿Eliminar este plan? Esta acción no se puede deshacer.')) return
+    setEliminandoPlan(planId)
+    try {
+      const res = await fetch(`/api/odontologia/planes/plan/${planId}`, { method: 'DELETE' })
+      if (!res.ok) { console.error('Error al eliminar plan'); return }
+      setPlanes((prev) => prev.filter((p) => p.id !== planId))
+      if (planExpandido === planId) setPlanExpandido(null)
+    } finally {
+      setEliminandoPlan(null)
+    }
+  }
+
   async function handleCompletarItem(itemId: string, planId: string, nombreProcedimiento: string) {
     setCompletandoItem(itemId)
     try {
@@ -973,6 +1037,20 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
                     </div>
                     <div className="flex items-center gap-2">
                       <BadgeEstadoPlan estado={plan.estado} />
+                      {plan.estado === 'borrador' && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleEliminarPlan(plan.id) }}
+                          disabled={eliminandoPlan === plan.id}
+                          title="Eliminar plan"
+                          className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-40 transition-colors flex-shrink-0"
+                        >
+                          {eliminandoPlan === plan.id
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : <Trash2 className="w-3.5 h-3.5" />
+                          }
+                        </button>
+                      )}
                       <ChevronRight
                         className={`w-4 h-4 text-slate-400 transition-transform ${planExpandido === plan.id ? 'rotate-90' : ''}`}
                       />

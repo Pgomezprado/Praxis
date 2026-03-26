@@ -64,6 +64,7 @@ export default async function MedicoAgendaSemanaPage({
           listPath="/medico/agenda"
           semanaPath="/medico/agenda/semana"
           hideMedicoFilter
+          esDoctor
         />
       </Suspense>
     </div>

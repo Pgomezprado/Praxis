@@ -59,3 +59,40 @@ export async function PATCH(
     return Response.json({ error: 'Error interno' }, { status: 500 })
   }
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return Response.json({ error: 'No autorizado' }, { status: 401 })
+
+    const { data: me } = await supabase
+      .from('usuarios')
+      .select('clinica_id, rol')
+      .eq('id', user.id)
+      .single()
+
+    if (!me) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    if ((me as { rol: string }).rol === 'doctor') return Response.json({ error: 'Sin permisos' }, { status: 403 })
+
+    const { error } = await supabase
+      .from('citas')
+      .delete()
+      .eq('id', id)
+      .eq('clinica_id', (me as { clinica_id: string }).clinica_id)
+
+    if (error) {
+      return Response.json({ error: 'No se pudo eliminar la cita' }, { status: 404 })
+    }
+
+    return Response.json({ ok: true })
+  } catch (error) {
+    console.error('Error en DELETE /api/citas/[id]:', error)
+    return Response.json({ error: 'Error interno' }, { status: 500 })
+  }
+}

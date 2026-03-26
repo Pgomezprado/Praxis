@@ -116,11 +116,12 @@ interface Props {
   semanaPath?: string
   hideMedicoFilter?: boolean
   esDoctor?: boolean
+  fichaBasePath?: string
 }
 
 type Toast = { folio: string; paciente: string }
 
-export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPath = '/agenda/hoy', semanaPath = '/agenda/semana', hideMedicoFilter = false, esDoctor = false }: Props) {
+export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPath = '/agenda/hoy', semanaPath = '/agenda/semana', hideMedicoFilter = false, esDoctor = false, fichaBasePath }: Props) {
   const router = useRouter()
   const today = getToday()
   const monday = getMonday(fecha)
@@ -440,8 +441,10 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
 
       {/* Drawer detalle de cita */}
       <DrawerDetalleCita
+        key={citaSeleccionada?.id}
         cita={citaSeleccionada}
         esDoctor={esDoctor}
+        fichaHref={citaSeleccionada && fichaBasePath ? `${fichaBasePath}/${citaSeleccionada.pacienteId}` : undefined}
         onClose={() => setCitaSeleccionada(null)}
         onEstadoCambiado={(id, estado) => {
           handleEstadoCambiado(id, estado)
@@ -451,6 +454,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
           setCitaSeleccionada(null)
           handleAbrirCambioHora(id)
         }}
+        onEliminada={(id) => setCitasLocales((prev) => prev.filter((c) => c.id !== id))}
       />
 
       {/* Modal nueva cita */}

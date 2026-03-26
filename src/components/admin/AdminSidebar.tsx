@@ -21,6 +21,7 @@ import {
 
 const navItems = [
   { href: '/admin',              label: 'Inicio',          icon: LayoutDashboard, exact: true },
+  { href: '/admin/agenda',       label: 'Agenda',          icon: CalendarDays },
   { href: '/admin/medicos',      label: 'Médicos',         icon: Stethoscope },
   { href: '/admin/secretarias',  label: 'Secretarias',     icon: UserCog },
   { href: '/admin/especialidades', label: 'Especialidades', icon: Tag },
