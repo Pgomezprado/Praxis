@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, ChevronRight, FileText, CheckCircle2, Loader2, Search, Sparkles, ShieldCheck, X, Trash2 } from 'lucide-react'
+import { Plus, ChevronRight, FileText, CheckCircle2, Loader2, Search, Sparkles, ShieldCheck, X, Trash2, History } from 'lucide-react'
 import { OdontogramaSVG } from './OdontogramaSVG'
 import { ModalEstadoDiente } from './ModalEstadoDiente'
 import type { EstadoDiente, EstadoDienteValor, FichaOdontologica, PlanTratamiento, PlanTratamientoItem, ArancelDental } from '@/types/database'
@@ -410,20 +410,85 @@ function buildItemDesdeEstado(
   }
 }
 
+// ── Tipo para ítems del historial clínico ─────────────────────────────────────
+
+interface HistorialItem {
+  numero_pieza: number
+  estado: EstadoDienteValor
+  material: string | null
+  notas: string | null
+  created_at: string
+}
+
 // ── Resumen de hallazgos clínicos ──────────────────────────────────────────────
 
 interface ResumenHallazgosProps {
+  fichaId: string
   estados: Record<number, EstadoDiente>
   generandoPlan: boolean
   onGenerarPlan: (hallazgos: Array<[string, EstadoDiente]>) => void
 }
 
-function ResumenHallazgos({ estados, generandoPlan, onGenerarPlan }: ResumenHallazgosProps) {
+function ResumenHallazgos({ fichaId, estados, generandoPlan, onGenerarPlan }: ResumenHallazgosProps) {
   const hallazgos = Object.entries(estados)
     .filter(([, est]) => est.estado !== 'sano')
     .sort(([a], [b]) => Number(a) - Number(b))
 
   const accionables = hallazgos.filter(([, est]) => ESTADOS_ACCIONABLES.has(est.estado))
+
+  // Checkboxes — todos los accionables seleccionados por defecto
+  const [seleccionadas, setSeleccionadas] = useState<Set<number>>(() =>
+    new Set(accionables.map(([pieza]) => Number(pieza)))
+  )
+
+  // Historial clínico
+  const [historialAbierto, setHistorialAbierto] = useState(false)
+  const [historialCargado, setHistorialCargado] = useState(false)
+  const [historialItems, setHistorialItems] = useState<HistorialItem[]>([])
+  const [cargandoHistorial, setCargandoHistorial] = useState(false)
+  const [errorHistorial, setErrorHistorial] = useState('')
+
+  // Actualizar selección cuando cambian los accionables (si se edita el odontograma)
+  const accionablesKey = accionables.map(([p]) => p).join(',')
+  useEffect(() => {
+    setSeleccionadas(new Set(accionables.map(([pieza]) => Number(pieza))))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accionablesKey])
+
+  function toggleSeleccion(pieza: number) {
+    setSeleccionadas((prev) => {
+      const siguiente = new Set(prev)
+      if (siguiente.has(pieza)) {
+        siguiente.delete(pieza)
+      } else {
+        siguiente.add(pieza)
+      }
+      return siguiente
+    })
+  }
+
+  async function handleAbrirHistorial() {
+    setHistorialAbierto((v) => !v)
+    if (!historialCargado) {
+      setCargandoHistorial(true)
+      setErrorHistorial('')
+      try {
+        const res = await fetch(`/api/odontologia/odontograma/${fichaId}/historial`)
+        if (!res.ok) throw new Error('Error al cargar historial')
+        const json = await res.json() as { historial: HistorialItem[] }
+        setHistorialItems(json.historial ?? [])
+        setHistorialCargado(true)
+      } catch {
+        setErrorHistorial('No se pudo cargar el historial. Intenta nuevamente.')
+      } finally {
+        setCargandoHistorial(false)
+      }
+    }
+  }
+
+  const hallazgosSeleccionados = hallazgos.filter(
+    ([pieza, est]) => ESTADOS_ACCIONABLES.has(est.estado) && seleccionadas.has(Number(pieza))
+  )
 
   if (hallazgos.length === 0) return null
 
@@ -436,14 +501,15 @@ function ResumenHallazgos({ estados, generandoPlan, onGenerarPlan }: ResumenHall
         {accionables.length > 0 && (
           <button
             type="button"
-            onClick={() => onGenerarPlan(accionables)}
-            disabled={generandoPlan}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 rounded-xl transition-colors"
+            onClick={() => onGenerarPlan(hallazgosSeleccionados)}
+            disabled={generandoPlan || hallazgosSeleccionados.length === 0}
+            title={hallazgosSeleccionados.length === 0 ? 'Selecciona al menos un hallazgo' : undefined}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors"
           >
             {generandoPlan ? (
               <><Loader2 className="w-3 h-3 animate-spin" />Generando...</>
             ) : (
-              <><Sparkles className="w-3 h-3" />Generar plan automático</>
+              <><Sparkles className="w-3 h-3" />Generar plan ({hallazgosSeleccionados.length})</>
             )}
           </button>
         )}
@@ -452,11 +518,36 @@ function ResumenHallazgos({ estados, generandoPlan, onGenerarPlan }: ResumenHall
         {hallazgos.map(([pieza, est]) => {
           const tratamiento = TRATAMIENTO_SUGERIDO[est.estado]
           const colorClase = COLOR_ESTADO[est.estado] ?? 'bg-slate-50 text-slate-600 border-slate-200'
+          const esAccionable = ESTADOS_ACCIONABLES.has(est.estado)
+          const piezaNum = Number(pieza)
+          const estaSeleccionada = seleccionadas.has(piezaNum)
           return (
             <div
               key={pieza}
-              className="flex items-start gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100"
+              className="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-100"
             >
+              {/* Checkbox — solo para hallazgos accionables */}
+              {esAccionable ? (
+                <button
+                  type="button"
+                  onClick={() => toggleSeleccion(piezaNum)}
+                  aria-label={estaSeleccionada ? `Deseleccionar pieza ${pieza}` : `Seleccionar pieza ${pieza}`}
+                  className={`flex-shrink-0 mt-0.5 w-4 h-4 rounded border flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+                    estaSeleccionada
+                      ? 'bg-blue-600 border-blue-600'
+                      : 'bg-white border-slate-300 hover:border-blue-400'
+                  }`}
+                >
+                  {estaSeleccionada && (
+                    <svg viewBox="0 0 10 8" className="w-2.5 h-2.5 text-white" fill="none">
+                      <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </button>
+              ) : (
+                <span className="flex-shrink-0 mt-0.5 w-4 h-4" />
+              )}
+
               {/* Número FDI */}
               <span className="flex-shrink-0 w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-sm font-bold text-slate-700 shadow-sm">
                 {pieza}
@@ -483,6 +574,72 @@ function ResumenHallazgos({ estados, generandoPlan, onGenerarPlan }: ResumenHall
             </div>
           )
         })}
+      </div>
+
+      {/* ── Historial clínico ── */}
+      <div className="mt-4 border-t border-slate-100 pt-3">
+        <button
+          type="button"
+          onClick={handleAbrirHistorial}
+          className="flex items-center gap-2 text-xs font-medium text-slate-500 hover:text-blue-600 transition-colors group"
+        >
+          <History className="w-3.5 h-3.5 flex-shrink-0 group-hover:text-blue-500" />
+          Ver historial clínico
+          <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition-transform group-hover:text-blue-500 ${historialAbierto ? 'rotate-90' : ''}`} />
+        </button>
+
+        {historialAbierto && (
+          <div className="mt-3 space-y-1.5">
+            {cargandoHistorial ? (
+              <div className="flex items-center gap-2 py-4 justify-center">
+                <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                <span className="text-xs text-slate-400">Cargando historial...</span>
+              </div>
+            ) : errorHistorial ? (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                {errorHistorial}
+              </p>
+            ) : historialItems.length === 0 ? (
+              <p className="text-xs text-slate-400 text-center py-3">
+                Sin registros previos en el historial.
+              </p>
+            ) : (
+              historialItems.map((item, idx) => {
+                const colorClase = COLOR_ESTADO[item.estado] ?? 'bg-slate-50 text-slate-600 border-slate-200'
+                const fecha = new Date(item.created_at).toLocaleDateString('es-CL', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })
+                return (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-3 py-2 px-3 rounded-xl bg-white border border-slate-100"
+                  >
+                    <span className="flex-shrink-0 text-xs text-slate-400 w-24 pt-0.5 tabular-nums">{fecha}</span>
+                    <div className="flex-shrink-0 w-7 h-7 rounded-md bg-slate-50 border border-slate-200 flex items-center justify-center text-xs font-bold text-slate-600">
+                      {item.numero_pieza}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-slate-500 truncate">{nombreCorto(item.numero_pieza)}</span>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium border ${colorClase}`}>
+                          {ETIQUETAS_ESTADO[item.estado] ?? item.estado}
+                        </span>
+                      </div>
+                      {item.material && (
+                        <p className="text-xs text-slate-400 mt-0.5">Material: {item.material}</p>
+                      )}
+                      {item.notas && (
+                        <p className="text-xs text-slate-400 mt-0.5 italic truncate">{item.notas}</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -980,11 +1137,14 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
             estados={estados}
             onDienteClick={handleDienteClick}
           />
-          <ResumenHallazgos
-            estados={estados}
-            generandoPlan={generandoPlanAuto}
-            onGenerarPlan={handleGenerarPlanAuto}
-          />
+          {ficha && (
+            <ResumenHallazgos
+              fichaId={ficha.id}
+              estados={estados}
+              generandoPlan={generandoPlanAuto}
+              onGenerarPlan={handleGenerarPlanAuto}
+            />
+          )}
         </div>
 
         {/* ── Planes de tratamiento ── */}
