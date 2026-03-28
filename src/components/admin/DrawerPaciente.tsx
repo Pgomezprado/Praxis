@@ -335,12 +335,7 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
                   className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors bg-white text-slate-700"
                 >
                   <option value="">Seleccionar previsión…</option>
-                  <optgroup label="Fonasa">
-                    <option value="Fonasa A">Fonasa A</option>
-                    <option value="Fonasa B">Fonasa B</option>
-                    <option value="Fonasa C">Fonasa C</option>
-                    <option value="Fonasa D">Fonasa D</option>
-                  </optgroup>
+                  <option value="Fonasa">Fonasa</option>
                   <optgroup label="Isapre">
                     {ISAPRES.map(i => (
                       <option key={i} value={i}>{i}</option>

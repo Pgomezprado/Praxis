@@ -43,7 +43,7 @@ export default async function PacientesPage() {
       rut: p.rut,
       fechaNacimiento: p.fecha_nac ?? '',
       edad: p.fecha_nac ? calcularEdad(p.fecha_nac) : 0,
-      prevision: (p.prevision ?? 'Fonasa A') as Prevision,
+      prevision: (p.prevision ?? 'Fonasa') as Prevision,
       email: p.email ?? '',
       telefono: p.telefono ?? '',
       ultimaVisita,

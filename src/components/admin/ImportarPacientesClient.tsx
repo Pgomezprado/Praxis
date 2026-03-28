@@ -21,10 +21,10 @@ type FilaCSV = {
 type EstadoImport = 'idle' | 'importando' | 'terminado' | 'error'
 
 const COLUMNAS_REQUERIDAS = ['nombre', 'rut', 'fecha_nacimiento', 'prevision', 'email', 'telefono']
-const PREVISIONES_VALIDAS = ['Fonasa A', 'Fonasa B', 'Fonasa C', 'Fonasa D', 'Isapre', 'Particular']
+const PREVISIONES_VALIDAS = ['Fonasa', 'Isapre', 'Particular']
 
 const EJEMPLO_CSV = `nombre,rut,fecha_nacimiento,prevision,email,telefono
-Juan Pérez González,12.345.678-9,1985-06-15,Fonasa B,juan.perez@gmail.com,+56 9 1234 5678
+Juan Pérez González,12.345.678-9,1985-06-15,Fonasa,juan.perez@gmail.com,+56 9 1234 5678
 Ana María Soto López,9.876.543-2,1992-03-22,Isapre,ana.soto@hotmail.com,+56 9 8765 4321`
 
 // ── Parser CSV ───────────────────────────────────────────────────────────────

@@ -8,17 +8,14 @@ import { DrawerPaciente } from './DrawerPaciente'
 import { type MockPacienteAdmin, type Prevision } from '@/types/domain'
 
 const PREVISIONES: Prevision[] = [
-  'Fonasa A', 'Fonasa B', 'Fonasa C', 'Fonasa D',
+  'Fonasa',
   'Isapre Banmédica', 'Isapre Cruz Blanca', 'Isapre Consalud',
   'Isapre Colmena', 'Isapre Vida Tres', 'Isapre Nueva Masvida',
   'Particular',
 ]
 
 const PREVISION_COLORS: Record<Prevision, string> = {
-  'Fonasa A':              'bg-emerald-100 text-emerald-700',
-  'Fonasa B':              'bg-teal-100 text-teal-700',
-  'Fonasa C':              'bg-cyan-100 text-cyan-700',
-  'Fonasa D':              'bg-blue-100 text-blue-700',
+  'Fonasa':                'bg-emerald-100 text-emerald-700',
   'Isapre Banmédica':      'bg-violet-100 text-violet-700',
   'Isapre Cruz Blanca':    'bg-violet-100 text-violet-700',
   'Isapre Consalud':       'bg-violet-100 text-violet-700',
@@ -172,12 +169,7 @@ export function PacientesAdminClient({ pacientesIniciales }: Props) {
           className="px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors bg-white text-slate-700"
         >
           <option value="">Todas las previsiones</option>
-          <optgroup label="Fonasa">
-            <option value="Fonasa A">Fonasa A</option>
-            <option value="Fonasa B">Fonasa B</option>
-            <option value="Fonasa C">Fonasa C</option>
-            <option value="Fonasa D">Fonasa D</option>
-          </optgroup>
+          <option value="Fonasa">Fonasa</option>
           <optgroup label="Isapre">
             <option value="Isapre Banmédica">Isapre Banmédica</option>
             <option value="Isapre Cruz Blanca">Isapre Cruz Blanca</option>

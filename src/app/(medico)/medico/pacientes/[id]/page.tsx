@@ -126,7 +126,7 @@ export default async function MedicoPacientePage({
     fecha_nacimiento: pacienteDb.fecha_nac ?? '',
     edad: pacienteDb.fecha_nac ? calcularEdad(pacienteDb.fecha_nac) : 0,
     sexo: pacienteDb.sexo ?? '',
-    prevision: pacienteDb.prevision ?? 'Fonasa A',
+    prevision: pacienteDb.prevision ?? 'Fonasa',
     grupo_sanguineo: pacienteDb.grupo_sang ?? '—',
     alergias: pacienteDb.alergias ?? [],
     condiciones: pacienteDb.condiciones ?? [],

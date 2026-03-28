@@ -86,7 +86,7 @@ export type MockConsulta = {
 }
 
 export type Prevision =
-  | 'Fonasa A' | 'Fonasa B' | 'Fonasa C' | 'Fonasa D'
+  | 'Fonasa'
   | 'Isapre Banmédica' | 'Isapre Cruz Blanca' | 'Isapre Consalud'
   | 'Isapre Colmena' | 'Isapre Vida Tres' | 'Isapre Nueva Masvida'
   | 'Particular'

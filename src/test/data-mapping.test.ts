@@ -29,7 +29,7 @@ function mapPacienteDbToAdmin(p: PacienteDb): MockPacienteAdmin {
     rut: p.rut,
     fechaNacimiento: p.fecha_nac ?? '',
     edad: p.fecha_nac ? calcularEdad(p.fecha_nac) : 0,
-    prevision: (p.prevision ?? 'Fonasa A') as Prevision,
+    prevision: (p.prevision ?? 'Fonasa') as Prevision,
     email: p.email ?? '',
     telefono: p.telefono ?? '',
     ultimaVisita: sorted[0]?.fecha.split('T')[0] ?? null,
@@ -47,7 +47,7 @@ describe('mapeo DB → MockPacienteAdmin', () => {
     nombre: 'María José Fernández',
     rut: '12.345.678-9',
     fecha_nac: '1982-04-15',
-    prevision: 'Fonasa B',
+    prevision: 'Fonasa',
     email: 'maria@test.cl',
     telefono: '+56 9 1234 5678',
     alergias: ['Penicilina'],
@@ -64,7 +64,7 @@ describe('mapeo DB → MockPacienteAdmin', () => {
     expect(result.id).toBe('uuid-1')
     expect(result.nombre).toBe('María José Fernández')
     expect(result.rut).toBe('12.345.678-9')
-    expect(result.prevision).toBe('Fonasa B')
+    expect(result.prevision).toBe('Fonasa')
     expect(result.email).toBe('maria@test.cl')
     expect(result.telefono).toBe('+56 9 1234 5678')
     expect(result.activo).toBe(true)
@@ -109,7 +109,7 @@ describe('mapeo DB → MockPacienteAdmin', () => {
     }
     const result = mapPacienteDbToAdmin(conNulos)
     expect(result.edad).toBe(0)
-    expect(result.prevision).toBe('Fonasa A')
+    expect(result.prevision).toBe('Fonasa')
     expect(result.email).toBe('')
     expect(result.telefono).toBe('')
     expect(result.totalVisitas).toBe(0)
@@ -126,14 +126,14 @@ describe('mapeo DB → MockPacienteAdmin', () => {
 
 describe('previsiones válidas', () => {
   const previsiones: Prevision[] = [
-    'Fonasa A', 'Fonasa B', 'Fonasa C', 'Fonasa D',
+    'Fonasa',
     'Isapre Banmédica', 'Isapre Cruz Blanca', 'Isapre Consalud',
     'Isapre Colmena', 'Isapre Vida Tres', 'Isapre Nueva Masvida',
     'Particular',
   ]
 
   it('cubre todas las previsiones del sistema de salud chileno', () => {
-    expect(previsiones).toHaveLength(11)
+    expect(previsiones).toHaveLength(8)
   })
 
   it('incluye todas las variantes Fonasa', () => {
