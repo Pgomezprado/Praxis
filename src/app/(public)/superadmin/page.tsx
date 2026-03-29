@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import GraficoCrecimiento from './GraficoCrecimiento'
 import {
   Lock,
   Building2,
@@ -110,7 +111,7 @@ type UsuarioData = {
   clinicas: { nombre: string } | null
 }
 
-type TabId = 'dashboard' | 'clinicas' | 'finanzas' | 'demos' | 'usuarios' | 'nueva'
+type TabId = 'dashboard' | 'clinicas' | 'finanzas' | 'demos' | 'usuarios' | 'nueva' | 'crecimiento'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -145,7 +146,7 @@ function diasDesde(iso: string): number {
 function rolLabel(rol: string): string {
   const map: Record<string, string> = {
     admin_clinica: 'Admin',
-    doctor: 'Médico',
+    doctor: 'Profesional',
     recepcionista: 'Recepcionista',
   }
   return map[rol] ?? rol
@@ -407,7 +408,7 @@ function TabDashboard({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-700">
-                  {['Clínica', 'Plan', 'Estado', 'Vence gratis', 'Médicos', 'Pacientes', 'Citas 30d', 'Último pago', 'Total pagado'].map(h => (
+                  {['Clínica', 'Plan', 'Estado', 'Vence gratis', 'Profesionales', 'Pacientes', 'Citas 30d', 'Último pago', 'Total pagado'].map(h => (
                     <th key={h} className="text-left py-3 px-4 text-xs font-medium text-slate-400 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -548,7 +549,7 @@ function DrawerClinica({ clinica, pagos, onClose, onActualizada }: DrawerClinica
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-slate-800 rounded-xl p-3 text-center">
               <p className="text-xl font-bold text-white">{clinica.medicos_activos}</p>
-              <p className="text-xs text-slate-500 mt-0.5">Médicos</p>
+              <p className="text-xs text-slate-500 mt-0.5">Profesionales</p>
             </div>
             <div className="bg-slate-800 rounded-xl p-3 text-center">
               <p className={`text-xl font-bold ${clinica.citas_30_dias === 0 ? 'text-red-400' : 'text-white'}`}>{clinica.citas_30_dias}</p>
@@ -699,7 +700,7 @@ function TabClinicas({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-700">
-                {['Clínica', 'Plan', 'Estado', 'Fin gratis', 'Médicos', 'Pacientes', 'Citas 30d', 'Total pagado', ''].map(h => (
+                {['Clínica', 'Plan', 'Estado', 'Fin gratis', 'Profesionales', 'Pacientes', 'Citas 30d', 'Total pagado', ''].map(h => (
                   <th key={h} className="text-left py-3 px-4 text-xs font-medium text-slate-400 whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -764,7 +765,7 @@ function TabClinicas({
               <BadgeEstadoClinica clinica={c} />
             </div>
             <div className="flex gap-4 text-xs text-slate-400">
-              <span>{c.medicos_activos} médicos</span>
+              <span>{c.medicos_activos} profesionales</span>
               <span className={c.citas_30_dias === 0 ? 'text-red-400' : ''}>{c.citas_30_dias} citas</span>
               {c.total_pagado > 0 && <span className="text-emerald-400">{formatCLP(c.total_pagado)}</span>}
             </div>
@@ -2103,7 +2104,7 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
               >
                 <option value="medicina_general">Medicina general</option>
                 <option value="odontologia">Odontología</option>
-                <option value="mixta">Mixta (médico + dental)</option>
+                <option value="mixta">Mixta (profesional + dental)</option>
               </select>
             </div>
           </div>
@@ -2337,12 +2338,13 @@ export default function SuperAdminPage() {
 
   type TabDef = { id: TabId; label: string; icon: React.ReactNode; badge?: number }
   const tabs: TabDef[] = [
-    { id: 'dashboard', label: 'Dashboard',     icon: <LayoutDashboard className="w-4 h-4" /> },
-    { id: 'clinicas',  label: 'Clínicas',       icon: <Hospital className="w-4 h-4" />, badge: clinicas.length },
-    { id: 'finanzas',  label: 'Finanzas',        icon: <DollarSign className="w-4 h-4" /> },
-    { id: 'demos',     label: 'Demos',           icon: <CalendarDays className="w-4 h-4" />, badge: demos.filter(d => (d.estado ?? 'pendiente') === 'pendiente').length || undefined },
-    { id: 'usuarios',  label: 'Usuarios',        icon: <Users className="w-4 h-4" />, badge: usuarios.length },
-    { id: 'nueva',     label: 'Nueva clínica',   icon: <PlusCircle className="w-4 h-4" /> },
+    { id: 'dashboard',    label: 'Dashboard',     icon: <LayoutDashboard className="w-4 h-4" /> },
+    { id: 'clinicas',    label: 'Clínicas',       icon: <Hospital className="w-4 h-4" />, badge: clinicas.length },
+    { id: 'finanzas',    label: 'Finanzas',        icon: <DollarSign className="w-4 h-4" /> },
+    { id: 'crecimiento', label: 'Crecimiento',     icon: <TrendingUp className="w-4 h-4" /> },
+    { id: 'demos',       label: 'Demos',           icon: <CalendarDays className="w-4 h-4" />, badge: demos.filter(d => (d.estado ?? 'pendiente') === 'pendiente').length || undefined },
+    { id: 'usuarios',    label: 'Usuarios',        icon: <Users className="w-4 h-4" />, badge: usuarios.length },
+    { id: 'nueva',       label: 'Nueva clínica',   icon: <PlusCircle className="w-4 h-4" /> },
   ]
 
   // ── Layout completo ───────────────────────────────────────────────────────
@@ -2442,6 +2444,10 @@ export default function SuperAdminPage() {
             pagos={pagos}
             onPagoRegistrado={p => setPagos(prev => [p, ...prev])}
           />
+        )}
+
+        {tabActivo === 'crecimiento' && (
+          <GraficoCrecimiento />
         )}
 
         {tabActivo === 'demos' && (

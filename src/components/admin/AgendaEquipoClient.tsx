@@ -267,7 +267,7 @@ export function AgendaEquipoClient({ medicos, citas, fecha }: AgendaEquipoClient
               <span className="font-semibold text-slate-700">{totalCitas}</span>
               {' '}citas ·{' '}
               <span className="font-semibold text-slate-700">{medicos.length}</span>
-              {' '}médicos
+              {' '}profesionales
               {medicosConCitas < medicos.length && (
                 <span className="text-slate-400">
                   {' '}({medicos.length - medicosConCitas} sin citas)
@@ -275,14 +275,14 @@ export function AgendaEquipoClient({ medicos, citas, fecha }: AgendaEquipoClient
               )}
             </p>
 
-            {/* Selector de médico — visible en móvil para filtrar columna */}
+            {/* Selector de profesional — visible en móvil para filtrar columna */}
             <div className="sm:hidden ml-auto">
               <select
                 value={medicoSeleccionado ?? ''}
                 onChange={(e) => setMedicoSeleccionado(e.target.value || null)}
                 className="text-sm font-medium border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Todos los médicos</option>
+                <option value="">Todos los profesionales</option>
                 {medicos.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.nombre}
@@ -298,7 +298,7 @@ export function AgendaEquipoClient({ medicos, citas, fecha }: AgendaEquipoClient
       {medicos.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center gap-3 py-24">
           <Users className="w-12 h-12 text-slate-300" />
-          <p className="text-slate-500 font-medium text-sm">No hay médicos registrados en la clínica.</p>
+          <p className="text-slate-500 font-medium text-sm">No hay profesionales registrados en la clínica.</p>
         </div>
       ) : (
         <>

@@ -9,7 +9,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: 'Praxis — Sistema clínico',
-  description: 'Historial clínico centralizado con resúmenes IA para médicos',
+  description: 'Historial clínico centralizado con resúmenes IA para clínicas y consultorios',
 }
 
 const jsonLdSoftware = {

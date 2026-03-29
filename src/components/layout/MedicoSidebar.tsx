@@ -70,7 +70,7 @@ export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false,
           <Avatar nombre={nombre || '?'} size="sm" />
           <div className="min-w-0">
             <p className="text-sm font-semibold text-white truncate">{nombre || '—'}</p>
-            <p className="text-xs text-slate-400 truncate">{especialidad || 'Médico'}</p>
+            <p className="text-xs text-slate-400 truncate">{especialidad || 'Profesional'}</p>
           </div>
         </div>
       </div>

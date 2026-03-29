@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     ])
 
     if (!pacienteValido) return Response.json({ error: 'Paciente no pertenece a esta clínica' }, { status: 403 })
-    if (!doctorValido) return Response.json({ error: 'Médico no pertenece a esta clínica' }, { status: 403 })
+    if (!doctorValido) return Response.json({ error: 'Profesional no pertenece a esta clínica' }, { status: 403 })
 
     // Si viene cita_id, verificar que no existe cobro activo para esa cita
     if (cita_id) {

@@ -101,7 +101,7 @@ export async function POST(req: Request) {
       supabase.from('pacientes').select('id').eq('id', paciente_id).eq('clinica_id', me.clinica_id).single(),
     ])
 
-    if (!doctorValido) return Response.json({ error: 'Médico no pertenece a esta clínica' }, { status: 403 })
+    if (!doctorValido) return Response.json({ error: 'Profesional no pertenece a esta clínica' }, { status: 403 })
     if (!pacienteValido) return Response.json({ error: 'Paciente no pertenece a esta clínica' }, { status: 403 })
 
     // Verificar colisión de slots: que el médico no tenga otra cita activa en ese bloque
@@ -116,7 +116,7 @@ export async function POST(req: Request) {
 
     if (citaExistente) {
       return Response.json(
-        { error: 'El médico ya tiene una cita en ese horario. Por favor elige otro bloque.' },
+        { error: 'El profesional ya tiene una cita en ese horario. Por favor elige otro bloque.' },
         { status: 409 }
       )
     }
@@ -134,7 +134,7 @@ export async function POST(req: Request) {
         motivo: motivo ?? null,
         tipo: tipo ?? 'control',
         estado: 'confirmada',
-        creada_por: 'secretaria',
+        creada_por: 'recepcionista',
       })
       .select(`
         id, folio, fecha, hora_inicio, hora_fin, motivo, tipo, estado,
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
     if (error) {
       if ((error as { code?: string }).code === '23505') {
         return Response.json(
-          { error: 'El médico ya tiene una cita en ese horario. Por favor elige otro bloque.' },
+          { error: 'El profesional ya tiene una cita en ese horario. Por favor elige otro bloque.' },
           { status: 409 }
         )
       }

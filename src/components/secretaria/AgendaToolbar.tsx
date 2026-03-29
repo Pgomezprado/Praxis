@@ -72,7 +72,7 @@ export function AgendaToolbar({ citas, medicos, onNuevaCita, listPath = '/agenda
             onChange={(e) => navigate(fecha, e.target.value)}
             className="flex-1 sm:flex-none sm:min-w-[220px] text-sm font-medium border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
-            <option value="">Todos los médicos</option>
+            <option value="">Todos los profesionales</option>
             {medicos.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.nombre} · {m.especialidad}

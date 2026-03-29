@@ -14,7 +14,7 @@ const PASOS = [
     num: '02',
     icon: CalendarCheck,
     titulo: 'El paciente agenda su hora',
-    descripcion: 'Portal de autoservicio 24/7. El paciente busca médico, elige horario y confirma desde su celular.',
+    descripcion: 'Portal de autoservicio 24/7. El paciente busca profesional, elige horario y confirma desde su celular.',
     accent: 'from-emerald-500 to-emerald-600',
     soft: 'bg-emerald-100',
     text: 'text-emerald-700',

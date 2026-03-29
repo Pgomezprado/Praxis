@@ -3,7 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { SecretariasClient } from '@/components/admin/SecretariasClient'
 import { type MockSecretaria, type MockMedicoAdmin } from '@/types/domain'
 
-export const metadata = { title: 'Secretarias — Praxis Admin' }
+export const metadata = { title: 'Recepcionistas — Praxis Admin' }
 
 export default async function AdminSecretariasPage() {
   const supabase = await createClient()
@@ -69,9 +69,9 @@ export default async function AdminSecretariasPage() {
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Secretarias</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Recepcionistas</h1>
         <p className="text-slate-500 mt-1 text-sm">
-          Gestiona las secretarias y sus médicos asignados
+          Gestiona las recepcionistas y sus profesionales asignados
         </p>
       </div>
 

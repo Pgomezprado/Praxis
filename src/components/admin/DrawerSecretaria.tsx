@@ -146,10 +146,10 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">
-              {esEdicion ? 'Editar secretaria' : 'Agregar secretaria'}
+              {esEdicion ? 'Editar recepcionista' : 'Agregar recepcionista'}
             </h2>
             <p className="text-sm text-slate-500 mt-0.5">
-              {esEdicion ? `Editando datos de ${secretariaEditar.nombre}` : 'Completa los datos de la nueva secretaria'}
+              {esEdicion ? `Editando datos de ${secretariaEditar.nombre}` : 'Completa los datos de la nueva recepcionista'}
             </p>
           </div>
           <button
@@ -209,7 +209,7 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
                   type="email"
                   value={form.email}
                   onChange={e => handleEmailChange(e.target.value)}
-                  placeholder="secretaria@clinica.cl"
+                  placeholder="recepcionista@clinica.cl"
                   className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
                 />
               </div>
@@ -228,13 +228,13 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
             </div>
           </section>
 
-          {/* ── Médicos asignados ── */}
+          {/* ── Profesionales asignados ── */}
           <section>
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-1">
-              Médicos que gestiona
+              Profesionales que gestiona
             </h3>
             <p className="text-xs text-slate-400 mb-4">
-              Selecciona uno o más médicos activos
+              Selecciona uno o más profesionales activos
             </p>
 
             <div className="space-y-2">
@@ -268,7 +268,7 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
 
             {form.medicosAsignados.length > 0 && (
               <p className="text-xs text-blue-600 mt-2 font-medium">
-                {form.medicosAsignados.length} médico{form.medicosAsignados.length !== 1 ? 's' : ''} asignado{form.medicosAsignados.length !== 1 ? 's' : ''}
+                {form.medicosAsignados.length} profesional{form.medicosAsignados.length !== 1 ? 'es' : ''} asignado{form.medicosAsignados.length !== 1 ? 's' : ''}
               </p>
             )}
           </section>
@@ -284,7 +284,7 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Rol</label>
                 <div className="px-3 py-2.5 text-sm rounded-xl border border-slate-100 bg-slate-50 text-slate-500 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-violet-500" />
-                  Secretaria / Recepcionista
+                  Recepcionista
                 </div>
               </div>
 
@@ -292,7 +292,7 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
                 <div className="flex items-start gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
                   <Mail className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
                   <p className="text-xs text-blue-700 leading-relaxed">
-                    Al guardar se enviará una invitación a <strong>{form.email.trim()}</strong> para que la secretaria cree su contraseña y acceda al sistema.
+                    Al guardar se enviará una invitación a <strong>{form.email.trim()}</strong> para que la recepcionista cree su contraseña y acceda al sistema.
                   </p>
                 </div>
               )}
@@ -325,7 +325,7 @@ export function DrawerSecretaria({ open, onClose, onGuardar, secretariaEditar, m
             {guardando && (
               <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
             )}
-            {esEdicion ? 'Guardar cambios' : 'Guardar secretaria'}
+            {esEdicion ? 'Guardar cambios' : 'Guardar recepcionista'}
           </button>
         </div>
 

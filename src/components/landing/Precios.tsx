@@ -33,7 +33,7 @@ const PLANES: Plan[] = [
     nombre: 'Tier Pequeño',
     precio: '$59.000',
     periodo: '/mes',
-    descripcion: '1–2 medicos',
+    descripcion: '1–2 profesionales',
     features: [
       'Agenda online para pacientes',
       'Historia clinica electronica',
@@ -49,10 +49,10 @@ const PLANES: Plan[] = [
     nombre: 'Tier Mediano',
     precio: '$129.000',
     periodo: '/mes',
-    descripcion: '3–8 medicos',
+    descripcion: '3–8 profesionales',
     features: [
       'Todo lo del Tier Pequeño',
-      'Multi-usuario y multi-medico',
+      'Multi-usuario y multi-profesional',
       'Reportes de gestion',
       'Onboarding dedicado',
     ],
@@ -65,7 +65,7 @@ const PLANES: Plan[] = [
     nombre: 'Enterprise',
     precio: null,
     periodo: null,
-    descripcion: '9+ medicos o multisede',
+    descripcion: '9+ profesionales o multisede',
     features: [
       'Todo lo del Tier Mediano',
       'Multisede',

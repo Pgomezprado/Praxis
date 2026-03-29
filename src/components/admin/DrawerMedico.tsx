@@ -158,7 +158,7 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
-      setErrorGuardar(data.error ?? 'Error al guardar el médico')
+      setErrorGuardar(data.error ?? 'Error al guardar el profesional')
       return
     }
 
@@ -208,10 +208,10 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-200">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">
-              {esEdicion ? 'Editar médico' : 'Agregar médico'}
+              {esEdicion ? 'Editar profesional' : 'Agregar profesional'}
             </h2>
             <p className="text-sm text-slate-500 mt-0.5">
-              {esEdicion ? `Editando datos de ${medicoEditar.nombre}` : 'Completa los datos del nuevo médico'}
+              {esEdicion ? `Editando datos de ${medicoEditar.nombre}` : 'Completa los datos del nuevo profesional'}
             </p>
           </div>
           <button
@@ -400,7 +400,7 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Rol</label>
                 <div className="px-3 py-2.5 text-sm rounded-xl border border-slate-100 bg-slate-50 text-slate-500 flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-blue-500" />
-                  Médico — solo lectura
+                  Profesional — solo lectura
                 </div>
               </div>
 
@@ -463,7 +463,7 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
             {guardando && (
               <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
             )}
-            {esEdicion ? 'Guardar cambios' : 'Guardar médico'}
+            {esEdicion ? 'Guardar cambios' : 'Guardar profesional'}
           </button>
         </div>
         </div>

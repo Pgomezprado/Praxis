@@ -50,7 +50,7 @@ export default async function AdminHorariosPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Horarios</h1>
         <p className="text-slate-500 mt-1 text-sm">
-          Configura la disponibilidad semanal de cada médico
+          Configura la disponibilidad semanal de cada profesional
         </p>
       </div>
 

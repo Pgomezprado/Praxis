@@ -86,12 +86,12 @@ export default function TerminosPage() {
                     </tr>
                     <tr className="border-b border-slate-100">
                       <td className="px-4 py-3 font-medium text-slate-900">Pequeño</td>
-                      <td className="px-4 py-3 text-slate-600">1 a 2 médicos</td>
+                      <td className="px-4 py-3 text-slate-600">1 a 2 profesionales</td>
                       <td className="px-4 py-3 text-slate-900">$59.000 CLP + IVA</td>
                     </tr>
                     <tr>
                       <td className="px-4 py-3 font-medium text-slate-900">Mediano</td>
-                      <td className="px-4 py-3 text-slate-600">3 o más médicos</td>
+                      <td className="px-4 py-3 text-slate-600">3 o más profesionales</td>
                       <td className="px-4 py-3 text-slate-900">$129.000 CLP + IVA</td>
                     </tr>
                   </tbody>

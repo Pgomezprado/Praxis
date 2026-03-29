@@ -116,7 +116,7 @@ export async function POST(req: Request) {
       .eq('activo', true)
       .single()
 
-    if (!doctor) return Response.json({ error: 'Médico no encontrado' }, { status: 404 })
+    if (!doctor) return Response.json({ error: 'Profesional no encontrado' }, { status: 404 })
 
     const duracionDoctor = (doctor as { id: string; nombre: string; duracion_consulta: number | null }).duracion_consulta ?? 30
 

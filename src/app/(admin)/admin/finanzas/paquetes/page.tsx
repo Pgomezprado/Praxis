@@ -65,7 +65,7 @@ export default async function AdminPaquetesPage() {
         </Link>
         <h1 className="text-2xl font-bold text-slate-900">Paquetes de sesiones</h1>
         <p className="text-slate-500 mt-1 text-sm">
-          Configura paquetes de N sesiones con precio por volumen, por médico y previsión.
+          Configura paquetes de N sesiones con precio por volumen, por profesional y previsión.
         </p>
       </div>
 

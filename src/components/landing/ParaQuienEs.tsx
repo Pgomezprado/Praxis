@@ -3,7 +3,7 @@ import { Stethoscope, ClipboardList, Building2, CheckCircle2 } from 'lucide-reac
 const SEGMENTOS = [
   {
     icon: Stethoscope,
-    titulo: 'Médicos',
+    titulo: 'Profesionales',
     subtitulo: 'Más tiempo para tus pacientes',
     gradient: 'from-blue-500 to-blue-700',
     border: 'border-blue-200',
@@ -17,14 +17,14 @@ const SEGMENTOS = [
   },
   {
     icon: ClipboardList,
-    titulo: 'Secretarias',
+    titulo: 'Recepcionistas',
     subtitulo: 'Agenda sin errores ni llamadas',
     gradient: 'from-emerald-400 to-emerald-600',
     border: 'border-emerald-200',
     iconBg: 'bg-emerald-100',
     iconColor: 'text-emerald-700',
     bullets: [
-      'Agenda visual por médico y día',
+      'Agenda visual por profesional y día',
       'Confirmación automática al paciente',
       'Gestión de citas en un solo lugar',
     ],
@@ -39,7 +39,7 @@ const SEGMENTOS = [
     iconBg: 'bg-violet-100',
     iconColor: 'text-violet-700',
     bullets: [
-      'Multi-médico y multi-sede',
+      'Multi-profesional y multi-sede',
       'Control de acceso por rol',
       'Datos seguros con respaldo en la nube',
     ],

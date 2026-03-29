@@ -88,7 +88,7 @@ export async function enviarConfirmacionCita(params: ConfirmacionCitaParams) {
                 </tr>
                 <tr>
                   <td style="padding:14px 18px;border-bottom:1px solid #e2e8f0;">
-                    <p style="margin:0;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Médico</p>
+                    <p style="margin:0;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Profesional</p>
                     <p style="margin:4px 0 0;font-size:15px;font-weight:600;color:#1e293b;">${medicoNombreSafe}</p>
                     <p style="margin:2px 0 0;font-size:14px;color:#475569;">${especialidadSafe}</p>
                   </td>

@@ -172,9 +172,9 @@ export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, ad
         body: JSON.stringify({ es_doctor: esDoctor, especialidad: especialidadAdmin }),
       })
       if (!res.ok) throw new Error()
-      mostrarToast('Perfil médico guardado')
+      mostrarToast('Perfil de profesional guardado')
     } catch {
-      mostrarToast('Error al guardar el perfil médico')
+      mostrarToast('Error al guardar el perfil de profesional')
     } finally {
       setGuardandoDoctor(false)
     }
@@ -443,7 +443,7 @@ export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, ad
               { key: 'recordatorioEmail', label: 'Recordatorio por email',          desc: 'Envía un email antes de cada cita' },
               { key: 'confirmacionCita',  label: 'Confirmación de reserva',         desc: 'Email al confirmar una nueva cita' },
               { key: 'cancelacionCita',   label: 'Aviso de cancelación',            desc: 'Email cuando se cancela una cita' },
-              { key: 'resumenDiario',     label: 'Resumen diario al médico',        desc: 'Email a cada médico con su agenda del día' },
+              { key: 'resumenDiario',     label: 'Resumen diario al profesional',   desc: 'Email a cada profesional con su agenda del día' },
             ] as const).map(({ key, label, desc }) => (
               <div key={key} className="flex items-center justify-between gap-4 py-2.5 border-b border-slate-50 last:border-0">
                 <div>
@@ -505,14 +505,14 @@ export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, ad
         </div>
       </section>
 
-      {/* ── Sección 4: Perfil médico del admin ── */}
+      {/* ── Sección 4: Perfil de profesional del admin ── */}
       <section className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/60">
           <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
             <Stethoscope className="w-4 h-4 text-teal-600" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold text-slate-800">Mi perfil médico</h2>
+            <h2 className="text-sm font-semibold text-slate-800">Mi perfil de profesional</h2>
             <p className="text-xs text-slate-500">Activa esto si también atiendes pacientes</p>
           </div>
         </div>
@@ -521,7 +521,7 @@ export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, ad
           {/* Toggle es_doctor */}
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="text-sm font-medium text-slate-700">También soy médico</div>
+              <div className="text-sm font-medium text-slate-700">También atiendo pacientes</div>
               <div className="text-xs text-slate-400 mt-0.5">
                 Aparecerás en la agenda, horarios y portal de agendamiento
               </div>
@@ -636,7 +636,7 @@ export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, ad
             <p className="text-sm text-slate-600 mb-2">
               Se eliminarán permanentemente todos los datos de{' '}
               <span className="font-semibold text-slate-800">{clinica.nombre}</span>,
-              incluyendo médicos, pacientes, consultas y horarios.
+              incluyendo profesionales, pacientes, consultas y horarios.
             </p>
 
             <p className="text-sm text-slate-600 mb-4">

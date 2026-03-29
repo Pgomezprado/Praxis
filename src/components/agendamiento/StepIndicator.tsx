@@ -5,7 +5,7 @@ interface StepIndicatorProps {
 }
 
 const PASOS = [
-  { num: 1, label: 'Médico' },
+  { num: 1, label: 'Profesional' },
   { num: 2, label: 'Hora' },
   { num: 3, label: 'Datos' },
   { num: 4, label: 'Listo' },

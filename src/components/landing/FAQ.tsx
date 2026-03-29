@@ -27,12 +27,12 @@ const PREGUNTAS: PreguntaItem[] = [
   {
     pregunta: '¿Cuánto cuesta un software de historia clínica electrónica en Chile?',
     respuesta:
-      'Praxis parte desde $59.000/mes para consultorios pequeños (1–2 médicos). Para clínicas con 3 o más médicos, el plan mediano es $129.000/mes. Los primeros 2 meses de onboarding son gratuitos.',
+      'Praxis parte desde $59.000/mes para consultorios pequeños (1–2 profesionales). Para clínicas con 3 o más profesionales, el plan mediano es $129.000/mes. Los primeros 2 meses de onboarding son gratuitos.',
   },
   {
     pregunta: '¿Cómo agenda un paciente su cita desde el celular?',
     respuesta:
-      'Desde el portal público de la clínica, el paciente busca al médico, elige el día y hora disponibles, ingresa sus datos y confirma. Todo en 4 pasos, sin necesidad de crear una cuenta.',
+      'Desde el portal público de la clínica, el paciente busca al profesional, elige el día y hora disponibles, ingresa sus datos y confirma. Todo en 4 pasos, sin necesidad de crear una cuenta.',
   },
   {
     pregunta: '¿Necesito instalar algo o funciona en la nube?',

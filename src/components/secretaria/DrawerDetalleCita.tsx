@@ -182,7 +182,7 @@ export function DrawerDetalleCita({
               </div>
             </div>
 
-            {/* Médico */}
+            {/* Profesional */}
             <div className="flex items-start gap-3">
               <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
                 <Stethoscope className="w-3.5 h-3.5 text-slate-500" />

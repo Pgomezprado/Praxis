@@ -49,7 +49,7 @@ export function SecretariasClient({ secretariasIniciales, medicosDisponibles }: 
       return [secretaria, ...prev]
     })
     setDrawerOpen(false)
-    mostrarToast(secretariaEditar ? `${secretaria.nombre} actualizada` : `${secretaria.nombre} agregada`)
+    mostrarToast(secretariaEditar ? `${secretaria.nombre} actualizada` : `${secretaria.nombre} agregada como recepcionista`)
   }
 
   async function reenviarInvitacion(id: string) {
@@ -123,7 +123,7 @@ export function SecretariasClient({ secretariasIniciales, medicosDisponibles }: 
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
-          Agregar secretaria
+          Agregar recepcionista
         </button>
       </div>
 
@@ -131,14 +131,14 @@ export function SecretariasClient({ secretariasIniciales, medicosDisponibles }: 
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         {/* Header */}
         <div className="hidden lg:grid grid-cols-[1fr_180px_140px_1fr_90px_80px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200">
-          {['Nombre', 'Email', 'Teléfono', 'Médicos asignados', 'Estado', 'Acciones'].map(h => (
+          {['Nombre', 'Email', 'Teléfono', 'Profesionales asignados', 'Estado', 'Acciones'].map(h => (
             <span key={h} className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</span>
           ))}
         </div>
 
         {filtradas.length === 0 ? (
           <div className="py-16 text-center text-slate-400">
-            <p className="text-sm">No se encontraron secretarias.</p>
+            <p className="text-sm">No se encontraron recepcionistas.</p>
           </div>
         ) : (
           filtradas.map(s => {
@@ -167,7 +167,7 @@ export function SecretariasClient({ secretariasIniciales, medicosDisponibles }: 
                 {/* Teléfono */}
                 <span className="hidden lg:block text-sm text-slate-600">{s.telefono || '—'}</span>
 
-                {/* Médicos asignados — chips */}
+                {/* Profesionales asignados — chips */}
                 <div className="hidden lg:flex flex-wrap gap-1.5">
                   {medNombres.length === 0 ? (
                     <span className="text-xs text-slate-400">Sin asignar</span>
@@ -239,7 +239,7 @@ export function SecretariasClient({ secretariasIniciales, medicosDisponibles }: 
       </div>
 
       <p className="text-xs text-slate-400 mt-3">
-        {filtradas.length} secretaria{filtradas.length !== 1 ? 's' : ''} ·{' '}
+        {filtradas.length} recepcionista{filtradas.length !== 1 ? 's' : ''} ·{' '}
         {filtradas.filter(s => s.estado === 'activo').length} activas
       </p>
 

@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     } = body
 
     if (!nombre?.trim()) return Response.json({ error: 'El nombre es obligatorio' }, { status: 400 })
-    if (!doctor_id) return Response.json({ error: 'El médico es obligatorio' }, { status: 400 })
+    if (!doctor_id) return Response.json({ error: 'El profesional es obligatorio' }, { status: 400 })
     if (!num_sesiones || num_sesiones < 1) return Response.json({ error: 'El número de sesiones debe ser mayor a 0' }, { status: 400 })
     if (!precio_total || precio_total < 1) return Response.json({ error: 'El precio total debe ser mayor a 0' }, { status: 400 })
 

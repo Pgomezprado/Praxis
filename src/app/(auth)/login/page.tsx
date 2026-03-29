@@ -85,7 +85,7 @@ export default function LoginPage() {
                 Tu clínica, organizada desde el primer día.
               </h2>
               <p className="text-slate-400 text-sm mt-4 leading-relaxed">
-                Historia clínica, agenda y cobros en un solo lugar. Diseñado para médicos y clínicas en Chile.
+                Historia clínica, agenda y cobros en un solo lugar. Diseñado para clínicas y consultorios en Chile.
               </p>
             </div>
             <ul className="space-y-3">
@@ -144,7 +144,7 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <div className="font-medium text-slate-800">Panel de administración</div>
-                  <div className="text-sm text-slate-500">Gestionar la clínica, médicos, agenda y configuración</div>
+                  <div className="text-sm text-slate-500">Gestionar la clínica, profesionales, agenda y configuración</div>
                 </div>
               </button>
             </div>

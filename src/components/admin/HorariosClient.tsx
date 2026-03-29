@@ -121,7 +121,7 @@ export function HorariosClient({ medicos, horariosInicial }: HorariosClientProps
   if (medicos.length === 0) {
     return (
       <div className="text-center py-16 text-slate-400 text-sm">
-        No hay médicos registrados en la clínica.
+        No hay profesionales registrados en la clínica.
       </div>
     )
   }
@@ -132,7 +132,7 @@ export function HorariosClient({ medicos, horariosInicial }: HorariosClientProps
   return (
     <div className="space-y-6">
 
-      {/* Selector médico */}
+      {/* Selector profesional */}
       <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex-1">

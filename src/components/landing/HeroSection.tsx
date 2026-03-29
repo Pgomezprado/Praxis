@@ -47,7 +47,7 @@ export function HeroSection() {
 
               <p className="mt-6 text-lg text-slate-300 leading-relaxed max-w-lg">
                 Historia clínica electrónica, agenda online y resúmenes con IA.
-                Todo en un solo lugar, diseñado para médicos chilenos.
+                Todo en un solo lugar, diseñado para clínicas y consultorios en Chile.
               </p>
 
               <div className="mt-9 flex flex-col sm:flex-row gap-3">

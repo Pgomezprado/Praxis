@@ -1,6 +1,6 @@
 'use client'
 
-import { Smile, ClipboardList, DollarSign, BookOpen, CheckCircle2 } from 'lucide-react'
+import { Smile, ClipboardList, DollarSign, BookOpen, CheckCircle2, Clock } from 'lucide-react'
 
 const FEATURES = [
   {
@@ -25,9 +25,9 @@ const FEATURES = [
   },
   {
     icon: DollarSign,
-    titulo: 'Cobros por tratamiento',
+    titulo: 'Cobros y finanzas',
     descripcion:
-      'Registra pagos en cuotas vinculados al plan. Dashboard de KPIs financieros de la clínica dental.',
+      'Registra pagos en cuotas, abonos y deudas pendientes. Disponible en todos los planes.',
     gradient: 'from-emerald-500 to-emerald-700',
     iconBg: 'bg-emerald-100',
     iconColor: 'text-emerald-700',
@@ -45,9 +45,30 @@ const FEATURES = [
   },
 ]
 
+type Feature = {
+  texto: string
+  proximamente?: boolean
+}
+
 type PlanDental =
-  | { nombre: string; precio: string; descripcion: string; destacado: boolean; esContacto?: false }
-  | { nombre: string; precio: null; descripcion: string; destacado: boolean; esContacto: true }
+  | {
+      nombre: string
+      precio: string
+      descripcion: string
+      destacado: boolean
+      esContacto?: false
+      features: Feature[]
+      hereda?: string
+    }
+  | {
+      nombre: string
+      precio: null
+      descripcion: string
+      destacado: boolean
+      esContacto: true
+      features: Feature[]
+      hereda?: string
+    }
 
 const PLANES_DENTAL: PlanDental[] = [
   {
@@ -55,18 +76,40 @@ const PLANES_DENTAL: PlanDental[] = [
     precio: '$20.000',
     descripcion: '1 dentista',
     destacado: false,
+    features: [
+      { texto: 'Odontograma digital interactivo' },
+      { texto: 'Planes de tratamiento y presupuestos' },
+      { texto: 'Cobros, cuotas y finanzas' },
+      { texto: 'Catálogo hasta 20 prestaciones' },
+      { texto: 'Agenda y ficha del paciente' },
+    ],
   },
   {
     nombre: 'Pequeño',
     precio: '$39.000',
     descripcion: '2–4 dentistas',
     destacado: false,
+    hereda: 'Todo lo del plan Particular +',
+    features: [
+      { texto: 'Catálogo ilimitado con aranceles FONASA' },
+      { texto: 'Agenda multi-dentista por columnas' },
+      { texto: 'Finanzas con desglose por dentista' },
+      { texto: 'Rol recepcionista independiente' },
+    ],
   },
   {
     nombre: 'Mediano',
     precio: '$79.000',
     descripcion: '4–8 dentistas',
     destacado: true,
+    hereda: 'Todo lo del plan Pequeño +',
+    features: [
+      { texto: 'Dashboard KPI para administrador' },
+      { texto: 'Portal de agendamiento para pacientes' },
+      { texto: 'Rol administrador independiente' },
+      { texto: 'Exportación de fichas en PDF', proximamente: true },
+      { texto: 'Soporte prioritario 24h' },
+    ],
   },
   {
     nombre: 'Multisede',
@@ -74,6 +117,13 @@ const PLANES_DENTAL: PlanDental[] = [
     descripcion: '9+ dentistas o multisede',
     destacado: false,
     esContacto: true,
+    hereda: 'Todo lo del plan Mediano +',
+    features: [
+      { texto: 'Múltiples sedes con datos aislados' },
+      { texto: 'Panel de administración propio' },
+      { texto: 'SLA con tiempo de respuesta garantizado' },
+      { texto: 'Onboarding asistido por sede' },
+    ],
   },
 ]
 
@@ -153,7 +203,7 @@ export function Odontologia() {
             >
               {plan.destacado && (
                 <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 inline-block bg-cyan-600 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-sm whitespace-nowrap">
-                  Mas popular
+                  Más popular
                 </span>
               )}
 
@@ -166,29 +216,36 @@ export function Odontologia() {
                 </div>
               ) : (
                 <div className="mb-1">
-                  <span className="text-xl font-bold text-slate-700">Cotizacion a medida</span>
+                  <span className="text-xl font-bold text-slate-700">Cotización a medida</span>
                 </div>
               )}
 
-              <p className="text-sm text-slate-400 mb-6">{plan.descripcion}</p>
+              <p className="text-sm text-slate-400 mb-4">{plan.descripcion}</p>
+
+              {plan.hereda && (
+                <p className="text-xs font-semibold text-cyan-700 mb-3 pb-3 border-b border-slate-100">
+                  {plan.hereda}
+                </p>
+              )}
 
               <ul className="space-y-2.5 mb-8 flex-1">
-                <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                  Odontograma digital interactivo
-                </li>
-                <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                  Planes de tratamiento y presupuestos
-                </li>
-                <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                  Cobros por tratamiento en cuotas
-                </li>
-                <li className="flex items-start gap-2.5 text-sm text-slate-600">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                  Agenda online y ficha del paciente
-                </li>
+                {plan.features.map((feature) => (
+                  <li key={feature.texto} className="flex items-start gap-2.5 text-sm text-slate-600">
+                    {feature.proximamente ? (
+                      <Clock className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                    )}
+                    <span>
+                      {feature.texto}
+                      {feature.proximamente && (
+                        <span className="ml-1.5 text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                          Próximamente
+                        </span>
+                      )}
+                    </span>
+                  </li>
+                ))}
               </ul>
 
               {plan.esContacto ? (

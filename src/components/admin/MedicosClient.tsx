@@ -148,7 +148,7 @@ export function MedicosClient({ medicosIniciales, especialidades }: Props) {
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0"
         >
           <Plus className="w-4 h-4" />
-          Agregar médico
+          Agregar profesional
         </button>
       </div>
 
@@ -156,14 +156,14 @@ export function MedicosClient({ medicosIniciales, especialidades }: Props) {
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
         {/* Encabezado */}
         <div className="hidden lg:grid grid-cols-[1fr_130px_200px_120px_90px_80px_112px] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200">
-          {['Médico', 'RUT', 'Email', 'Teléfono', 'Estado', 'Citas/mes', 'Acciones'].map(h => (
+          {['Profesional', 'RUT', 'Email', 'Teléfono', 'Estado', 'Citas/mes', 'Acciones'].map(h => (
             <span key={h} className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{h}</span>
           ))}
         </div>
 
         {medicosFiltrados.length === 0 ? (
           <div className="py-16 text-center text-slate-400">
-            <p className="text-sm">No se encontraron médicos con los filtros aplicados.</p>
+            <p className="text-sm">No se encontraron profesionales con los filtros aplicados.</p>
           </div>
         ) : (
           medicosFiltrados.map(medico => {
@@ -176,7 +176,7 @@ export function MedicosClient({ medicosIniciales, especialidades }: Props) {
                   !activo ? 'bg-slate-50/60 opacity-70' : 'hover:bg-slate-50/50'
                 }`}
               >
-                {/* Médico */}
+                {/* Profesional */}
                 <div className="flex items-center gap-3 min-w-0">
                   <Avatar nombre={medico.nombre} size="sm" />
                   <div className="min-w-0">
@@ -266,7 +266,7 @@ export function MedicosClient({ medicosIniciales, especialidades }: Props) {
 
       {/* Resumen */}
       <p className="text-xs text-slate-400 mt-3">
-        {medicosFiltrados.length} médico{medicosFiltrados.length !== 1 ? 's' : ''} ·{' '}
+        {medicosFiltrados.length} profesional{medicosFiltrados.length !== 1 ? 'es' : ''} ·{' '}
         {medicosFiltrados.filter(m => m.estado === 'activo').length} activos
       </p>
 

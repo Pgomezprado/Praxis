@@ -64,7 +64,7 @@ function ModalPaquete({ open, onClose, onGuardar, medicos, especialidades }: Mod
     const precio = parseInt(precioTotal.replace(/\./g, ''), 10)
 
     if (!nombre.trim()) { setError('El nombre es obligatorio'); return }
-    if (!doctorId) { setError('Selecciona un médico'); return }
+    if (!doctorId) { setError('Selecciona un profesional'); return }
     if (isNaN(sesiones) || sesiones < 1) { setError('El número de sesiones debe ser mayor a 0'); return }
     if (isNaN(precio) || precio < 1) { setError('El precio total debe ser mayor a 0'); return }
 
@@ -135,10 +135,10 @@ function ModalPaquete({ open, onClose, onGuardar, medicos, especialidades }: Mod
             />
           </div>
 
-          {/* Médico */}
+          {/* Profesional */}
           <div>
             <label className="block text-xs font-medium text-slate-600 mb-1.5">
-              Médico <span className="text-red-500">*</span>
+              Profesional <span className="text-red-500">*</span>
             </label>
             <select
               value={doctorId}
@@ -146,7 +146,7 @@ function ModalPaquete({ open, onClose, onGuardar, medicos, especialidades }: Mod
               disabled={loading}
               className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Seleccionar médico…</option>
+              <option value="">Seleccionar profesional…</option>
               {medicos.map(m => (
                 <option key={m.id} value={m.id}>
                   {m.nombre}{m.especialidad ? ` — ${m.especialidad}` : ''}
@@ -392,7 +392,7 @@ export function PaquetesClient({ paquetesIniciales, medicos, especialidades }: P
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         {/* Cabecera — solo visible en desktop */}
         <div className="hidden sm:grid sm:grid-cols-[1fr_auto_auto_auto_auto_auto] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-          <span>Nombre / Médico</span>
+          <span>Nombre / Profesional</span>
           <span className="w-24 text-center">Previsión</span>
           <span className="w-28 text-center">Tipo cita</span>
           <span className="w-20 text-center">Sesiones</span>

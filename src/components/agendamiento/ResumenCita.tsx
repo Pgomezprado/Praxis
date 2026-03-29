@@ -16,7 +16,7 @@ export function ResumenCita({ medico, especialidad, fecha, hora, className = '' 
     : null
 
   const items = [
-    { icon: User, label: 'Médico', valor: medico, sub: especialidad },
+    { icon: User, label: 'Profesional', valor: medico, sub: especialidad },
     { icon: Calendar, label: 'Fecha', valor: fechaFormateada, sub: null },
     { icon: Clock, label: 'Hora', valor: hora, sub: null },
   ]

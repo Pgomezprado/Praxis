@@ -181,7 +181,7 @@ function ConfirmarForm() {
               onChange={(e) => setPrimeraConsulta(e.target.checked)}
               className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
-            <span className="text-sm text-slate-700">¿Es tu primera consulta con este médico?</span>
+            <span className="text-sm text-slate-700">¿Es tu primera consulta con este profesional?</span>
           </label>
           <label className="flex items-start gap-3 cursor-pointer">
             <input

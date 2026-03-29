@@ -66,7 +66,7 @@ export async function PUT(req: Request) {
       .single()
 
     if (!doctor || doctor.clinica_id !== me.clinica_id) {
-      return Response.json({ error: 'Médico no pertenece a esta clínica' }, { status: 403 })
+      return Response.json({ error: 'Profesional no pertenece a esta clínica' }, { status: 403 })
     }
 
     const { data, error } = await supabase

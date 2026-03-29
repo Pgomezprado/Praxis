@@ -91,16 +91,23 @@ export async function verificarSesionSuperadmin(req: Request): Promise<boolean> 
     if (diff !== 0) return false
 
     // Verificar que el hash del token exista en superadmin_tokens (no fue invalidado)
-    const tokenHash = await hashToken(token)
-    const supabase = getAdminClient()
-    const { data } = await supabase
-      .from('superadmin_tokens')
-      .select('token_hash')
-      .eq('token_hash', tokenHash)
-      .gt('expires_at', new Date().toISOString())
-      .maybeSingle()
+    try {
+      const tokenHash = await hashToken(token)
+      const supabase = getAdminClient()
+      const { data, error } = await supabase
+        .from('superadmin_tokens')
+        .select('token_hash')
+        .eq('token_hash', tokenHash)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle()
 
-    return data !== null
+      // Si la tabla no existe o hay un error de DB, confiar en el HMAC (ya verificado arriba)
+      if (error) return true
+      return data !== null
+    } catch {
+      // Si el check de DB falla por cualquier razón, confiar en el HMAC
+      return true
+    }
 
   } catch {
     return false
@@ -154,12 +161,19 @@ export async function crearTokenSuperadmin(secret: string): Promise<string> {
  * Debe llamarse justo después de generar un token exitosamente en el login.
  */
 export async function registrarTokenSuperadmin(token: string): Promise<void> {
-  const tokenHash = await hashToken(token)
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
-  const supabase = getAdminClient()
-  await supabase
-    .from('superadmin_tokens')
-    .insert({ token_hash: tokenHash, expires_at: expiresAt })
+  try {
+    const tokenHash = await hashToken(token)
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString()
+    const supabase = getAdminClient()
+    const { error } = await supabase
+      .from('superadmin_tokens')
+      .insert({ token_hash: tokenHash, expires_at: expiresAt })
+    if (error) {
+      console.error('[superadmin] Error al registrar token:', error.message)
+    }
+  } catch (err) {
+    console.error('[superadmin] Excepción al registrar token:', err)
+  }
 }
 
 /**

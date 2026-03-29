@@ -73,7 +73,7 @@ function ExitoContent() {
               <span className="text-blue-600 text-xs font-bold">Dr</span>
             </div>
             <div>
-              <p className="text-xs text-slate-500">Médico</p>
+              <p className="text-xs text-slate-500">Profesional</p>
               <p className="text-sm font-semibold text-slate-800">{medico}</p>
               <p className="text-sm text-slate-500">{especialidad}</p>
             </div>

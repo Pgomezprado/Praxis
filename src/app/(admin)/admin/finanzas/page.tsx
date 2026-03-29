@@ -178,7 +178,7 @@ export default async function AdminFinanzasPage() {
             <>
               <div className="hidden sm:grid sm:grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
                 <span>Paciente / Concepto</span>
-                <span className="w-36">Médico</span>
+                <span className="w-36">Profesional</span>
                 <span className="w-28 text-right">Monto</span>
                 <span className="w-24 text-center">Estado</span>
               </div>

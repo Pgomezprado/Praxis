@@ -119,7 +119,7 @@ export function EspecialidadesClient({ especialidadesIniciales, medicos }: Props
                   </button>
                   <button
                     onClick={() => tieneMedicos ? undefined : setConfirmarEliminarId(esp.id)}
-                    title={tieneMedicos ? 'No se puede eliminar: tiene médicos asociados' : 'Eliminar'}
+                    title={tieneMedicos ? 'No se puede eliminar: tiene profesionales asociados' : 'Eliminar'}
                     className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
                       tieneMedicos
                         ? 'text-slate-200 cursor-not-allowed'
@@ -144,11 +144,11 @@ export function EspecialidadesClient({ especialidadesIniciales, medicos }: Props
               {/* Info */}
               <div className="flex items-center justify-end text-xs text-slate-500">
                 <span className={`font-medium ${tieneMedicos ? 'text-slate-700' : 'text-slate-400'}`}>
-                  {medicosEsp.length} médico{medicosEsp.length !== 1 ? 's' : ''}
+                  {medicosEsp.length} profesional{medicosEsp.length !== 1 ? 'es' : ''}
                 </span>
               </div>
 
-              {/* Médicos asociados (si los hay) */}
+              {/* Profesionales asociados (si los hay) */}
               {tieneMedicos && (
                 <div className="mt-3 pt-3 border-t border-slate-100 flex flex-wrap gap-1">
                   {medicosEsp.slice(0, 3).map(m => (

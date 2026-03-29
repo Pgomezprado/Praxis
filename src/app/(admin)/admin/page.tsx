@@ -99,7 +99,7 @@ export default async function AdminInicioPage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-          label="Médicos activos"
+          label="Profesionales activos"
           value={totalMedicosActivos ?? 0}
           icon={<Stethoscope className="w-5 h-5 text-blue-600" />}
           bg="bg-blue-50"
@@ -130,14 +130,14 @@ export default async function AdminInicioPage() {
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
           {/* thead */}
           <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-            <span>Médico</span>
+            <span>Profesional</span>
             <span className="text-center w-36">Estado</span>
             <span className="text-center w-28">Citas del día</span>
             <span className="w-24" />
           </div>
 
           {equipo.length === 0 ? (
-            <p className="px-5 py-6 text-sm text-slate-400 text-center">Sin médicos registrados</p>
+            <p className="px-5 py-6 text-sm text-slate-400 text-center">Sin profesionales registrados</p>
           ) : equipo.map((medico) => {
             const badge = estadoBadge[medico.estadoHoy]
             return (
@@ -145,7 +145,7 @@ export default async function AdminInicioPage() {
                 key={medico.id}
                 className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-4 border-b border-slate-100 last:border-0 items-center"
               >
-                {/* Médico */}
+                {/* Profesional */}
                 <div className="flex items-center gap-3 min-w-0">
                   <Avatar nombre={medico.nombre} size="sm" />
                   <div className="min-w-0">
@@ -200,13 +200,13 @@ export default async function AdminInicioPage() {
           <AccesoRapido
             href="/admin/medicos"
             icon={<UserPlus className="w-5 h-5 text-blue-600" />}
-            label="+ Agregar médico"
+            label="+ Agregar profesional"
             bg="bg-blue-50 hover:bg-blue-100"
           />
           <AccesoRapido
             href="/admin/secretarias"
             icon={<UserCog className="w-5 h-5 text-violet-600" />}
-            label="+ Agregar secretaria"
+            label="+ Agregar recepcionista"
             bg="bg-violet-50 hover:bg-violet-100"
           />
           <AccesoRapido

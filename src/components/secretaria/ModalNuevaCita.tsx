@@ -197,7 +197,7 @@ export function ModalNuevaCita({
       tipo: c.tipo,
       estado: c.estado,
       creadaEn: new Date().toISOString(),
-      creadaPor: 'secretaria',
+      creadaPor: 'recepcionista',
     }
 
     onCrear(nuevaCita)
@@ -236,9 +236,9 @@ export function ModalNuevaCita({
             <BuscadorPaciente value={paciente} onChange={setPaciente} />
           </section>
 
-          {/* Sección 2 — Médico */}
+          {/* Sección 2 — Profesional */}
           <section>
-            <SectionHeader icon={Stethoscope} label="Médico" />
+            <SectionHeader icon={Stethoscope} label="Profesional" />
             <select
               value={medicoId}
               onChange={(e) => setMedicoId(e.target.value)}

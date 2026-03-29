@@ -20,7 +20,7 @@ export type MockCita = {
   tipo: 'primera_consulta' | 'control' | 'urgencia'
   estado: 'confirmada' | 'pendiente' | 'en_consulta' | 'completada' | 'cancelada'
   creadaEn: string
-  creadaPor: 'secretaria' | 'paciente'
+  creadaPor: 'recepcionista' | 'paciente'
 }
 
 export type MockMedicoAdmin = {
