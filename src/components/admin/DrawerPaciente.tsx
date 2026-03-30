@@ -250,6 +250,7 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
                 </label>
                 <input
                   type="text"
+                  data-sensitive
                   value={form.nombre}
                   onChange={e => set('nombre', e.target.value)}
                   placeholder="María José Fernández"
@@ -263,6 +264,7 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
                 </label>
                 <input
                   type="text"
+                  data-sensitive
                   value={form.rut}
                   onChange={e => handleRutChange(e.target.value)}
                   placeholder="12.345.678-9"
@@ -307,6 +309,7 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
                 </label>
                 <input
                   type="email"
+                  data-sensitive
                   value={form.email}
                   onChange={e => set('email', e.target.value)}
                   placeholder="paciente@email.com"
@@ -318,6 +321,7 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Teléfono</label>
                 <input
                   type="tel"
+                  data-sensitive
                   value={form.telefono}
                   onChange={e => set('telefono', e.target.value)}
                   placeholder="+56 9 1234 5678"

@@ -546,6 +546,7 @@ export function PacienteConsultaClient({
                   </label>
                   <textarea
                     {...register('motivo')}
+                    data-sensitive
                     rows={2}
                     placeholder="Motivo de la consulta..."
                     className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
@@ -560,6 +561,7 @@ export function PacienteConsultaClient({
                   <label className="text-sm font-medium text-slate-700 block mb-1.5">Diagnóstico</label>
                   <textarea
                     {...register('diagnostico')}
+                    data-sensitive
                     rows={2}
                     placeholder="CIE-10 o descripción clínica..."
                     className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
@@ -571,6 +573,7 @@ export function PacienteConsultaClient({
                   <label className="text-sm font-medium text-slate-700 block mb-1.5">Notas clínicas</label>
                   <textarea
                     {...register('notas')}
+                    data-sensitive
                     rows={3}
                     placeholder="Observaciones, hallazgos, anamnesis..."
                     className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
@@ -584,6 +587,7 @@ export function PacienteConsultaClient({
                   </label>
                   <textarea
                     {...register('plan')}
+                    data-sensitive
                     rows={2}
                     placeholder="Indicaciones, derivaciones, próximo control..."
                     className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
@@ -601,6 +605,7 @@ export function PacienteConsultaClient({
                   <input
                     {...register('medicamentos')}
                     type="text"
+                    data-sensitive
                     placeholder="Ej: Enalapril 10mg, Metformina 850mg (separados por coma)"
                     className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
