@@ -217,6 +217,13 @@ function BadgeTier({ tier }: { tier: string | null }) {
       </span>
     )
   }
+  if (tier === 'particular') {
+    return (
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+        Particular · $20K
+      </span>
+    )
+  }
   return (
     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-blue-500/20 text-blue-300 border-blue-500/30">
       Pequeño · $59K
@@ -585,7 +592,7 @@ function DrawerClinica({ clinica, pagos, onClose, onActualizada }: DrawerClinica
           <div>
             <label className={labelCls}>Plan</label>
             <div className="flex gap-3">
-              {[{ v: 'pequeno', label: 'Pequeño · $59K' }, { v: 'mediano', label: 'Mediano · $129K' }].map(opt => (
+              {[{ v: 'particular', label: 'Particular · $20K' }, { v: 'pequeno', label: 'Pequeño · $59K' }, { v: 'mediano', label: 'Mediano · $129K' }].map(opt => (
                 <button
                   key={opt.v}
                   type="button"
