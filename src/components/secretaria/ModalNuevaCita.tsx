@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { X, User, Stethoscope, CalendarDays, FileText, Loader2 } from 'lucide-react'
 import { BuscadorPaciente, type PacienteSeleccionado } from './BuscadorPaciente'
 import { Avatar } from '@/components/ui/Avatar'
@@ -38,6 +39,7 @@ export function ModalNuevaCita({
   medicoIdInicial,
   horaInicial,
 }: ModalNuevaCitaProps) {
+  const router = useRouter()
   const [paciente, setPaciente] = useState<PacienteSeleccionado | null>(null)
   const [medicoId, setMedicoId] = useState(medicoIdInicial ?? '')
   const [fecha, setFecha] = useState(fechaInicial ?? getToday())
@@ -201,6 +203,7 @@ export function ModalNuevaCita({
     }
 
     onCrear(nuevaCita)
+    router.refresh()
     onClose()
   }
 

@@ -70,12 +70,13 @@ export async function PUT(
     clinica_id: string
   }
 
-  if (presupuesto.estado !== 'enviado') {
+  // Se acepta tanto 'enviado' como 'borrador' — los presupuestos se crean en borrador
+  // y no hay flujo de envío formal, por lo que ambos estados son válidos para aceptar
+  if (presupuesto.estado !== 'enviado' && presupuesto.estado !== 'borrador') {
     const mensajes: Record<string, string> = {
       aceptado:  'El presupuesto ya fue aceptado',
       rechazado: 'El presupuesto fue rechazado y no puede aceptarse',
       vencido:   'El presupuesto está vencido y no puede aceptarse',
-      borrador:  'El presupuesto debe estar enviado antes de poder aceptarse',
     }
     const msg = mensajes[presupuesto.estado] ?? 'El presupuesto no está disponible para aceptar'
     return NextResponse.json({ error: msg }, { status: 409 })

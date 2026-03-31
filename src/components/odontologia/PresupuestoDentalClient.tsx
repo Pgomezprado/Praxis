@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import {
   CheckCircle2, FileText, Building2, User, Phone, ChevronLeft,
-  CreditCard, X, Loader2, AlertCircle,
+  CreditCard, X, Loader2, AlertCircle, Mail, Printer,
 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import type { PresupuestoDental, Paciente, PlanTratamientoItem, Cobro, Pago } from '@/types/database'
@@ -386,6 +386,11 @@ export function PresupuestoDentalClient({
   const [mostrarModalCobro, setMostrarModalCobro] = useState(false)
   const [mostrarModalPago, setMostrarModalPago] = useState(false)
 
+  // Estado email
+  const [enviandoEmail, setEnviandoEmail] = useState(false)
+  const [emailEnviado, setEmailEnviado] = useState(false)
+  const [errorEmail, setErrorEmail] = useState('')
+
   const yaAceptado = aceptado || presupuesto.estado === 'aceptado'
   const vencido = presupuesto.estado === 'vencido' || presupuesto.estado === 'rechazado'
 
@@ -415,8 +420,38 @@ export function PresupuestoDentalClient({
     }
   }
 
+  async function handleEnviarEmail() {
+    setEnviandoEmail(true)
+    setErrorEmail('')
+    setEmailEnviado(false)
+    try {
+      const res = await fetch(`/api/odontologia/presupuestos/${presupuesto.id}/enviar-email`, {
+        method: 'POST',
+      })
+      if (!res.ok) {
+        const body = await res.json() as { error?: string }
+        setErrorEmail(body.error ?? 'Error al enviar el email')
+        return
+      }
+      setEmailEnviado(true)
+    } catch {
+      setErrorEmail('Error de conexión. Intenta nuevamente.')
+    } finally {
+      setEnviandoEmail(false)
+    }
+  }
+
   return (
     <div className="space-y-6 pb-12">
+
+      {/* Estilos de impresión — oculta navegación y expande contenido */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          nav, aside, header, [data-sidebar], .print\\:hidden { display: none !important; }
+          body { background: white !important; }
+          .space-y-6 { width: 100% !important; max-width: 100% !important; }
+        }
+      ` }} />
 
       {/* ── Back ── */}
       <button
@@ -550,6 +585,54 @@ export function PresupuestoDentalClient({
             Condiciones del presupuesto
           </p>
           <p className="text-sm text-amber-800 whitespace-pre-line">{presupuesto.notas_condiciones}</p>
+        </div>
+      )}
+
+      {/* ── Acciones del médico: email e imprimir ── */}
+      {doctorId && !vencido && (
+        <div className="flex flex-col sm:flex-row gap-2 print:hidden">
+          {/* Botón enviar por email — solo si el paciente tiene email */}
+          {paciente.email && (
+            <div className="flex-1 space-y-1.5">
+              <button
+                onClick={handleEnviarEmail}
+                disabled={enviandoEmail}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 disabled:opacity-50 transition-colors"
+              >
+                {enviandoEmail ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+                ) : (
+                  <><Mail className="w-4 h-4" /> Enviar por email</>
+                )}
+              </button>
+              <p className="text-xs text-slate-400 text-center truncate px-1">
+                {paciente.email}
+              </p>
+            </div>
+          )}
+
+          {/* Botón imprimir / PDF */}
+          <button
+            onClick={() => window.print()}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition-colors"
+          >
+            <Printer className="w-4 h-4" />
+            Imprimir / PDF
+          </button>
+        </div>
+      )}
+
+      {/* Feedback email */}
+      {doctorId && emailEnviado && (
+        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl print:hidden">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+          <p className="text-sm text-emerald-700">Email enviado correctamente a {paciente.email}</p>
+        </div>
+      )}
+      {doctorId && errorEmail && (
+        <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl print:hidden">
+          <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+          <p className="text-sm text-red-700">{errorEmail}</p>
         </div>
       )}
 
