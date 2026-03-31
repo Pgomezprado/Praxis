@@ -197,7 +197,7 @@ export function ModalNuevaCita({
       tipo: c.tipo,
       estado: c.estado,
       creadaEn: new Date().toISOString(),
-      creadaPor: 'recepcionista',
+      creadaPor: 'secretaria',
     }
 
     onCrear(nuevaCita)

@@ -183,7 +183,7 @@ export interface Cita {
   motivo: string | null
   tipo: 'primera_consulta' | 'control' | 'urgencia'
   estado: 'confirmada' | 'pendiente' | 'en_consulta' | 'completada' | 'cancelada'
-  creada_por: 'recepcionista' | 'paciente'
+  creada_por: 'secretaria' | 'paciente'
   created_at: string
 }
 

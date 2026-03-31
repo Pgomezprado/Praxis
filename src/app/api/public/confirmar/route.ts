@@ -148,6 +148,7 @@ export async function POST(req: Request) {
     }
 
     // Verificar que el slot no esté ocupado
+    // Usar maybeSingle() — devuelve null si no hay fila, sin lanzar error (a diferencia de single())
     const { data: citaExistente } = await supabase
       .from('citas')
       .select('id')
@@ -155,7 +156,7 @@ export async function POST(req: Request) {
       .eq('fecha', fecha)
       .eq('hora_inicio', hora)
       .neq('estado', 'cancelada')
-      .single()
+      .maybeSingle()
 
     if (citaExistente) {
       return Response.json({ error: 'El horario ya no está disponible. Por favor elige otro.' }, { status: 409 })

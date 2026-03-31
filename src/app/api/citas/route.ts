@@ -105,6 +105,7 @@ export async function POST(req: Request) {
     if (!pacienteValido) return Response.json({ error: 'Paciente no pertenece a esta clínica' }, { status: 403 })
 
     // Verificar colisión de slots: que el médico no tenga otra cita activa en ese bloque
+    // Usar maybeSingle() — devuelve null si no hay fila, sin lanzar error (a diferencia de single())
     const { data: citaExistente } = await supabase
       .from('citas')
       .select('id')
@@ -112,7 +113,7 @@ export async function POST(req: Request) {
       .eq('fecha', fecha)
       .eq('hora_inicio', hora_inicio)
       .neq('estado', 'cancelada')
-      .single()
+      .maybeSingle()
 
     if (citaExistente) {
       return Response.json(
@@ -134,7 +135,7 @@ export async function POST(req: Request) {
         motivo: motivo ?? null,
         tipo: tipo ?? 'control',
         estado: 'confirmada',
-        creada_por: 'recepcionista',
+        creada_por: 'secretaria',
       })
       .select(`
         id, folio, fecha, hora_inicio, hora_fin, motivo, tipo, estado,
