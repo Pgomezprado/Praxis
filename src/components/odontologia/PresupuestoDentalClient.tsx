@@ -58,10 +58,13 @@ interface ModalCrearCobroProps {
   nombrePlan: string
   onClose: () => void
   onCobroCreado: (cobro: Pick<Cobro, 'id' | 'folio_cobro' | 'estado' | 'monto_neto'> & { pagos?: Pago[] }) => void
+  requiereAceptacion?: boolean
+  nombrePaciente?: string
 }
 
 function ModalCrearCobro({
   presupuesto, pacienteId, doctorId, nombrePlan, onClose, onCobroCreado,
+  requiereAceptacion, nombrePaciente,
 }: ModalCrearCobroProps) {
   const fechaLegible = new Date().toLocaleDateString('es-CL', {
     day: '2-digit', month: '2-digit', year: 'numeric',
@@ -73,6 +76,7 @@ function ModalCrearCobro({
   const [referencia, setReferencia] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
+  const [aceptadoPor, setAceptadoPor] = useState(requiereAceptacion ? (nombrePaciente ?? '') : '')
 
   async function handleGuardar() {
     if (!concepto.trim()) {
@@ -89,6 +93,24 @@ function ModalCrearCobro({
     setGuardando(true)
     setError('')
     try {
+      if (requiereAceptacion) {
+        if (!aceptadoPor.trim()) {
+          setError('Ingresa el nombre de quien acepta el presupuesto')
+          setGuardando(false)
+          return
+        }
+        const resAceptar = await fetch(`/api/odontologia/presupuestos/${presupuesto.id}/aceptar`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ aceptado_por: aceptadoPor.trim() }),
+        })
+        if (!resAceptar.ok && resAceptar.status !== 409) {
+          const body = await resAceptar.json() as { error?: string }
+          setError(body.error ?? 'Error al registrar la aceptación')
+          setGuardando(false)
+          return
+        }
+      }
       const body: Record<string, unknown> = {
         presupuesto_dental_id: presupuesto.id,
         monto_neto: presupuesto.total,
@@ -133,7 +155,7 @@ function ModalCrearCobro({
       <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
       <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <h2 className="text-base font-semibold text-slate-900">Cobrar presupuesto</h2>
+          <h2 className="text-base font-semibold text-slate-900">{requiereAceptacion ? 'Aceptar y cobrar presupuesto' : 'Cobrar presupuesto'}</h2>
           <button onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 transition-colors">
             <X className="w-4 h-4" />
           </button>
@@ -152,6 +174,21 @@ function ModalCrearCobro({
               </span>
             </div>
           </div>
+
+          {/* Aceptado por */}
+          {requiereAceptacion && (
+            <div>
+              <label className="text-sm font-medium text-slate-700 block mb-1.5">
+                Aceptado por <span className="text-red-500">*</span>
+              </label>
+              <input
+                value={aceptadoPor}
+                onChange={(e) => setAceptadoPor(e.target.value)}
+                placeholder="Nombre completo de quien acepta"
+                className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          )}
 
           {/* Concepto */}
           <div>
@@ -656,54 +693,69 @@ export function PresupuestoDentalClient({
           </p>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
-          <div>
-            <h3 className="text-base font-semibold text-slate-800 mb-1">
-              Aceptar presupuesto
-            </h3>
-            <p className="text-sm text-slate-500">
-              Al aceptar este presupuesto confirmas que estás de acuerdo con los
-              procedimientos y precios indicados.
+        !doctorId ? (
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
+            <div>
+              <h3 className="text-base font-semibold text-slate-800 mb-1">
+                Aceptar presupuesto
+              </h3>
+              <p className="text-sm text-slate-500">
+                Al aceptar este presupuesto confirmas que estás de acuerdo con los
+                procedimientos y precios indicados.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-slate-700 block mb-1.5">
+                Nombre completo de quien acepta <span className="text-red-500">*</span>
+              </label>
+              <input
+                value={nombreAcepta}
+                onChange={(e) => setNombreAcepta(e.target.value)}
+                placeholder="Nombre completo"
+                className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            )}
+
+            <button
+              onClick={handleAceptar}
+              disabled={aceptando || !nombreAcepta.trim()}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              {aceptando ? (
+                <>
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Registrando aceptación...
+                </>
+              ) : (
+                'Acepto este presupuesto'
+              )}
+            </button>
+
+            <p className="text-xs text-slate-400 text-center">
+              Esta aceptación quedará registrada en el sistema con fecha y hora.
             </p>
           </div>
-
-          <div>
-            <label className="text-sm font-medium text-slate-700 block mb-1.5">
-              Nombre completo de quien acepta <span className="text-red-500">*</span>
-            </label>
-            <input
-              value={nombreAcepta}
-              onChange={(e) => setNombreAcepta(e.target.value)}
-              placeholder="Nombre completo"
-              className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+        ) : (
+          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-2">
+            <p className="text-sm text-slate-500">
+              Registra la aceptación del paciente y genera el cobro en un solo paso.
+            </p>
+            <button
+              onClick={() => setMostrarModalCobro(true)}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              <CreditCard className="w-4 h-4" />
+              Cobrar presupuesto
+            </button>
           </div>
-
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
-
-          <button
-            onClick={handleAceptar}
-            disabled={aceptando || !nombreAcepta.trim()}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors flex items-center justify-center gap-2"
-          >
-            {aceptando ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Registrando aceptación...
-              </>
-            ) : (
-              'Acepto este presupuesto'
-            )}
-          </button>
-
-          <p className="text-xs text-slate-400 text-center">
-            Esta aceptación quedará registrada en el sistema con fecha y hora.
-          </p>
-        </div>
+        )
       )}
 
       {/* ── Sección de cobro (solo si está aceptado y hay doctorId — vista médico) ── */}
@@ -794,7 +846,12 @@ export function PresupuestoDentalClient({
           doctorId={doctorId}
           nombrePlan={nombrePlan}
           onClose={() => setMostrarModalCobro(false)}
-          onCobroCreado={(nuevoCobro) => setCobro(nuevoCobro)}
+          requiereAceptacion={!yaAceptado}
+          nombrePaciente={paciente.nombre}
+          onCobroCreado={(nuevoCobro) => {
+            setCobro(nuevoCobro)
+            if (!yaAceptado) setAceptado(true)
+          }}
         />
       )}
 
