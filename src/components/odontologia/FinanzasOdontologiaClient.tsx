@@ -115,7 +115,6 @@ function ModalPago({ cobro, onClose, onPagoRegistrado }: ModalPagoProps) {
   const saldo = saldoPendiente(cobro)
   const [monto, setMonto] = useState(String(saldo))
   const [medioPago, setMedioPago] = useState<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo')
-  const [referencia, setReferencia] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
 
@@ -140,7 +139,6 @@ function ModalPago({ cobro, onClose, onPagoRegistrado }: ModalPagoProps) {
         body: JSON.stringify({
           monto: montoNum,
           medio_pago: medioPago,
-          referencia: referencia.trim() || undefined,
         }),
       })
       const data = await res.json() as {
@@ -186,24 +184,12 @@ function ModalPago({ cobro, onClose, onPagoRegistrado }: ModalPagoProps) {
         {/* Body */}
         <div className="p-5 space-y-4">
           {/* Resumen del cobro */}
-          <div className="bg-slate-50 rounded-xl p-4 space-y-2">
+          <div className="bg-slate-50 rounded-xl p-3 space-y-1">
             <div className="flex justify-between text-sm">
               <span className="text-slate-500">Paciente</span>
               <span className="font-medium text-slate-900">{nombrePaciente}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-slate-500">Concepto</span>
-              <span className="font-medium text-slate-900 text-right max-w-[60%]">{cobro.concepto}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-500">Total</span>
-              <span className="font-medium text-slate-900">{formatCLP(cobro.monto_neto)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-500">Ya pagado</span>
-              <span className="font-medium text-emerald-700">{formatCLP(sumaPagada(cobro))}</span>
-            </div>
-            <div className="flex justify-between text-sm pt-1 border-t border-slate-200">
               <span className="font-semibold text-slate-700">Saldo pendiente</span>
               <span className="font-bold text-amber-700">{formatCLP(saldo)}</span>
             </div>
@@ -246,20 +232,6 @@ function ModalPago({ cobro, onClose, onPagoRegistrado }: ModalPagoProps) {
                 </button>
               ))}
             </div>
-          </div>
-
-          {/* Referencia (opcional) */}
-          <div>
-            <label className="text-sm font-medium text-slate-700 block mb-1.5">
-              Referencia <span className="text-slate-400 font-normal">(opcional)</span>
-            </label>
-            <input
-              type="text"
-              value={referencia}
-              onChange={(e) => setReferencia(e.target.value)}
-              placeholder="Nro. operación, nota, etc."
-              className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
           </div>
 
           {/* Error */}

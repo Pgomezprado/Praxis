@@ -69,21 +69,15 @@ function ModalCrearCobro({
   const fechaLegible = new Date().toLocaleDateString('es-CL', {
     day: '2-digit', month: '2-digit', year: 'numeric',
   })
-  const [concepto, setConcepto] = useState(`${nombrePlan} — ${fechaLegible}`)
-  const [conPago, setConPago] = useState(false)
+  const concepto = `${nombrePlan} — ${fechaLegible}`
   const [montoPago, setMontoPago] = useState(String(presupuesto.total))
   const [medioPago, setMedioPago] = useState<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo')
-  const [referencia, setReferencia] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
   const [aceptadoPor, setAceptadoPor] = useState(requiereAceptacion ? (nombrePaciente ?? '') : '')
 
-  async function handleGuardar() {
-    if (!concepto.trim()) {
-      setError('El concepto es obligatorio')
-      return
-    }
-    if (conPago) {
+  async function handleGuardar(includePago: boolean) {
+    if (includePago) {
       const m = parseFloat(montoPago)
       if (isNaN(m) || m <= 0) {
         setError('Ingresa un monto válido para el pago')
@@ -118,11 +112,10 @@ function ModalCrearCobro({
         paciente_id: pacienteId,
         doctor_id: doctorId,
       }
-      if (conPago) {
+      if (includePago) {
         body.pago = {
           monto: parseFloat(montoPago),
           medio_pago: medioPago,
-          referencia: referencia.trim() || undefined,
         }
       }
       const res = await fetch('/api/odontologia/cobros', {
@@ -190,71 +183,36 @@ function ModalCrearCobro({
             </div>
           )}
 
-          {/* Concepto */}
+          {/* Monto */}
           <div>
             <label className="text-sm font-medium text-slate-700 block mb-1.5">
-              Concepto <span className="text-red-500">*</span>
+              Monto a pagar <span className="text-red-500">*</span>
             </label>
             <input
-              value={concepto}
-              onChange={(e) => setConcepto(e.target.value)}
+              type="number"
+              value={montoPago}
+              onChange={(e) => setMontoPago(e.target.value)}
+              min={1}
               className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-          {/* Pago inicial opcional */}
-          <div className="flex items-center gap-2">
-            <input
-              id="con-pago"
-              type="checkbox"
-              checked={conPago}
-              onChange={(e) => setConPago(e.target.checked)}
-              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            <label htmlFor="con-pago" className="text-sm text-slate-700">
-              Registrar pago inicial
+          {/* Medio de pago */}
+          <div>
+            <label className="text-sm font-medium text-slate-700 block mb-1.5">
+              Medio de pago <span className="text-red-500">*</span>
             </label>
-          </div>
-
-          {conPago && (
-            <div className="space-y-3 pl-6 border-l-2 border-slate-200">
-              <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">Monto</label>
-                <input
-                  type="number"
-                  value={montoPago}
-                  onChange={(e) => setMontoPago(e.target.value)}
-                  min={1}
-                  className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">Medio de pago</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['efectivo', 'tarjeta', 'transferencia'] as const).map((m) => (
-                    <button key={m} type="button" onClick={() => setMedioPago(m)}
-                      className={`py-2 px-2 rounded-xl text-xs font-medium border transition-colors ${
-                        medioPago === m ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
-                      }`}>
-                      {m.charAt(0).toUpperCase() + m.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">
-                  Referencia <span className="text-slate-400 font-normal">(opcional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={referencia}
-                  onChange={(e) => setReferencia(e.target.value)}
-                  placeholder="Nro. operación, etc."
-                  className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+            <div className="grid grid-cols-3 gap-2">
+              {(['efectivo', 'tarjeta', 'transferencia'] as const).map((m) => (
+                <button key={m} type="button" onClick={() => setMedioPago(m)}
+                  className={`py-2 px-2 rounded-xl text-xs font-medium border transition-colors ${
+                    medioPago === m ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+                  }`}>
+                  {m.charAt(0).toUpperCase() + m.slice(1)}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
 
           {error && (
             <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
@@ -264,15 +222,22 @@ function ModalCrearCobro({
           )}
 
           <button
-            onClick={handleGuardar}
+            onClick={() => handleGuardar(true)}
             disabled={guardando}
             className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors flex items-center justify-center gap-2"
           >
             {guardando ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Creando cobro...</>
+              <><Loader2 className="w-4 h-4 animate-spin" /> Procesando...</>
             ) : (
-              <><CreditCard className="w-4 h-4" /> Crear cobro</>
+              <><CreditCard className="w-4 h-4" /> Cobrar</>
             )}
+          </button>
+          <button
+            onClick={() => handleGuardar(false)}
+            disabled={guardando}
+            className="w-full py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+          >
+            Solo registrar cobro (pagar después)
           </button>
         </div>
       </div>
@@ -293,7 +258,6 @@ function ModalPagoPresupuesto({ cobro, onClose, onPagoRegistrado }: ModalPagoPre
   const saldo = Math.max(0, cobro.monto_neto - pagado)
   const [monto, setMonto] = useState(String(saldo))
   const [medioPago, setMedioPago] = useState<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo')
-  const [referencia, setReferencia] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [errorPago, setErrorPago] = useState('')
 
@@ -313,7 +277,7 @@ function ModalPagoPresupuesto({ cobro, onClose, onPagoRegistrado }: ModalPagoPre
       const res = await fetch(`/api/finanzas/cobros/${cobro.id}/pagos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ monto: montoNum, medio_pago: medioPago, referencia: referencia.trim() || undefined }),
+        body: JSON.stringify({ monto: montoNum, medio_pago: medioPago }),
       })
       const data = await res.json() as { pago?: Pago; cobro_pagado?: boolean; error?: string }
       if (!res.ok || !data.pago) {
@@ -371,14 +335,6 @@ function ModalPagoPresupuesto({ cobro, onClose, onPagoRegistrado }: ModalPagoPre
                 </button>
               ))}
             </div>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-slate-700 block mb-1.5">
-              Referencia <span className="text-slate-400 font-normal">(opcional)</span>
-            </label>
-            <input type="text" value={referencia} onChange={(e) => setReferencia(e.target.value)}
-              placeholder="Nro. operación, etc."
-              className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
           </div>
           {errorPago && (
             <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
