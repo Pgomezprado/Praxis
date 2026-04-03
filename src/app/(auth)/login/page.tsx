@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -74,8 +75,14 @@ export default function LoginPage() {
 
           {/* Logo */}
           <div className="relative z-10">
-            <span className="text-2xl font-bold text-white">Praxis</span>
-            <p className="text-blue-300 text-sm mt-1">Sistema clínico inteligente</p>
+            <Image
+              src="/logo_praxis_dark.png"
+              alt="Praxis"
+              height={36}
+              width={130}
+              style={{ width: 'auto' }}
+              className="h-9 object-contain"
+            />
           </div>
 
           {/* Centro */}
@@ -113,8 +120,14 @@ export default function LoginPage() {
           <div className="w-full max-w-sm">
             {/* Logo mobile */}
             <div className="lg:hidden text-center mb-8">
-              <span className="text-2xl font-bold text-slate-900">Praxis</span>
-              <p className="text-slate-500 text-sm mt-1">Sistema clínico inteligente</p>
+              <Image
+                src="/logo_praxis.png"
+                alt="Praxis"
+                height={36}
+                width={130}
+                style={{ width: 'auto' }}
+                className="h-9 object-contain mx-auto"
+              />
             </div>
 
             <p className="text-slate-500 text-sm mb-1">Bienvenida,</p>
@@ -171,8 +184,14 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="relative z-10">
-          <span className="text-2xl font-bold text-white">Praxis</span>
-          <p className="text-blue-300 text-sm mt-1">Sistema clínico inteligente</p>
+          <Image
+            src="/logo_praxis_dark.png"
+            alt="Praxis"
+            height={36}
+            width={130}
+            style={{ width: 'auto' }}
+            className="h-9 object-contain"
+          />
         </div>
 
         {/* Centro */}
@@ -210,8 +229,14 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           {/* Logo mobile (panel izq oculto en mobile) */}
           <div className="lg:hidden text-center mb-8">
-            <span className="text-2xl font-bold text-slate-900">Praxis</span>
-            <p className="text-slate-500 text-sm mt-1">Sistema clínico inteligente</p>
+            <Image
+              src="/logo_praxis.png"
+              alt="Praxis"
+              height={36}
+              width={130}
+              style={{ width: 'auto' }}
+              className="h-9 object-contain mx-auto"
+            />
           </div>
 
           <h1 className="text-2xl font-bold text-slate-900">Bienvenido de vuelta</h1>

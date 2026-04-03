@@ -1,4 +1,4 @@
-import { Stethoscope, Mail, MessageCircle } from 'lucide-react'
+import { Mail, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 
 const WA_URL = 'https://wa.me/+56993589027'
@@ -12,12 +12,19 @@ export function Footer() {
 
             {/* Logo + tagline */}
             <div className="sm:col-span-2">
-              <div className="flex items-center gap-2.5 mb-4">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Stethoscope className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-base font-bold">Praxis</span>
-              </div>
+              <div
+                className="mb-4"
+                role="img"
+                aria-label="Praxis"
+                style={{
+                  backgroundImage: 'url(/logo_praxis_white.png)',
+                  backgroundSize: '200px 200px',
+                  backgroundPosition: 'center center',
+                  backgroundRepeat: 'no-repeat',
+                  height: '60px',
+                  width: '160px',
+                }}
+              />
               <p className="text-slate-400 text-sm leading-relaxed max-w-xs">
                 Sistema de historia clínica electrónica diseñado para clínicas y consultorios en Chile.
               </p>

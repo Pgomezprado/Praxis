@@ -10,8 +10,65 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Praxis — Sistema clínico',
-  description: 'Historial clínico centralizado con resúmenes IA para clínicas y consultorios',
+  metadataBase: new URL('https://praxisapp.cl'),
+  title: {
+    default: 'Praxis — Software Médico para Clínicas Privadas en Chile',
+    template: '%s | Praxis',
+  },
+  description: 'Centraliza agenda, ficha clínica e historial de pacientes en una sola plataforma diseñada para clínicas privadas en Chile. Cumple Ley 20.584. Desde $59.000/mes.',
+  keywords: [
+    'software médico Chile',
+    'historia clínica electrónica Chile',
+    'ficha clínica electrónica',
+    'agenda médica online Chile',
+    'software para clínicas Chile',
+    'gestión de pacientes online',
+    'HCE Chile',
+    'sistema gestión clínica',
+  ],
+  authors: [{ name: 'Praxis', url: 'https://praxisapp.cl' }],
+  creator: 'Praxis',
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
+      { url: '/favicon.ico', sizes: '16x16', type: 'image/x-icon' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/logo_praxis_icon.png',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'es_CL',
+    url: 'https://praxisapp.cl',
+    siteName: 'Praxis',
+    title: 'Praxis — Software Médico para Clínicas Privadas en Chile',
+    description: 'Centraliza agenda, ficha clínica e historial de pacientes en una sola plataforma diseñada para clínicas privadas en Chile. Cumple Ley 20.584.',
+    images: [
+      {
+        url: '/og_image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Praxis — Software Médico para Clínicas Privadas en Chile',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Praxis — Software Médico para Clínicas Privadas en Chile',
+    description: 'Centraliza agenda, ficha clínica e historial de pacientes en una sola plataforma. Cumple Ley 20.584.',
+    images: ['/og_image.png'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 }
 
 const jsonLdSoftware = {
