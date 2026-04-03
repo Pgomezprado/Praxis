@@ -28,14 +28,6 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: 'Praxis', url: 'https://praxisapp.cl' }],
   creator: 'Praxis',
-  icons: {
-    icon: [
-      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
-      { url: '/favicon.ico', sizes: '16x16', type: 'image/x-icon' },
-    ],
-    shortcut: '/favicon.ico',
-    apple: '/logo_praxis_icon.png',
-  },
   openGraph: {
     type: 'website',
     locale: 'es_CL',
