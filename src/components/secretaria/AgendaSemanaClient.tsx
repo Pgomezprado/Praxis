@@ -455,6 +455,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
           handleAbrirCambioHora(id)
         }}
         onEliminada={(id) => setCitasLocales((prev) => prev.filter((c) => c.id !== id))}
+        onRepetida={(nuevas) => setCitasLocales((prev) => [...prev, ...nuevas])}
       />
 
       {/* Modal nueva cita */}

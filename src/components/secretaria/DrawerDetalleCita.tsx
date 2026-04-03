@@ -5,11 +5,12 @@ import Link from 'next/link'
 import {
   X, Clock, CalendarDays, User, Stethoscope, FileText,
   CheckCheck, CheckCircle2, XCircle, PlayCircle, Loader2, DollarSign, Trash2,
-  AlertTriangle,
+  AlertTriangle, RefreshCw,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import type { MockCita } from '@/types/domain'
+import { ModalRepetirCita } from './ModalRepetirCita'
 
 const TIPO_LABEL: Record<MockCita['tipo'], string> = {
   primera_consulta: 'Primera consulta',
@@ -42,6 +43,7 @@ interface DrawerDetalleCitaProps {
   onEstadoCambiado: (id: string, nuevoEstado: MockCita['estado']) => void
   onCambioHora: (id: string) => void
   onEliminada?: (id: string) => void
+  onRepetida?: (nuevas: MockCita[]) => void
 }
 
 export function DrawerDetalleCita({
@@ -52,6 +54,7 @@ export function DrawerDetalleCita({
   onEstadoCambiado,
   onCambioHora,
   onEliminada,
+  onRepetida,
 }: DrawerDetalleCitaProps) {
   const [estadoLocal, setEstadoLocal] = useState<MockCita['estado'] | null>(null)
   const [accionActiva, setAccionActiva] = useState<string | null>(null)
@@ -59,6 +62,7 @@ export function DrawerDetalleCita({
   const [error, setError] = useState<string | null>(null)
   const [confirmarAnular, setConfirmarAnular] = useState(false)
   const [confirmarEliminar, setConfirmarEliminar] = useState(false)
+  const [mostrarModalRepetir, setMostrarModalRepetir] = useState(false)
 
   // Usa estado local si ya se cambió en el drawer, si no el de la cita original
   const estadoActual = estadoLocal ?? cita?.estado ?? 'pendiente'
@@ -300,6 +304,18 @@ export function DrawerDetalleCita({
                   Cambiar hora
                 </button>
 
+                {/* Repetir cita */}
+                {!esDoctor && (
+                  <button
+                    onClick={() => setMostrarModalRepetir(true)}
+                    disabled={loading}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Repetir cita
+                  </button>
+                )}
+
                 {/* Separador */}
                 <div className="h-px bg-slate-100 my-1" />
 
@@ -416,6 +432,16 @@ export function DrawerDetalleCita({
         </div>
       </div>
       </div>
+      {mostrarModalRepetir && cita && (
+        <ModalRepetirCita
+          cita={cita}
+          onClose={() => setMostrarModalRepetir(false)}
+          onRepetida={(nuevas) => {
+            onRepetida?.(nuevas)
+            setMostrarModalRepetir(false)
+          }}
+        />
+      )}
     </>
   )
 }

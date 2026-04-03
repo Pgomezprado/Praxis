@@ -147,7 +147,7 @@ export default function PrivacidadPage() {
               <p className="mt-2">
                 Para ejercer estos derechos, dirígete a la clínica que gestionó tu atención (responsable del dato) o escríbenos a{' '}
                 <a href="mailto:privacidad@praxisapp.cl" className="text-blue-600 underline">privacidad@praxisapp.cl</a>.
-                Te responderemos en un plazo máximo de <strong>10 días hábiles</strong>.
+                Te responderemos en un plazo máximo de <strong>30 días hábiles</strong>.
               </p>
             </section>
 
@@ -156,7 +156,7 @@ export default function PrivacidadPage() {
               <h2 className="text-lg font-semibold text-slate-900 mb-2">Ejercer tus derechos ARCO</h2>
               <p className="text-sm text-slate-600 mb-1">
                 Puedes ejercer tus derechos de Acceso, Rectificación, Cancelación u Oposición enviando el siguiente formulario.
-                Te responderemos al correo indicado en un plazo de <strong>10 días hábiles</strong>.
+                Te responderemos al correo indicado en un plazo de <strong>30 días hábiles</strong>.
               </p>
               <FormularioArco />
             </section>

@@ -421,6 +421,7 @@ export function AgendaEquipoClient({ medicos, citas, fecha }: AgendaEquipoClient
         onEliminada={(id) =>
           setCitasLocales((prev) => prev.filter((c) => c.id !== id))
         }
+        onRepetida={(nuevas) => setCitasLocales((prev) => [...prev, ...nuevas])}
       />
 
       {/* Modal cambio de hora */}

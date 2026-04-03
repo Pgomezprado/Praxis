@@ -22,6 +22,21 @@ export const metadata: Metadata = {
     siteName: 'Praxis',
     locale: 'es_CL',
     type: 'website',
+    images: [
+      {
+        url: 'https://praxisapp.cl/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'Praxis — Historia clínica electrónica para clínicas en Chile',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Praxis — Historia clínica electrónica para clínicas en Chile',
+    description:
+      'HCE, agenda online e IA para clínicas privadas chilenas. Cumple Ley 20.584. Demo gratuita.',
+    images: ['https://praxisapp.cl/og-image.png'],
   },
   alternates: {
     canonical: 'https://praxisapp.cl',

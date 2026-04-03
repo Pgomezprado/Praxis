@@ -201,19 +201,19 @@ export async function POST(req: Request) {
     const clinicaDireccion = (clinica as { direccion?: string }).direccion ?? ''
     const clinicaCiudad    = (clinica as { ciudad?: string }).ciudad ?? ''
 
-    // Email de confirmación deshabilitado temporalmente (reactivar cuando el piloto esté estable)
-    // void enviarConfirmacionCita({
-    //   to: email,
-    //   pacienteNombre: nombre,
-    //   folio: cita.folio,
-    //   medicoNombre: doctor.nombre,
-    //   especialidad: '',
-    //   fecha,
-    //   hora,
-    //   clinicaNombre,
-    //   clinicaDireccion,
-    //   clinicaCiudad,
-    // })
+    // Enviar email de confirmación al paciente (no bloqueante — el catch interno absorbe errores)
+    void enviarConfirmacionCita({
+      to: email,
+      pacienteNombre: nombre,
+      folio: cita.folio,
+      medicoNombre: doctor.nombre,
+      especialidad: '',
+      fecha,
+      hora,
+      clinicaNombre,
+      clinicaDireccion,
+      clinicaCiudad,
+    })
 
     return Response.json({
       folio: cita.folio,
