@@ -9,9 +9,28 @@ function getAdmin() {
   )
 }
 
-type MesRow = {
-  mes: string
-  total: string | number
+type Granularity = 'dia' | 'semana' | 'mes'
+
+function getRangeStart(granularity: Granularity): Date {
+  const now = new Date()
+  if (granularity === 'dia') return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+  if (granularity === 'semana') return new Date(now.getTime() - 84 * 24 * 60 * 60 * 1000)
+  return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+}
+
+/** Convierte una fecha (string YYYY-MM-DD o ISO timestamp) en clave de período según granularidad */
+function getPeriodoKey(dateStr: string, granularity: Granularity): string {
+  // Normalizamos: tomamos solo la parte YYYY-MM-DD
+  const ymd = dateStr.split('T')[0]
+  if (granularity === 'mes') return ymd.slice(0, 7) // "YYYY-MM"
+  if (granularity === 'dia') return ymd               // "YYYY-MM-DD"
+
+  // semana: clave = lunes de esa semana
+  const d = new Date(ymd + 'T12:00:00')
+  const dow = d.getDay() // 0=Dom, 1=Lun...6=Sab
+  const diffToMonday = dow === 0 ? -6 : 1 - dow
+  d.setDate(d.getDate() + diffToMonday)
+  return d.toISOString().split('T')[0] // "YYYY-MM-DD" del lunes
 }
 
 export async function GET(req: NextRequest) {
@@ -21,100 +40,117 @@ export async function GET(req: NextRequest) {
 
   try {
     const supabase = getAdmin()
+    const url = new URL(req.url)
+    const granularity = (url.searchParams.get('granularity') ?? 'mes') as Granularity
 
-    // ── Pacientes nuevos por mes (últimos 12 meses) ──────────────────────────
-    const { data: pacientesMes, error: errPacientes } = await supabase
-      .rpc('superadmin_pacientes_por_mes')
+    const desde = getRangeStart(granularity)
+    const desdeStr = desde.toISOString().split('T')[0]
 
-    // Si no existe la función RPC usamos query directa via REST
-    // Fallback: traer filas y agrupar en JS
-    let pacientesData: MesRow[] = []
-
-    if (errPacientes || !pacientesMes) {
-      // Query directa con from + filter — agrupamos en JS
-      const { data: rawPacientes } = await supabase
-        .from('pacientes')
-        .select('created_at')
-        .eq('activo', true)
-        .gte('created_at', new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString())
-
-      const rawData = rawPacientes as { created_at: string }[] | null
-
-      if (rawData) {
-        const mapa: Record<string, number> = {}
-        for (const row of rawData) {
-          const d = new Date(row.created_at)
-          const mes = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-          mapa[mes] = (mapa[mes] ?? 0) + 1
-        }
-        pacientesData = Object.entries(mapa)
-          .map(([mes, total]) => ({ mes, total }))
-          .sort((a, b) => a.mes.localeCompare(b.mes))
-      }
-    } else {
-      pacientesData = pacientesMes as MesRow[]
-    }
-
-    // ── Citas por mes (últimos 12 meses) ─────────────────────────────────────
-    const { data: rawCitas } = await supabase
-      .from('citas')
-      .select('fecha')
-      .gte('fecha', new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-
-    const rawCitasData = rawCitas as { fecha: string }[] | null
-    let citasData: MesRow[] = []
-
-    if (rawCitasData) {
-      const mapa: Record<string, number> = {}
-      for (const row of rawCitasData) {
-        // fecha puede ser 'YYYY-MM-DD'
-        const [year, month] = row.fecha.split('-')
-        const mes = `${year}-${month}`
-        mapa[mes] = (mapa[mes] ?? 0) + 1
-      }
-      citasData = Object.entries(mapa)
-        .map(([mes, total]) => ({ mes, total }))
-        .sort((a, b) => a.mes.localeCompare(b.mes))
-    }
-
-    // ── Total acumulado de pacientes activos ──────────────────────────────────
-    const { data: totalRow } = await supabase
+    // ── Pacientes nuevos por período ──────────────────────────────────────────
+    const { data: rawPacientes } = await supabase
       .from('pacientes')
-      .select('id', { count: 'exact', head: true })
+      .select('created_at')
       .eq('activo', true)
+      .gte('created_at', desde.toISOString())
 
-    // Supabase devuelve el conteo en la respuesta cuando se usa count: 'exact'
-    // Necesitamos hacer la query con count explícito
+    const pacientesMapa: Record<string, number> = {}
+    for (const row of (rawPacientes as { created_at: string }[] | null) ?? []) {
+      const key = getPeriodoKey(row.created_at, granularity)
+      pacientesMapa[key] = (pacientesMapa[key] ?? 0) + 1
+    }
+
     const { count: totalPacientes } = await supabase
       .from('pacientes')
       .select('*', { count: 'exact', head: true })
       .eq('activo', true)
 
-    void totalRow
+    const pacientesOrdenados = Object.entries(pacientesMapa)
+      .map(([periodo, total]) => ({ periodo, total }))
+      .sort((a, b) => a.periodo.localeCompare(b.periodo))
 
-    // Calcular acumulado retrospectivo por mes
-    const totalActual = totalPacientes ?? 0
-    const mesesTotales = pacientesData.length
-
-    // Partiendo del total actual, restamos hacia atrás los nuevos de cada mes
-    const pacientesConAcumulado = [...pacientesData].reverse().map((row, i) => {
-      const nuevosEseMes = Number(row.total)
-      // Acumulado al final de ese mes = totalActual - suma de todos los meses posteriores
-      // Se calcula después de construir el array completo
-      return { mes: row.mes, total: nuevosEseMes, _idx: mesesTotales - 1 - i }
-    }).reverse()
-
-    // Calcular acumulado: al mes más reciente = totalActual, ir restando hacia atrás
-    let acumuladoActual = totalActual
-    const pacientesFinales = [...pacientesConAcumulado].reverse().map(row => {
+    // Calcular acumulado retrospectivo
+    let acumuladoActual = totalPacientes ?? 0
+    const pacientesFinales = [...pacientesOrdenados].reverse().map(row => {
       const acumulado = acumuladoActual
       acumuladoActual -= row.total
-      return { mes: row.mes, total: row.total, acumulado }
+      return { periodo: row.periodo, total: row.total, acumulado }
     }).reverse()
+
+    // ── Citas por período (con desglose de estado y tipo) ─────────────────────
+    const { data: rawCitas } = await supabase
+      .from('citas')
+      .select('fecha, estado, tipo')
+      .gte('fecha', desdeStr)
+
+    type CitaRaw = { fecha: string; estado: string | null; tipo: string | null }
+    const citasMapa: Record<string, { total: number; completadas: number; canceladas: number; primera_consulta: number }> = {}
+
+    for (const row of (rawCitas as CitaRaw[] | null) ?? []) {
+      const key = getPeriodoKey(row.fecha, granularity)
+      if (!citasMapa[key]) citasMapa[key] = { total: 0, completadas: 0, canceladas: 0, primera_consulta: 0 }
+      citasMapa[key].total++
+      if (row.estado === 'completada') citasMapa[key].completadas++
+      if (row.estado === 'cancelada') citasMapa[key].canceladas++
+      if (row.tipo === 'primera_consulta') citasMapa[key].primera_consulta++
+    }
+
+    const citasFinales = Object.entries(citasMapa)
+      .map(([periodo, vals]) => ({ periodo, ...vals }))
+      .sort((a, b) => a.periodo.localeCompare(b.periodo))
+
+    // ── MRR por mes (siempre mensual, independiente de granularity) ───────────
+    const { data: rawMrr } = await supabase
+      .from('pagos_clinica')
+      .select('mes, monto')
+      .order('mes', { ascending: true })
+
+    type PagoRow = { mes: string; monto: number }
+    const mrrMapa: Record<string, number> = {}
+    for (const row of (rawMrr as PagoRow[] | null) ?? []) {
+      const key = row.mes.slice(0, 7) // "YYYY-MM"
+      mrrMapa[key] = (mrrMapa[key] ?? 0) + row.monto
+    }
+    const mrrFinales = Object.entries(mrrMapa)
+      .map(([mes, monto]) => ({ mes, monto }))
+      .sort((a, b) => a.mes.localeCompare(b.mes))
+      .slice(-12) // últimos 12 meses
+
+    // ── Cobros pagados por período ─────────────────────────────────────────────
+    const { data: rawCobros } = await supabase
+      .from('cobros')
+      .select('created_at, monto_neto')
+      .eq('estado', 'pagado')
+      .eq('activo', true)
+      .gte('created_at', desde.toISOString())
+
+    type CobroRow = { created_at: string; monto_neto: number }
+    const cobrosMapa: Record<string, number> = {}
+    for (const row of (rawCobros as CobroRow[] | null) ?? []) {
+      const key = getPeriodoKey(row.created_at, granularity)
+      cobrosMapa[key] = (cobrosMapa[key] ?? 0) + row.monto_neto
+    }
+    const cobrosFinales = Object.entries(cobrosMapa)
+      .map(([periodo, monto]) => ({ periodo, monto }))
+      .sort((a, b) => a.periodo.localeCompare(b.periodo))
+
+    // ── Pipeline de demos (conteo por estado) ─────────────────────────────────
+    const { data: rawDemos } = await supabase
+      .from('demo_requests')
+      .select('estado')
+
+    type DemoRow = { estado: string | null }
+    const demos = { pendiente: 0, agendada: 0, realizada: 0, perdida: 0 }
+    for (const row of (rawDemos as DemoRow[] | null) ?? []) {
+      const est = row.estado ?? 'pendiente'
+      if (est in demos) demos[est as keyof typeof demos]++
+    }
 
     return Response.json({
       pacientes: pacientesFinales,
-      citas: citasData.map(r => ({ mes: r.mes, total: Number(r.total) })),
+      citas: citasFinales,
+      mrr: mrrFinales,
+      cobros: cobrosFinales,
+      demos,
     })
 
   } catch (err) {
