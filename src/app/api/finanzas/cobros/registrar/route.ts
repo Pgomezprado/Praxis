@@ -33,8 +33,8 @@ export async function POST(req: Request) {
     if (!medio_pago) {
       return Response.json({ error: 'medio_pago es obligatorio' }, { status: 400 })
     }
-    if (!['efectivo', 'tarjeta'].includes(medio_pago)) {
-      return Response.json({ error: 'medio_pago debe ser "efectivo" o "tarjeta"' }, { status: 400 })
+    if (!['efectivo', 'tarjeta', 'transferencia'].includes(medio_pago)) {
+      return Response.json({ error: 'medio_pago debe ser "efectivo", "tarjeta" o "transferencia"' }, { status: 400 })
     }
 
     const supabase = await createClient()
