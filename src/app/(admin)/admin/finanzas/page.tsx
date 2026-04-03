@@ -84,11 +84,26 @@ export default async function AdminFinanzasPage() {
     .order('created_at', { ascending: false })
     .limit(10)
 
+  // Cobros pendientes (cualquier fecha) para lista
+  const { data: cobrosPendientesListData } = await supabase
+    .from('cobros')
+    .select(`
+      id, folio_cobro, concepto, monto_neto, estado, created_at,
+      paciente:pacientes!cobros_paciente_id_fkey ( nombre ),
+      doctor:usuarios!cobros_doctor_id_fkey ( nombre )
+    `)
+    .eq('clinica_id', clinicaId)
+    .eq('activo', true)
+    .eq('estado', 'pendiente')
+    .order('created_at', { ascending: false })
+    .limit(20)
+
   type CobroConJoins = Cobro & {
     paciente: { nombre: string } | null
     doctor: { nombre: string } | null
   }
   const ultimosCobros = (ultimosCobrosData ?? []) as unknown as CobroConJoins[]
+  const cobrosPendientesList = (cobrosPendientesListData ?? []) as unknown as CobroConJoins[]
 
   const mesLabel = new Date(inicioMesStr + 'T12:00:00').toLocaleDateString('es-CL', {
     month: 'long',
@@ -219,6 +234,64 @@ export default async function AdminFinanzasPage() {
           )}
         </div>
       </section>
+
+      {/* Cobros pendientes */}
+      {cobrosPendientesList.length > 0 && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-slate-800">
+              Cobros pendientes
+              <span className="ml-2 text-sm font-normal text-slate-400">({cobrosPendientesList.length})</span>
+            </h2>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="hidden sm:grid sm:grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-3 bg-amber-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              <span>Paciente / Concepto</span>
+              <span className="w-36">Profesional</span>
+              <span className="w-28 text-right">Monto</span>
+              <span className="w-24 text-center">Fecha</span>
+            </div>
+
+            {cobrosPendientesList.map((cobro, idx) => (
+              <div
+                key={cobro.id}
+                className={`flex flex-col sm:grid sm:grid-cols-[1fr_auto_auto_auto] gap-2 sm:gap-4 px-5 py-4 items-start sm:items-center ${
+                  idx < cobrosPendientesList.length - 1 ? 'border-b border-slate-100' : ''
+                }`}
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-800">
+                    {cobro.paciente?.nombre ?? '—'}
+                  </p>
+                  <p className="text-xs text-slate-400 truncate">{cobro.concepto}</p>
+                  <p className="text-xs text-slate-300 font-mono mt-0.5">{cobro.folio_cobro}</p>
+                </div>
+
+                <div className="w-36">
+                  <p className="text-sm text-slate-600 truncate">
+                    {cobro.doctor?.nombre ?? '—'}
+                  </p>
+                </div>
+
+                <div className="w-28 text-right">
+                  <span className="text-sm font-semibold text-slate-900">
+                    ${cobro.monto_neto.toLocaleString('es-CL')}
+                  </span>
+                </div>
+
+                <div className="w-24 text-center">
+                  <span className="text-xs text-slate-400">
+                    {new Date(cobro.created_at).toLocaleDateString('es-CL', {
+                      day: 'numeric', month: 'short', timeZone: 'America/Santiago',
+                    })}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Acceso rápido a aranceles y paquetes */}
       <section>
