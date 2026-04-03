@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { DollarSign, Clock, CheckCircle2, Tag, ArrowRight, TrendingUp, Package } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import type { Cobro, Pago } from '@/types/database'
+import CobrosPendientesClient from '@/components/admin/CobrosPendientesClient'
 
 export const metadata = { title: 'Finanzas — Praxis Admin' }
 
@@ -245,51 +246,7 @@ export default async function AdminFinanzasPage() {
             </h2>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-            <div className="hidden sm:grid sm:grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-3 bg-amber-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-              <span>Paciente / Concepto</span>
-              <span className="w-36">Profesional</span>
-              <span className="w-28 text-right">Monto</span>
-              <span className="w-24 text-center">Fecha</span>
-            </div>
-
-            {cobrosPendientesList.map((cobro, idx) => (
-              <div
-                key={cobro.id}
-                className={`flex flex-col sm:grid sm:grid-cols-[1fr_auto_auto_auto] gap-2 sm:gap-4 px-5 py-4 items-start sm:items-center ${
-                  idx < cobrosPendientesList.length - 1 ? 'border-b border-slate-100' : ''
-                }`}
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-800">
-                    {cobro.paciente?.nombre ?? '—'}
-                  </p>
-                  <p className="text-xs text-slate-400 truncate">{cobro.concepto}</p>
-                  <p className="text-xs text-slate-300 font-mono mt-0.5">{cobro.folio_cobro}</p>
-                </div>
-
-                <div className="w-36">
-                  <p className="text-sm text-slate-600 truncate">
-                    {cobro.doctor?.nombre ?? '—'}
-                  </p>
-                </div>
-
-                <div className="w-28 text-right">
-                  <span className="text-sm font-semibold text-slate-900">
-                    ${cobro.monto_neto.toLocaleString('es-CL')}
-                  </span>
-                </div>
-
-                <div className="w-24 text-center">
-                  <span className="text-xs text-slate-400">
-                    {new Date(cobro.created_at).toLocaleDateString('es-CL', {
-                      day: 'numeric', month: 'short', timeZone: 'America/Santiago',
-                    })}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <CobrosPendientesClient cobros={cobrosPendientesList} />
         </section>
       )}
 
