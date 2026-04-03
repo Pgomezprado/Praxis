@@ -1,9 +1,9 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { StepIndicator } from '@/components/agendamiento/StepIndicator'
-import { CheckCircle2, Calendar, MapPin } from 'lucide-react'
+import { CheckCircle2, Calendar, MapPin, Copy, Check, Mail } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 
@@ -14,15 +14,28 @@ function ExitoContent() {
   const especialidad = params.get('especialidad') ?? ''
   const fecha = params.get('fecha') ?? ''
   const hora = params.get('hora') ?? ''
+  const email = params.get('email') ?? ''
   const clinicaNombre = params.get('clinicaNombre') ?? ''
   const clinicaDireccion = params.get('clinicaDireccion') ?? ''
   const clinicaCiudad = params.get('clinicaCiudad') ?? ''
+
+  const [folioCopied, setFolioCopied] = useState(false)
 
   const fechaFormateada = fecha
     ? new Date(fecha + 'T12:00:00').toLocaleDateString('es-CL', {
         weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
       })
     : ''
+
+  async function copiarFolio() {
+    try {
+      await navigator.clipboard.writeText(folio)
+      setFolioCopied(true)
+      setTimeout(() => setFolioCopied(false), 2000)
+    } catch {
+      // Fallback si el clipboard API no está disponible
+    }
+  }
 
   function agregarCalendario() {
     const inicio = `${fecha.replace(/-/g, '')}T${hora.replace(':', '')}00`
@@ -42,17 +55,43 @@ function ExitoContent() {
         </div>
         <h1 className="text-2xl font-bold text-slate-900">¡Cita confirmada!</h1>
         <p className="text-slate-500 mt-2 text-sm">
-          Guarda el folio de tu cita como comprobante.
+          Tu hora ha sido reservada exitosamente.
         </p>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 p-5 mb-4">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Resumen de tu cita</p>
-          <span className="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded-lg">{folio}</span>
+      {/* Folio destacado */}
+      <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-5 mb-4 text-center">
+        <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2">
+          Folio de tu cita
+        </p>
+        <p className="text-3xl font-bold text-blue-700 font-mono tracking-wider mb-3">
+          {folio}
+        </p>
+        <button
+          onClick={copiarFolio}
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+        >
+          {folioCopied
+            ? <><Check className="w-4 h-4 text-emerald-500" /><span className="text-emerald-600">¡Copiado!</span></>
+            : <><Copy className="w-4 h-4" />Copiar folio</>
+          }
+        </button>
+      </div>
+
+      {/* Aviso de email de confirmación */}
+      {email && (
+        <div className="flex items-start gap-2.5 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3 mb-4">
+          <Mail className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+          <p className="text-sm text-emerald-800 leading-relaxed">
+            Recibirás un email de confirmación en{' '}
+            <span className="font-semibold">{email}</span>
+          </p>
         </div>
-        <p className="text-xs text-slate-500 mt-1">
-          Guarda el folio como comprobante de tu cita.
+      )}
+
+      <div className="bg-white rounded-xl border border-slate-200 p-5 mb-4">
+        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-4">
+          Resumen de tu cita
         </p>
 
         <div className="space-y-3">

@@ -182,45 +182,64 @@ export function SecretariaDashboard({ kpis, proximasCitas, equipo, clinicaNombre
               <CalendarDays className="w-8 h-8 text-slate-200 mx-auto mb-2" />
               <p className="text-sm text-slate-400">No quedan citas pendientes hoy</p>
             </div>
-          ) : (
-            <div className="divide-y divide-slate-50">
-              {proximasCitas.map(cita => {
-                const badge = ESTADO_CITA_BADGE[cita.estado]
-                return (
-                  <div key={cita.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
-                    {/* Hora */}
-                    <div className="w-14 flex-shrink-0 text-right">
-                      <p className="text-sm font-bold text-slate-700 tabular-nums">{cita.horaInicio}</p>
-                      <p className="text-xs text-slate-400 tabular-nums">{cita.horaFin}</p>
-                    </div>
-
-                    {/* Divider vertical */}
-                    <div className="w-px h-10 bg-slate-100 flex-shrink-0" />
-
-                    {/* Paciente */}
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Avatar nombre={cita.pacienteNombre} size="sm" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 truncate">{cita.pacienteNombre}</p>
-                        <p className="text-xs text-slate-400 truncate">{cita.motivo}</p>
+          ) : (() => {
+            const LIMITE = 5
+            const citasVisibles = proximasCitas.slice(0, LIMITE)
+            const restantes = proximasCitas.length - LIMITE
+            return (
+              <div className="divide-y divide-slate-50">
+                {citasVisibles.map(cita => {
+                  const badge = ESTADO_CITA_BADGE[cita.estado]
+                  return (
+                    <Link
+                      key={cita.id}
+                      href="/agenda/hoy"
+                      className="flex items-center gap-4 px-5 py-3.5 hover:bg-blue-50/50 transition-colors cursor-pointer group"
+                    >
+                      {/* Hora */}
+                      <div className="w-14 flex-shrink-0 text-right">
+                        <p className="text-sm font-bold text-slate-700 tabular-nums">{cita.horaInicio}</p>
+                        <p className="text-xs text-slate-400 tabular-nums">{cita.horaFin}</p>
                       </div>
-                    </div>
 
-                    {/* Médico */}
-                    <p className="hidden sm:block text-xs text-slate-400 flex-shrink-0 max-w-[120px] truncate">
-                      {cita.medicoNombre}
-                    </p>
+                      {/* Divider vertical */}
+                      <div className="w-px h-10 bg-slate-100 flex-shrink-0" />
 
-                    {/* Estado */}
-                    <span className={`flex-shrink-0 inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${badge.cls}`}>
-                      {badge.dot && <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${badge.dot}`} />}
-                      {badge.label}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+                      {/* Paciente */}
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <Avatar nombre={cita.pacienteNombre} size="sm" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-blue-700 transition-colors">{cita.pacienteNombre}</p>
+                          <p className="text-xs text-slate-400 truncate">{cita.motivo}</p>
+                        </div>
+                      </div>
+
+                      {/* Médico */}
+                      <p className="hidden sm:block text-xs text-slate-400 flex-shrink-0 max-w-[120px] truncate">
+                        {cita.medicoNombre}
+                      </p>
+
+                      {/* Estado */}
+                      <span className={`flex-shrink-0 inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full ${badge.cls}`}>
+                        {badge.dot && <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${badge.dot}`} />}
+                        {badge.label}
+                      </span>
+                    </Link>
+                  )
+                })}
+
+                {restantes > 0 && (
+                  <Link
+                    href="/agenda/hoy"
+                    className="flex items-center justify-center gap-1.5 px-5 py-3 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 transition-colors"
+                  >
+                    y {restantes} cita{restantes > 1 ? 's' : ''} mas
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                )}
+              </div>
+            )
+          })()}
         </div>
 
         {/* ── Estado del equipo ── */}

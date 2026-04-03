@@ -104,6 +104,7 @@ export function ElegirHoraClient({ medico, fechasDisponibles }: ElegirHoraClient
               onSeleccionar={handleSeleccionar}
               fechaSeleccionada={fechaSeleccionada}
               horaSeleccionada={horaSeleccionada}
+              loadingSlots={loadingSlots}
             />
           </div>
         </div>

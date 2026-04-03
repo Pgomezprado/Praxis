@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar, ArrowRight } from 'lucide-react'
 
 interface CalendarioDisponibilidadProps {
   fechasDisponibles: string[]
@@ -9,6 +9,7 @@ interface CalendarioDisponibilidadProps {
   onSeleccionar: (fecha: string, hora: string) => void
   fechaSeleccionada: string | null
   horaSeleccionada: string | null
+  loadingSlots?: boolean
 }
 
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
@@ -20,6 +21,7 @@ export function CalendarioDisponibilidad({
   onSeleccionar,
   fechaSeleccionada,
   horaSeleccionada,
+  loadingSlots = false,
 }: CalendarioDisponibilidadProps) {
   const hoy = new Date()
   const [mesVista, setMesVista] = useState(new Date(hoy.getFullYear(), hoy.getMonth(), 1))
@@ -52,6 +54,10 @@ export function CalendarioDisponibilidad({
   }
 
   const horasDelDia = fechaSeleccionada ? (slots[fechaSeleccionada] ?? []) : []
+
+  // Detectar si el mes visible tiene algún día con disponibilidad
+  const prefijMes = `${anio}-${String(mes + 1).padStart(2, '0')}-`
+  const mesConDisponibilidad = fechasDisponibles.some(f => f.startsWith(prefijMes))
 
   return (
     <div>
@@ -113,6 +119,27 @@ export function CalendarioDisponibilidad({
           )
         })}
       </div>
+
+      {/* Aviso: mes sin disponibilidad */}
+      {!mesConDisponibilidad && (
+        <div className="mt-5 flex flex-col items-center gap-2 text-center text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-5">
+          <Calendar className="w-5 h-5 text-slate-400" />
+          <p>No hay horarios disponibles este mes.</p>
+          <p className="flex items-center gap-1 text-slate-400">
+            Prueba avanzando al siguiente mes
+            <ArrowRight className="w-4 h-4" />
+          </p>
+        </div>
+      )}
+
+      {/* Aviso: día seleccionado sin horas disponibles */}
+      {fechaSeleccionada && !loadingSlots && horasDelDia.length === 0 && mesConDisponibilidad && (
+        <div ref={slotsRef} className="mt-5 flex flex-col items-center gap-2 text-center text-sm text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-5">
+          <Calendar className="w-5 h-5 text-slate-400" />
+          <p>No hay horas disponibles para este día.</p>
+          <p className="text-slate-400">Selecciona otra fecha.</p>
+        </div>
+      )}
 
       {/* Slots de hora */}
       {fechaSeleccionada && horasDelDia.length > 0 && (

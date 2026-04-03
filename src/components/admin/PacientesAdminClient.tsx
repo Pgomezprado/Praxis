@@ -48,6 +48,7 @@ export function PacientesAdminClient({ pacientesIniciales }: Props) {
   const [toast, setToast] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [pacienteEditar, setPacienteEditar] = useState<MockPacienteAdmin | null>(null)
+  const [confirmandoId, setConfirmandoId] = useState<string | null>(null)
 
   function abrirCrear() {
     setPacienteEditar(null)
@@ -80,6 +81,20 @@ export function PacientesAdminClient({ pacientesIniciales }: Props) {
     ))
     const p = pacientes.find(x => x.id === id)
     if (p) mostrarToast(`${p.nombre} ${p.activo ? 'desactivado' : 'reactivado'}`)
+  }
+
+  function solicitarConfirmacion(id: string) {
+    if (confirmandoId === id) {
+      // Segunda pulsación: ejecutar y limpiar
+      toggleEstado(id)
+      setConfirmandoId(null)
+    } else {
+      // Primera pulsación: entrar en modo confirmación con auto-cancelación a los 3 s
+      setConfirmandoId(id)
+      setTimeout(() => {
+        setConfirmandoId(prev => prev === id ? null : prev)
+      }, 3000)
+    }
   }
 
   function toggleSort(field: SortField) {
@@ -320,7 +335,7 @@ export function PacientesAdminClient({ pacientesIniciales }: Props) {
 
                   {/* Acciones */}
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-0.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-0.5">
                       <button
                         title="Ver ficha"
                         onClick={() => router.push(`/pacientes/${p.id}`)}
@@ -335,17 +350,28 @@ export function PacientesAdminClient({ pacientesIniciales }: Props) {
                       >
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
-                      <button
-                        onClick={() => toggleEstado(p.id)}
-                        title={p.activo ? 'Desactivar' : 'Reactivar'}
-                        className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
-                          p.activo
-                            ? 'hover:bg-red-50 text-slate-400 hover:text-red-500'
-                            : 'hover:bg-emerald-50 text-slate-400 hover:text-emerald-600'
-                        }`}
-                      >
-                        <PowerOff className="w-3.5 h-3.5" />
-                      </button>
+                      {confirmandoId === p.id ? (
+                        <button
+                          onClick={() => solicitarConfirmacion(p.id)}
+                          title="Confirmar acción"
+                          className="h-7 px-2 flex items-center gap-1 rounded-lg text-xs font-medium bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors whitespace-nowrap"
+                        >
+                          <PowerOff className="w-3 h-3" />
+                          ¿Confirmar?
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => solicitarConfirmacion(p.id)}
+                          title={p.activo ? 'Desactivar' : 'Reactivar'}
+                          className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${
+                            p.activo
+                              ? 'hover:bg-red-50 text-slate-400 hover:text-red-500'
+                              : 'hover:bg-emerald-50 text-slate-400 hover:text-emerald-600'
+                          }`}
+                        >
+                          <PowerOff className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -6,7 +6,7 @@ import { StepIndicator } from '@/components/agendamiento/StepIndicator'
 import { ResumenCita } from '@/components/agendamiento/ResumenCita'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
-import { ArrowLeft, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ShieldCheck, AlertTriangle, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { validarRut, formatearRut } from '@/lib/agendamiento'
 
@@ -31,6 +31,7 @@ function ConfirmarForm() {
   const [consentimientoIa, setConsentimientoIa] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errores, setErrores] = useState<Record<string, string>>({})
+  const [slotOcupado, setSlotOcupado] = useState(false)
 
   function handleRut(valor: string) {
     setRut(formatearRut(valor))
@@ -53,6 +54,7 @@ function ConfirmarForm() {
     e.preventDefault()
     if (!validar()) return
 
+    setSlotOcupado(false)
     setLoading(true)
     try {
       const res = await fetch('/api/public/confirmar', {
@@ -74,7 +76,11 @@ function ConfirmarForm() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setErrores({ general: data.error ?? 'Error al confirmar la cita' })
+        if (res.status === 409) {
+          setSlotOcupado(true)
+        } else {
+          setErrores({ general: data.error ?? 'Ocurrió un error al confirmar la cita. Por favor intenta nuevamente.' })
+        }
         return
       }
       const q = new URLSearchParams({
@@ -229,15 +235,38 @@ function ConfirmarForm() {
           </label>
         </div>
 
-        {errores.general && (
-          <p className="text-sm text-red-600 text-center bg-red-50 border border-red-200 rounded-xl px-3 py-2.5">
-            {errores.general}
-          </p>
+        {slotOcupado && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3.5">
+            <div className="flex items-start gap-2.5 mb-3">
+              <Clock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">Esta hora ya fue reservada</p>
+                <p className="text-sm text-amber-700 mt-0.5">
+                  Otro paciente tomó este horario mientras completabas el formulario. Por favor, elige otra hora disponible.
+                </p>
+              </div>
+            </div>
+            <Link href={`/agendar/${medicoId}?fecha=${fecha}`}>
+              <Button variant="secondary" className="w-full">
+                <ArrowLeft className="w-4 h-4" />
+                Volver a elegir hora
+              </Button>
+            </Link>
+          </div>
         )}
 
-        <Button type="submit" loading={loading} className="w-full mt-2">
-          Confirmar cita
-        </Button>
+        {errores.general && (
+          <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+            <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+            <p className="text-sm text-red-700">{errores.general}</p>
+          </div>
+        )}
+
+        {!slotOcupado && (
+          <Button type="submit" loading={loading} className="w-full mt-2">
+            Confirmar cita
+          </Button>
+        )}
       </form>
     </div>
   )

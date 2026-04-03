@@ -174,11 +174,6 @@ export function PacienteConsultaClient({
         setConsultasLocales((prev) => [nuevaConsulta, ...prev])
         setSaved(true)
         reset()
-
-        // Si no hay receta, redirigir inmediatamente
-        if (medicamentosReceta.length === 0) {
-          setTimeout(() => router.push('/medico/inicio'), 1500)
-        }
       } else {
         const errorBody = await res.json() as { error?: string }
         setSaveError(errorBody.error ?? 'Error al guardar la consulta. Inténtalo de nuevo.')
@@ -241,8 +236,6 @@ export function PacienteConsultaClient({
         indicacionesGenerales,
         fechaReceta: new Date().toISOString(),
       })
-
-      setTimeout(() => router.push('/medico/inicio'), 2000)
     } catch {
       setRecetaError('Error de conexión al guardar la receta.')
     } finally {
@@ -524,18 +517,34 @@ export function PacienteConsultaClient({
               Registrar consulta
             </h3>
 
-            {/* Estado: consulta guardada + receta guardada */}
-            {saved && recetaGuardada ? (
-              <div className="py-6 text-center space-y-2">
-                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
-                <p className="text-sm font-semibold text-slate-800">Consulta y receta guardadas</p>
-                <p className="text-xs text-slate-400">Volviendo al inicio...</p>
-              </div>
-            ) : saved && medicamentosReceta.length === 0 ? (
-              <div className="py-6 text-center space-y-2">
-                <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto" />
-                <p className="text-sm font-semibold text-slate-800">Consulta guardada</p>
-                <p className="text-xs text-slate-400">Volviendo al inicio...</p>
+            {/* Estado: consulta guardada (con o sin receta) */}
+            {saved && (medicamentosReceta.length === 0 || recetaGuardada) ? (
+              <div className="py-5 space-y-4">
+                <div className="flex flex-col items-center gap-2 p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <CheckCircle2 className="w-9 h-9 text-emerald-500" />
+                  <p className="text-sm font-semibold text-emerald-800">
+                    {recetaGuardada ? 'Consulta y receta guardadas' : 'Consulta guardada correctamente'}
+                  </p>
+                  <p className="text-xs text-emerald-600 text-center">
+                    Los datos quedaron registrados en la historia clínica del paciente.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => router.push('/medico/inicio')}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                  >
+                    Volver al inicio
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSaved(false)}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 border border-slate-300 hover:border-slate-400 text-slate-700 text-sm font-medium rounded-xl transition-colors"
+                  >
+                    Revisar consulta
+                  </button>
+                </div>
               </div>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

@@ -258,18 +258,30 @@ export function MedicoDashboard({
           <div className="divide-y divide-slate-50">
             {citasHoy.map((cita) => {
               const est = ESTADO_CONFIG[cita.estado]
-              const isCompleted = cita.estado === 'completada' || cita.estado === 'cancelada'
+              const isCompletada = cita.estado === 'completada'
+              const isCancelada  = cita.estado === 'cancelada'
+              const isTerminada  = isCompletada || isCancelada
 
               return (
                 <div
                   key={cita.id}
-                  className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${
-                    isCompleted ? 'opacity-50' : 'hover:bg-slate-50/60'
+                  className={`relative flex items-center gap-4 px-5 py-3.5 transition-colors ${
+                    isTerminada ? 'bg-slate-50/60' : 'hover:bg-slate-50/60'
                   }`}
                 >
+                  {/* Línea decorativa izquierda para estados terminados */}
+                  {isCompletada && (
+                    <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-emerald-400 rounded-full" />
+                  )}
+                  {isCancelada && (
+                    <span className="absolute left-0 top-2 bottom-2 w-0.5 bg-red-400 rounded-full" />
+                  )}
+
                   {/* Hora */}
                   <div className="w-16 flex-shrink-0 text-right">
-                    <p className="text-sm font-bold text-slate-700 tabular-nums">{cita.horaInicio}</p>
+                    <p className={`text-sm font-bold tabular-nums ${isCancelada ? 'text-slate-400' : 'text-slate-700'}`}>
+                      {cita.horaInicio}
+                    </p>
                     <p className="text-xs text-slate-400 tabular-nums">{cita.horaFin}</p>
                   </div>
 
@@ -280,8 +292,12 @@ export function MedicoDashboard({
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <Avatar nombre={cita.pacienteNombre} size="sm" />
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{cita.pacienteNombre}</p>
-                      <p className="text-xs text-slate-400 truncate">{cita.motivo}</p>
+                      <p className={`text-sm font-semibold truncate ${isCancelada ? 'text-slate-400' : 'text-slate-800'}`}>
+                        {cita.pacienteNombre}
+                      </p>
+                      <p className={`text-xs truncate ${isCancelada ? 'text-slate-300' : 'text-slate-400'}`}>
+                        {cita.motivo}
+                      </p>
                     </div>
                   </div>
 
@@ -290,14 +306,26 @@ export function MedicoDashboard({
                     {TIPO_LABEL[cita.tipo]}
                   </span>
 
-                  {/* Estado */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <span className={`w-1.5 h-1.5 rounded-full ${est.dot}`} />
-                    <span className={`text-xs font-medium ${est.text}`}>{est.label}</span>
-                  </div>
+                  {/* Estado — badge para terminadas, dot+texto para activas */}
+                  {isCompletada ? (
+                    <span className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      <CheckCircle2 className="w-3 h-3" />
+                      Completada
+                    </span>
+                  ) : isCancelada ? (
+                    <span className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-600 border border-red-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+                      Cancelada
+                    </span>
+                  ) : (
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className={`w-1.5 h-1.5 rounded-full ${est.dot}`} />
+                      <span className={`text-xs font-medium ${est.text}`}>{est.label}</span>
+                    </div>
+                  )}
 
                   {/* Action */}
-                  {!isCompleted && (
+                  {!isTerminada && (
                     <Link
                       href={`/medico/pacientes/${cita.pacienteId}?cita=${cita.id}`}
                       className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-blue-50 text-slate-400 hover:text-blue-600 transition-colors"

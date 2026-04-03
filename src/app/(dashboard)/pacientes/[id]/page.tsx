@@ -6,6 +6,7 @@ import { AlergiasBadges } from '@/components/paciente/AlergiasBadges'
 import { HistorialConsultas } from '@/components/paciente/HistorialConsultas'
 import { HistorialCitas } from '@/components/paciente/HistorialCitas'
 import { PaquetesPaciente } from '@/components/paciente/PaquetesPaciente'
+import { PacienteFichaHeader } from '@/components/paciente/PacienteFichaHeader'
 import type { Consulta, PaquetePaciente } from '@/types/database'
 import type { CitaPaciente } from '@/components/paciente/HistorialCitas'
 
@@ -94,38 +95,26 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
 
   return (
     <div className="max-w-7xl mx-auto">
-      {/* Nombre y datos básicos */}
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">{paciente.nombre}</h2>
-        <div className="flex items-center gap-4 mt-1 text-sm text-slate-500 flex-wrap">
-          <span>RUT: {formatRut(paciente.rut)}</span>
-          {edad !== null && <span>{edad} años</span>}
-          {paciente.grupo_sang && <span>Grupo: {paciente.grupo_sang}</span>}
-          {paciente.prevision && (
-            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-              String(paciente.prevision).toLowerCase() === 'fonasa'
-                ? 'bg-green-100 text-green-700 border-green-200'
-                : String(paciente.prevision).toLowerCase() === 'isapre'
-                ? 'bg-purple-100 text-purple-700 border-purple-200'
-                : 'bg-slate-100 text-slate-600 border-slate-200'
-            }`}>
-              {String(paciente.prevision).charAt(0).toUpperCase() + String(paciente.prevision).slice(1)}
-            </span>
-          )}
-          <span>Desde {formatFecha(paciente.created_at)}</span>
-        </div>
-        {/* Datos de facturación — solo si existen */}
-        {(paciente.direccion || paciente.seguro_complementario) && (
-          <div className="flex items-center gap-4 mt-1 text-sm text-slate-500 flex-wrap">
-            {paciente.direccion && (
-              <span>{paciente.direccion}</span>
-            )}
-            {paciente.seguro_complementario && (
-              <span>Seguro: {paciente.seguro_complementario}</span>
-            )}
-          </div>
-        )}
-      </div>
+      {/* Header con nombre, datos básicos y botón de edición */}
+      <PacienteFichaHeader
+        paciente={{
+          id: paciente.id,
+          nombre: paciente.nombre,
+          rut: formatRut(paciente.rut),
+          fecha_nac: paciente.fecha_nac ?? null,
+          email: paciente.email ?? null,
+          telefono: paciente.telefono ?? null,
+          prevision: paciente.prevision ? String(paciente.prevision) : null,
+          direccion: paciente.direccion ?? null,
+          seguro_complementario: paciente.seguro_complementario ?? null,
+          grupo_sang: paciente.grupo_sang ?? null,
+          alergias: (paciente as unknown as { alergias?: string[] }).alergias ?? null,
+          condiciones: (paciente as unknown as { condiciones?: string[] }).condiciones ?? null,
+          created_at: paciente.created_at,
+        }}
+        edad={edad}
+        fechaDesde={formatFecha(paciente.created_at)}
+      />
 
       {/* Layout de 2 columnas — recepcionista no tiene acceso al formulario de consulta */}
       <div className="grid grid-cols-[280px_1fr] gap-6 items-start">
