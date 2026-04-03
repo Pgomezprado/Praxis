@@ -37,12 +37,15 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      return Response.json({ error: error.message }, { status: 500 })
+      return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
     }
 
     return Response.json({ demos: data as DemoRow[] | null ?? [] })
   } catch (err) {
-    return Response.json({ error: `Error interno: ${err instanceof Error ? err.message : String(err)}` }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/superadmin/demos:', err)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -76,11 +79,14 @@ export async function PATCH(req: NextRequest) {
       .single()
 
     if (error) {
-      return Response.json({ error: error.message }, { status: 500 })
+      return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
     }
 
     return Response.json({ demo: data })
   } catch (err) {
-    return Response.json({ error: `Error interno: ${err instanceof Error ? err.message : String(err)}` }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en PATCH /api/superadmin/demos:', err)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { ArancelDental } from '@/types/database'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // PUT /api/odontologia/catalogo/[arancelId]
 // Actualiza nombre, precio u otros campos de una prestación dental
@@ -9,6 +10,7 @@ export async function PUT(
 ) {
   try {
     const { arancelId } = await params
+    if (!isValidUUID(arancelId)) return Response.json({ error: 'ID inválido' }, { status: 400 })
     const body = await req.json() as {
       nombre?: string
       precio_particular?: number
@@ -94,9 +96,10 @@ export async function PUT(
 
     return Response.json({ arancel: data as ArancelDental })
   } catch (err) {
-    console.error('Error en PUT /api/odontologia/catalogo/[arancelId]:', err)
-    const msg = err instanceof Error ? err.message : 'Error interno'
-    return Response.json({ error: msg }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en PUT /api/odontologia/catalogo/[arancelId]:', err)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -108,6 +111,7 @@ export async function DELETE(
 ) {
   try {
     const { arancelId } = await params
+    if (!isValidUUID(arancelId)) return Response.json({ error: 'ID inválido' }, { status: 400 })
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -169,8 +173,9 @@ export async function DELETE(
 
     return Response.json({ ok: true })
   } catch (err) {
-    console.error('Error en DELETE /api/odontologia/catalogo/[arancelId]:', err)
-    const msg = err instanceof Error ? err.message : 'Error interno'
-    return Response.json({ error: msg }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en DELETE /api/odontologia/catalogo/[arancelId]:', err)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

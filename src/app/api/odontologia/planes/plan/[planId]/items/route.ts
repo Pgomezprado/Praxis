@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { PlanTratamientoItem } from '@/types/database'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // POST — agrega ítem al plan
 export async function POST(
@@ -8,6 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ planId: string }> }
 ) {
   const { planId } = await params
+  if (!isValidUUID(planId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -112,7 +114,9 @@ export async function POST(
     .single()
 
   if (errItem) {
-    console.error('Error al agregar ítem:', errItem)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error al agregar ítem:', errItem)
+    }
     return NextResponse.json({ error: 'Error al agregar ítem' }, { status: 500 })
   }
 

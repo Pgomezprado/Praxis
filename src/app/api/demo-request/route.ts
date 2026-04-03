@@ -62,7 +62,9 @@ export async function POST(request: Request) {
       .insert({ nombre, clinica, email, telefono })
 
     if (dbError) {
-      console.error('Error al persistir solicitud de demo:', dbError)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Error al persistir solicitud de demo:', dbError)
+      }
       return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
     }
 
@@ -173,7 +175,9 @@ export async function POST(request: Request) {
         html,
       })
     } catch (err) {
-      console.error('Error enviando email de demo:', err)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Error enviando email de demo:', err)
+      }
     }
 
     return NextResponse.json({ success: true })

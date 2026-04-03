@@ -44,8 +44,10 @@ export async function GET(req: Request) {
 
     return Response.json({ paquetes: data as unknown as PaqueteArancel[] })
   } catch (error) {
-    console.error('Error en GET /api/paquetes/aranceles:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/paquetes/aranceles:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -114,8 +116,10 @@ export async function POST(req: Request) {
 
     return Response.json({ paquete: data as unknown as PaqueteArancel }, { status: 201 })
   } catch (error) {
-    console.error('Error en POST /api/paquetes/aranceles:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/paquetes/aranceles:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -155,7 +159,9 @@ export async function PATCH(req: Request) {
 
     return Response.json({ paquete: data })
   } catch (error) {
-    console.error('Error en PATCH /api/paquetes/aranceles:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en PATCH /api/paquetes/aranceles:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

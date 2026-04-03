@@ -121,7 +121,9 @@ export async function POST(req: Request) {
 
     return Response.json({ receta: data }, { status: 201 })
   } catch (err) {
-    console.error('Error en POST /api/recetas:', err)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/recetas:', err)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

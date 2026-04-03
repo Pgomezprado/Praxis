@@ -107,7 +107,9 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) {
-    console.error('Error al registrar consentimiento:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error al registrar consentimiento:', error)
+    }
     return NextResponse.json({ error: 'Error al registrar consentimiento' }, { status: 500 })
   }
 

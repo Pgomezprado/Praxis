@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { createClient } from '@/lib/supabase/server'
 import type { PresupuestoDental, PlanTratamientoItem } from '@/types/database'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // POST — envía el presupuesto por email al paciente y actualiza el estado a 'enviado'
 export async function POST(
@@ -9,6 +10,7 @@ export async function POST(
   { params }: { params: Promise<{ presupuestoId: string }> }
 ) {
   const { presupuestoId } = await params
+  if (!isValidUUID(presupuestoId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -256,7 +258,9 @@ export async function POST(
       html,
     })
   } catch (err) {
-    console.error('Error enviando email de presupuesto:', err)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error enviando email de presupuesto:', err)
+    }
     return NextResponse.json(
       { error: 'No se pudo enviar el email. Verifica la configuración de correo.' },
       { status: 500 }

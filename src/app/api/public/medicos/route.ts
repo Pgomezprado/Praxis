@@ -42,7 +42,9 @@ export async function GET(request: Request) {
 
     return Response.json({ medicos })
   } catch (error) {
-    console.error('Error en GET /api/public/medicos:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/public/medicos:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

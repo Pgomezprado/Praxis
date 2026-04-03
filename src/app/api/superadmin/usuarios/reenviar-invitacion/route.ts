@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
         error.message.toLowerCase().includes('registered')
 
       if (!isAlreadyRegistered) {
-        return Response.json({ error: error.message }, { status: 500 })
+        return Response.json({ error: 'No se pudo reenviar la invitación' }, { status: 500 })
       }
 
       // Primero intentar tipo 'invite', si falla usar 'recovery' (funciona para usuarios ya confirmados)
@@ -166,7 +166,9 @@ export async function POST(req: NextRequest) {
       if (!linkErrorInvite && linkDataInvite?.properties?.action_link) {
         actionLink = linkDataInvite.properties.action_link
       } else {
-        console.error('generateLink invite falló, intentando recovery:', linkErrorInvite?.message)
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('generateLink invite falló, intentando recovery:', linkErrorInvite?.message)
+        }
         const { data: linkDataRecovery, error: linkErrorRecovery } = await supabase.auth.admin.generateLink({
           type: 'recovery',
           email,
@@ -175,7 +177,9 @@ export async function POST(req: NextRequest) {
         if (!linkErrorRecovery && linkDataRecovery?.properties?.action_link) {
           actionLink = linkDataRecovery.properties.action_link
         } else {
-          console.error('generateLink recovery también falló:', linkErrorRecovery?.message)
+          if (process.env.NODE_ENV !== 'production') {
+            console.error('generateLink recovery también falló:', linkErrorRecovery?.message)
+          }
         }
       }
 
@@ -195,7 +199,9 @@ export async function POST(req: NextRequest) {
       })
 
       if (emailError) {
-        console.error('Error enviando email de invitación via Resend:', emailError)
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Error enviando email de invitación via Resend:', emailError)
+        }
         return Response.json(
           { error: 'No se pudo enviar el correo de activación' },
           { status: 500 }
@@ -207,8 +213,11 @@ export async function POST(req: NextRequest) {
 
     return Response.json({ ok: true })
   } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/superadmin/usuarios/reenviar-invitacion:', err)
+    }
     return Response.json(
-      { error: `Error interno: ${err instanceof Error ? err.message : String(err)}` },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     )
   }

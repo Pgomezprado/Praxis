@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest } from 'next/server'
 import { verificarSesionSuperadmin } from '@/lib/superadmin/auth'
+import { isValidUUID } from '@/lib/utils/validators'
 
 function getAdmin() {
   return createClient(
@@ -32,6 +33,7 @@ export async function PATCH(
 
   try {
     const { id } = await params
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
     const body = await req.json() as PatchBody
 
     // Solo actualizar campos permitidos
@@ -64,6 +66,9 @@ export async function PATCH(
 
     return Response.json({ clinica: data })
   } catch (err) {
-    return Response.json({ error: `Error interno: ${err instanceof Error ? err.message : String(err)}` }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en PATCH /api/superadmin/clinicas/[id]:', err)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

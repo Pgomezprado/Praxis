@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Arancel } from '@/types/database'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // PATCH /api/finanzas/aranceles/[id] — editar arancel (solo admin_clinica)
 export async function PATCH(
@@ -8,6 +9,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
     const body = await req.json()
     const { nombre, precio_particular, tipo_cita } = body
 
@@ -67,12 +69,10 @@ export async function PATCH(
 
     return Response.json({ arancel: data as Arancel })
   } catch (error) {
-    console.error('Error en PATCH /api/finanzas/aranceles/[id]:', error)
-    const msg =
-      error instanceof Error
-        ? error.message
-        : (error as { message?: string })?.message ?? 'Error interno'
-    return Response.json({ error: msg }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en PATCH /api/finanzas/aranceles/[id]:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -83,6 +83,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -125,11 +126,9 @@ export async function DELETE(
 
     return Response.json({ ok: true })
   } catch (error) {
-    console.error('Error en DELETE /api/finanzas/aranceles/[id]:', error)
-    const msg =
-      error instanceof Error
-        ? error.message
-        : (error as { message?: string })?.message ?? 'Error interno'
-    return Response.json({ error: msg }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en DELETE /api/finanzas/aranceles/[id]:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { validarRut } from '@/lib/utils/formatters'
+import { isValidUUID } from '@/lib/utils/validators'
 
 export async function PATCH(
   req: Request,
@@ -7,10 +8,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
-
-    if (!id) {
-      return Response.json({ error: 'ID de paciente requerido' }, { status: 400 })
-    }
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -100,8 +98,10 @@ export async function PATCH(
 
     return Response.json({ paciente: pacienteActualizado })
   } catch (error) {
-    console.error('Error en PATCH /api/pacientes/[id]:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en PATCH /api/pacientes/[id]:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -111,10 +111,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
-
-    if (!id) {
-      return Response.json({ error: 'ID de paciente requerido' }, { status: 400 })
-    }
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -194,7 +191,9 @@ export async function DELETE(
 
     return Response.json({ ok: true })
   } catch (error) {
-    console.error('Error en DELETE /api/pacientes/[id]:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en DELETE /api/pacientes/[id]:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { verificarSesionSuperadmin } from '@/lib/superadmin/auth'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // PATCH /api/superadmin/usuarios/[id]
 // Permite al superadmin activar o desactivar el modo médico (es_doctor) para
@@ -14,10 +15,7 @@ export async function PATCH(
   }
 
   const { id } = await params
-
-  if (!id) {
-    return Response.json({ error: 'ID de usuario requerido' }, { status: 400 })
-  }
+  if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
 
   let body: unknown
   try {

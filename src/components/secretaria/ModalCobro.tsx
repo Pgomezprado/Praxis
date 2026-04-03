@@ -225,6 +225,7 @@ export function ModalCobro({ open, onClose, cita, onCobrado }: ModalCobroProps) 
           <button
             onClick={onClose}
             disabled={loading}
+            aria-label="Cerrar modal de cobro"
             className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
             <X className="w-4 h-4" />
@@ -310,6 +311,7 @@ export function ModalCobro({ open, onClose, cita, onCobrado }: ModalCobroProps) 
                     value={arancelSeleccionado}
                     onChange={e => handleArancelChange(e.target.value)}
                     disabled={loading}
+                    aria-label="Tipo de prestación"
                     className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2.5 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="">Seleccionar prestación…</option>
@@ -337,6 +339,7 @@ export function ModalCobro({ open, onClose, cita, onCobrado }: ModalCobroProps) 
                     value={concepto}
                     onChange={e => setConcepto(e.target.value)}
                     disabled={loading}
+                    aria-label="Concepto del cobro"
                     placeholder="Ej: Consulta medicina general"
                     className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
@@ -353,6 +356,7 @@ export function ModalCobro({ open, onClose, cita, onCobrado }: ModalCobroProps) 
                   <input
                     type="text"
                     inputMode="numeric"
+                    aria-label="Monto en pesos chilenos"
                     value={monto ? parseInt(monto.replace(/\./g, ''), 10).toLocaleString('es-CL') : ''}
                     onChange={e => {
                       const raw = e.target.value.replace(/\./g, '').replace(/\D/g, '')
@@ -416,6 +420,7 @@ export function ModalCobro({ open, onClose, cita, onCobrado }: ModalCobroProps) 
                     value={referencia}
                     onChange={e => setReferencia(e.target.value)}
                     disabled={loading}
+                    aria-label="Número de voucher"
                     placeholder="Ej: 123456"
                     className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />

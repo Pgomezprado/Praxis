@@ -2,6 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { generarSlots } from '@/lib/agendamiento'
 import type { HorarioSemanal } from '@/types/domain'
 import { getClinicaSlugFromHost } from '@/lib/utils/getClinicaSlug'
+import { isValidUUID } from '@/lib/utils/validators'
 
 const DIA_KEYS: (keyof HorarioSemanal)[] = [
   'domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado',
@@ -24,6 +25,7 @@ export async function GET(
 ) {
   try {
     const { medicoId } = await params
+    if (!isValidUUID(medicoId)) return Response.json({ error: 'ID inválido' }, { status: 400 })
     const { searchParams } = new URL(req.url)
     const fecha = searchParams.get('fecha') // si se pide para una fecha específica
 
@@ -122,7 +124,9 @@ export async function GET(
 
     return Response.json({ fechasDisponibles })
   } catch (error) {
-    console.error('Error en GET /api/public/disponibilidad:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/public/disponibilidad:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

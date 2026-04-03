@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { PlanTratamiento } from '@/types/database'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // GET — lista planes de tratamiento del paciente
 export async function GET(
@@ -8,6 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ pacienteId: string }> }
 ) {
   const { pacienteId } = await params
+  if (!isValidUUID(pacienteId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -52,7 +54,9 @@ export async function GET(
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('Error al obtener planes:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error al obtener planes:', error)
+    }
     return NextResponse.json({ error: 'Error al obtener planes' }, { status: 500 })
   }
 
@@ -65,6 +69,7 @@ export async function POST(
   { params }: { params: Promise<{ pacienteId: string }> }
 ) {
   const { pacienteId } = await params
+  if (!isValidUUID(pacienteId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -125,7 +130,9 @@ export async function POST(
     .single()
 
   if (error) {
-    console.error('Error al crear plan:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error al crear plan:', error)
+    }
     return NextResponse.json({ error: 'Error al crear plan' }, { status: 500 })
   }
 

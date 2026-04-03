@@ -27,7 +27,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   const cronSecret = process.env.CRON_SECRET
 
   if (!cronSecret) {
-    console.error('[monitor-ia] CRON_SECRET no está configurado en las variables de entorno')
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[monitor-ia] CRON_SECRET no está configurado en las variables de entorno')
+    }
     return NextResponse.json(
       { error: 'Configuración incorrecta del servidor' },
       { status: 500 }
@@ -60,7 +62,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     .lte('created_at', hasta)
 
   if (error) {
-    console.error('[monitor-ia] Error al consultar audit_log:', error.message)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[monitor-ia] Error al consultar audit_log:', error.message)
+    }
     return NextResponse.json(
       { error: 'Error al consultar la base de datos' },
       { status: 500 }

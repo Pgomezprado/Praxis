@@ -124,6 +124,9 @@ export async function GET(req: NextRequest) {
 
     return Response.json({ clinicas: resultado })
   } catch (err) {
-    return Response.json({ error: `Error interno: ${err instanceof Error ? err.message : String(err)}` }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/superadmin/clinicas:', err)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

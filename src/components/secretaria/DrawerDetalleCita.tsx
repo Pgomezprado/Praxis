@@ -141,6 +141,7 @@ export function DrawerDetalleCita({
           </div>
           <button
             onClick={onClose}
+            aria-label="Cerrar detalle de cita"
             className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
             <X className="w-4 h-4" />

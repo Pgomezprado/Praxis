@@ -64,8 +64,10 @@ export async function GET() {
 
     return Response.json({ categorias })
   } catch (err) {
-    console.error('Error en GET /api/odontologia/catalogo:', err)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/odontologia/catalogo:', err)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -152,8 +154,9 @@ export async function POST(req: Request) {
 
     return Response.json({ arancel: data as ArancelDental }, { status: 201 })
   } catch (err) {
-    console.error('Error en POST /api/odontologia/catalogo:', err)
-    const msg = err instanceof Error ? err.message : 'Error interno'
-    return Response.json({ error: msg }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/odontologia/catalogo:', err)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

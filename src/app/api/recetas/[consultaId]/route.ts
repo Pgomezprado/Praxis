@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { MedicamentoReceta } from '../route'
+import { isValidUUID } from '@/lib/utils/validators'
 
 export interface RecetaDB {
   id: string
@@ -19,6 +20,7 @@ export async function GET(
 ) {
   try {
     const { consultaId } = await params
+    if (!isValidUUID(consultaId)) return Response.json({ error: 'ID inválido' }, { status: 400 })
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -49,7 +51,9 @@ export async function GET(
 
     return Response.json({ receta: (data as RecetaDB | null) ?? null })
   } catch (err) {
-    console.error('Error en GET /api/recetas/[consultaId]:', err)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/recetas/[consultaId]:', err)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

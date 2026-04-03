@@ -37,12 +37,15 @@ export async function GET(req: NextRequest) {
       .order('mes', { ascending: false })
 
     if (error) {
-      return Response.json({ error: error.message }, { status: 500 })
+      return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
     }
 
     return Response.json({ pagos: data as PagoRow[] | null ?? [] })
   } catch (err) {
-    return Response.json({ error: `Error interno: ${err instanceof Error ? err.message : String(err)}` }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/superadmin/pagos:', err)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -80,11 +83,14 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (error) {
-      return Response.json({ error: error.message }, { status: 500 })
+      return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
     }
 
     return Response.json({ pago: data }, { status: 201 })
   } catch (err) {
-    return Response.json({ error: `Error interno: ${err instanceof Error ? err.message : String(err)}` }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/superadmin/pagos:', err)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

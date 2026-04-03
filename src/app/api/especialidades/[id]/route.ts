@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isValidUUID } from '@/lib/utils/validators'
 
 type EspecialidadRow = {
   id: string
@@ -34,6 +35,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
     const { error, status, supabase, usuario } = await getAdminContext()
     if (error || !supabase || !usuario) {
       return Response.json({ error }, { status: status ?? 500 })
@@ -70,8 +72,10 @@ export async function PATCH(
 
     return Response.json({ especialidad: data as EspecialidadRow })
   } catch (error) {
-    console.error('Error en PATCH /api/especialidades/[id]:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en PATCH /api/especialidades/[id]:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -81,6 +85,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
     const { error, status, supabase, usuario } = await getAdminContext()
     if (error || !supabase || !usuario) {
       return Response.json({ error }, { status: status ?? 500 })
@@ -101,7 +106,9 @@ export async function DELETE(
 
     return Response.json({ ok: true })
   } catch (error) {
-    console.error('Error en DELETE /api/especialidades/[id]:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en DELETE /api/especialidades/[id]:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

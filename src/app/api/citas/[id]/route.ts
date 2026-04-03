@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isValidUUID } from '@/lib/utils/validators'
 
 const ESTADOS_VALIDOS = ['confirmada', 'pendiente', 'en_consulta', 'completada', 'cancelada'] as const
 type EstadoCita = typeof ESTADOS_VALIDOS[number]
@@ -9,6 +10,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
     const body = await req.json()
 
     const supabase = await createClient()
@@ -55,8 +57,10 @@ export async function PATCH(
 
     return Response.json({ cita })
   } catch (error) {
-    console.error('Error en PATCH /api/citas/[id]:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en PATCH /api/citas/[id]:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -66,6 +70,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -136,7 +141,9 @@ export async function DELETE(
 
     return Response.json({ ok: true })
   } catch (error) {
-    console.error('Error en DELETE /api/citas/[id]:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en DELETE /api/citas/[id]:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

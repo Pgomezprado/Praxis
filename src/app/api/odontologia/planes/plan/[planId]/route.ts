@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { PlanTratamiento, EstadoPlan } from '@/types/database'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // GET — obtiene plan con sus ítems
 export async function GET(
@@ -8,6 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ planId: string }> }
 ) {
   const { planId } = await params
+  if (!isValidUUID(planId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -64,6 +66,7 @@ export async function PUT(
   { params }: { params: Promise<{ planId: string }> }
 ) {
   const { planId } = await params
+  if (!isValidUUID(planId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -123,7 +126,9 @@ export async function PUT(
     .single()
 
   if (error) {
-    console.error('Error al actualizar plan:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error al actualizar plan:', error)
+    }
     return NextResponse.json({ error: 'Error al actualizar plan' }, { status: 500 })
   }
 
@@ -136,6 +141,7 @@ export async function DELETE(
   { params }: { params: Promise<{ planId: string }> }
 ) {
   const { planId } = await params
+  if (!isValidUUID(planId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -175,7 +181,9 @@ export async function DELETE(
     .eq('clinica_id', clinicaId)
 
   if (error) {
-    console.error('Error al eliminar plan:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error al eliminar plan:', error)
+    }
     return NextResponse.json({ error: 'Error al eliminar plan' }, { status: 500 })
   }
 

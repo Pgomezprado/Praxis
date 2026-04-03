@@ -137,7 +137,9 @@ export async function POST(req: Request) {
         .eq('id', cobro.id)
         .eq('clinica_id', meTyped.clinica_id)
 
-      console.error('Error al registrar pago (cobro anulado):', pagoError)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Error al registrar pago (cobro anulado):', pagoError)
+      }
       return Response.json({ error: 'Error al registrar el pago. El cobro fue revertido.' }, { status: 500 })
     }
 
@@ -163,7 +165,9 @@ export async function POST(req: Request) {
       { status: 201 }
     )
   } catch (error) {
-    console.error('Error en POST /api/finanzas/cobros/registrar:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/finanzas/cobros/registrar:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

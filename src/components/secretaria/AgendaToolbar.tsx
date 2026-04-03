@@ -70,6 +70,7 @@ export function AgendaToolbar({ citas, medicos, onNuevaCita, listPath = '/agenda
           <select
             value={medicoId}
             onChange={(e) => navigate(fecha, e.target.value)}
+            aria-label="Filtrar por profesional"
             className="flex-1 sm:flex-none sm:min-w-[220px] text-sm font-medium border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
           >
             <option value="">Todos los profesionales</option>
@@ -121,6 +122,7 @@ export function AgendaToolbar({ citas, medicos, onNuevaCita, listPath = '/agenda
             onClick={() =>
               router.push(buildUrl(listPath, fecha, medicoId))
             }
+            aria-label="Vista de lista"
             className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
               isListaView
                 ? 'bg-blue-600 text-white'
@@ -134,6 +136,7 @@ export function AgendaToolbar({ citas, medicos, onNuevaCita, listPath = '/agenda
             onClick={() =>
               router.push(buildUrl(semanaPath, fecha, medicoId))
             }
+            aria-label="Vista de semana"
             className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
               !isListaView
                 ? 'bg-blue-600 text-white'

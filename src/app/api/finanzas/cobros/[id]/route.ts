@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Cobro } from '@/types/database'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // GET /api/finanzas/cobros/[id] — detalle con pagos
 export async function GET(
@@ -8,6 +9,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -40,8 +42,10 @@ export async function GET(
 
     return Response.json({ cobro: data as unknown as Cobro })
   } catch (error) {
-    console.error('Error en GET /api/finanzas/cobros/[id]:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/finanzas/cobros/[id]:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -52,6 +56,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
     const body = await req.json()
     const { estado, notas } = body
 
@@ -113,7 +118,9 @@ export async function PATCH(
 
     return Response.json({ cobro: data as unknown as Cobro })
   } catch (error) {
-    console.error('Error en PATCH /api/finanzas/cobros/[id]:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en PATCH /api/finanzas/cobros/[id]:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

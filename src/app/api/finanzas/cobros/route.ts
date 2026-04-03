@@ -42,8 +42,10 @@ export async function GET(req: Request) {
 
     return Response.json({ cobros: data as unknown as Cobro[] })
   } catch (error) {
-    console.error('Error en GET /api/finanzas/cobros:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/finanzas/cobros:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -144,7 +146,9 @@ export async function POST(req: Request) {
 
     return Response.json({ cobro: data as unknown as Cobro }, { status: 201 })
   } catch (error) {
-    console.error('Error en POST /api/finanzas/cobros:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/finanzas/cobros:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

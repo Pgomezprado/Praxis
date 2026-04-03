@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Pago, Cobro } from '@/types/database'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // POST /api/finanzas/cobros/[id]/pagos — registrar un pago
 // Si la suma de pagos activos >= monto_neto, el cobro pasa a 'pagado'
@@ -9,6 +10,7 @@ export async function POST(
 ) {
   try {
     const { id: cobro_id } = await params
+    if (!isValidUUID(cobro_id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
     const body = await req.json()
     const { monto, medio_pago, referencia, fecha_pago } = body
 
@@ -122,7 +124,9 @@ export async function POST(
       { status: 201 }
     )
   } catch (error) {
-    console.error('Error en POST /api/finanzas/cobros/[id]/pagos:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/finanzas/cobros/[id]/pagos:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

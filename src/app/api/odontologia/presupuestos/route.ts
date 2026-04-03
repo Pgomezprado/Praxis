@@ -89,7 +89,9 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) {
-    console.error('Error al crear presupuesto:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error al crear presupuesto:', error)
+    }
     return NextResponse.json({ error: 'Error al crear presupuesto' }, { status: 500 })
   }
 

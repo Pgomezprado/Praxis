@@ -132,6 +132,7 @@ export function ModalCambioHora({ open, onClose, cita, medicos, onCambiado }: Mo
           </div>
           <button
             onClick={onClose}
+            aria-label="Cerrar panel de cambio de hora"
             className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
             <X className="w-4 h-4" />
@@ -166,6 +167,7 @@ export function ModalCambioHora({ open, onClose, cita, medicos, onCambiado }: Mo
             <div className="space-y-3">
               <input
                 type="date"
+                aria-label="Nueva fecha de la cita"
                 value={fecha}
                 min={getToday()}
                 onChange={(e) => setFecha(e.target.value)}
@@ -185,6 +187,7 @@ export function ModalCambioHora({ open, onClose, cita, medicos, onCambiado }: Mo
                         <button
                           key={s.hora}
                           disabled={!s.disponible}
+                          aria-label={s.disponible ? `Seleccionar hora ${s.hora}` : `Hora ${s.hora} no disponible`}
                           onClick={() => setSlot(s.hora)}
                           className={`py-2 rounded-xl text-sm font-medium transition-all ${
                             !s.disponible

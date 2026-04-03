@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest } from 'next/server'
 import { verificarSesionSuperadmin } from '@/lib/superadmin/auth'
+import { isValidUUID } from '@/lib/utils/validators'
 
 function getAdmin() {
   return createClient(
@@ -19,9 +20,7 @@ export async function POST(
 
   try {
     const { id } = await params
-    if (!id) {
-      return Response.json({ error: 'ID de usuario requerido' }, { status: 400 })
-    }
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
 
     const body = await req.json() as { emailNuevo?: string }
     const { emailNuevo } = body
@@ -76,7 +75,9 @@ export async function POST(
     if (errorTabla) {
       // Auth ya se actualizó — registrar en audit y continuar de todas formas
       // (la inconsistencia es menor; el campo de la tabla es solo referencia)
-      console.error('[email] Error actualizando tabla usuarios:', errorTabla.message)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[email] Error actualizando tabla usuarios:', errorTabla.message)
+      }
     }
 
     // 4. Reenviar invitación al nuevo correo para que el usuario establezca su sesión
@@ -114,8 +115,11 @@ export async function POST(
       ...(advertenciaInvite && { advertencia: advertenciaInvite }),
     })
   } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/superadmin/usuarios/[id]/email:', err)
+    }
     return Response.json(
-      { error: `Error interno: ${err instanceof Error ? err.message : String(err)}` },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     )
   }

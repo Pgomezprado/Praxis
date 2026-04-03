@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Resend } from 'resend'
+import { isValidUUID } from '@/lib/utils/validators'
 
 function escapeUrl(url: string): string {
   return url.replace(/"/g, '%22').replace(/'/g, '%27')
@@ -73,6 +74,7 @@ export async function POST(
 ) {
   try {
     const { id } = await params
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
 
     // Verificar sesión y rol
     const supabase = await createClient()
@@ -132,9 +134,11 @@ export async function POST(
         inviteError.message.toLowerCase().includes('registered')
 
       if (!isAlreadyRegistered) {
-        console.error('Error al reenviar invitación:', inviteError)
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Error al reenviar invitación:', inviteError)
+        }
         return Response.json(
-          { error: `No se pudo reenviar la invitación: ${inviteError.message}` },
+          { error: 'No se pudo reenviar la invitación' },
           { status: 500 }
         )
       }
@@ -151,7 +155,9 @@ export async function POST(
       if (!linkErrorInvite && linkDataInvite?.properties?.action_link) {
         actionLink = linkDataInvite.properties.action_link
       } else {
-        console.error('generateLink invite falló, intentando recovery:', linkErrorInvite?.message)
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('generateLink invite falló, intentando recovery:', linkErrorInvite?.message)
+        }
         const { data: linkDataRecovery, error: linkErrorRecovery } = await admin.auth.admin.generateLink({
           type: 'recovery',
           email: destinoTyped.email,
@@ -160,7 +166,9 @@ export async function POST(
         if (!linkErrorRecovery && linkDataRecovery?.properties?.action_link) {
           actionLink = linkDataRecovery.properties.action_link
         } else {
-          console.error('generateLink recovery también falló:', linkErrorRecovery?.message)
+          if (process.env.NODE_ENV !== 'production') {
+            console.error('generateLink recovery también falló:', linkErrorRecovery?.message)
+          }
         }
       }
 
@@ -180,7 +188,9 @@ export async function POST(
       })
 
       if (emailError) {
-        console.error('Error enviando email de invitación via Resend:', emailError)
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('Error enviando email de invitación via Resend:', emailError)
+        }
         return Response.json(
           { error: 'No se pudo enviar el correo de activación' },
           { status: 500 }
@@ -198,7 +208,9 @@ export async function POST(
       mensaje: `Invitación reenviada a ${destinoTyped.email}`,
     })
   } catch (error) {
-    console.error('Error en POST /api/usuarios/[id]/reenviar-invitacion:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/usuarios/[id]/reenviar-invitacion:', error)
+    }
     return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

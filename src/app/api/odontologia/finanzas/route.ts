@@ -136,7 +136,9 @@ export async function GET() {
     const respuesta: RespuestaFinanzasOdonto = { kpis, pendientes, recientes }
     return Response.json(respuesta)
   } catch (error) {
-    console.error('Error en GET /api/odontologia/finanzas:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/odontologia/finanzas:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

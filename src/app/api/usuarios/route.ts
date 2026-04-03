@@ -38,8 +38,10 @@ export async function GET(req: Request) {
 
     return Response.json({ usuarios: data })
   } catch (error) {
-    console.error('Error en GET /api/usuarios:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/usuarios:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -104,7 +106,7 @@ export async function POST(req: Request) {
         authError.message.toLowerCase().includes('exist')
 
       if (!isAlreadyRegistered) {
-        return Response.json({ error: authError.message }, { status: 400 })
+        return Response.json({ error: 'No se pudo registrar el usuario' }, { status: 400 })
       }
 
       // Buscar el usuario existente en auth
@@ -144,7 +146,9 @@ export async function POST(req: Request) {
 
     return Response.json({ usuario: nuevo }, { status: 201 })
   } catch (error) {
-    console.error('Error en POST /api/usuarios:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/usuarios:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

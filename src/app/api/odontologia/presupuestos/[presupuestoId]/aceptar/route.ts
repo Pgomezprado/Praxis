@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { PresupuestoDental } from '@/types/database'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // PUT — registra aceptación formal del paciente
 export async function PUT(
@@ -8,6 +9,7 @@ export async function PUT(
   { params }: { params: Promise<{ presupuestoId: string }> }
 ) {
   const { presupuestoId } = await params
+  if (!isValidUUID(presupuestoId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   const supabase = await createClient()
 
   // TODO: si se requiere aceptación por email sin login, implementar token firmado (HMAC-SHA256)
@@ -95,7 +97,9 @@ export async function PUT(
     .single()
 
   if (error) {
-    console.error('Error al aceptar presupuesto:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error al aceptar presupuesto:', error)
+    }
     return NextResponse.json({ error: 'Error al registrar aceptación' }, { status: 500 })
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { PlanTratamientoItem, EstadoPlanItem, EstadoDienteValor } from '@/types/database'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // Procedimientos que requieren consentimiento informado (Ley 20.584 Art. 14)
 const PALABRAS_INVASIVAS = [
@@ -21,6 +22,7 @@ export async function PUT(
   { params }: { params: Promise<{ itemId: string }> }
 ) {
   const { itemId } = await params
+  if (!isValidUUID(itemId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -119,7 +121,9 @@ export async function PUT(
     .single()
 
   if (error) {
-    console.error('Error al actualizar ítem:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error al actualizar ítem:', error)
+    }
     return NextResponse.json({ error: 'Error al actualizar ítem' }, { status: 500 })
   }
 

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // POST /api/paquetes/cuotas/[id]/pagar — marcar una cuota como pagada
 // recibe: { medio_pago: 'efectivo' | 'tarjeta' | 'transferencia' }
@@ -8,6 +9,7 @@ export async function POST(
 ) {
   try {
     const { id: cuotaId } = await params
+    if (!isValidUUID(cuotaId)) return Response.json({ error: 'ID inválido' }, { status: 400 })
     const body = await req.json().catch(() => ({}))
     const { medio_pago } = body as { medio_pago?: 'efectivo' | 'tarjeta' | 'transferencia' }
 
@@ -66,7 +68,9 @@ export async function POST(
 
     return Response.json({ cuota: cuotaActualizada })
   } catch (error) {
-    console.error('Error en POST /api/paquetes/cuotas/[id]/pagar:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/paquetes/cuotas/[id]/pagar:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

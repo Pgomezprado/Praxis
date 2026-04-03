@@ -1,8 +1,49 @@
-import { Suspense } from 'react'
+import { Suspense, cache } from 'react'
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { ElegirHoraClient } from '@/components/agendamiento/ElegirHoraClient'
 import type { HorarioSemanal } from '@/types/domain'
+import type { Metadata } from 'next'
+
+// cache() deduplica la query: si generateMetadata y el page body la llaman
+// con el mismo medicoId dentro del mismo render, Supabase solo recibe una request.
+const getMedico = cache(async (medicoId: string) => {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('usuarios')
+    .select('id, nombre, especialidad')
+    .eq('id', medicoId)
+    .eq('activo', true)
+    .single()
+  return data
+})
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ medicoId: string }>
+}): Promise<Metadata> {
+  const { medicoId } = await params
+  const medico = await getMedico(medicoId)
+
+  if (!medico) {
+    return { title: 'Agendar cita' }
+  }
+
+  const titulo = `Agendar con ${medico.nombre}`
+  const descripcion = medico.especialidad
+    ? `Reserva tu hora con ${medico.nombre}, ${medico.especialidad}. Elige el día y hora que más te acomoden.`
+    : `Reserva tu hora médica en línea con ${medico.nombre}.`
+
+  return {
+    title: titulo,
+    description: descripcion,
+    openGraph: {
+      title: `${titulo} | Praxis`,
+      description: descripcion,
+    },
+  }
+}
 
 export default async function ElegirHoraPage({
   params,
@@ -12,12 +53,7 @@ export default async function ElegirHoraPage({
   const { medicoId } = await params
   const supabase = createAdminClient()
 
-  const { data: medico } = await supabase
-    .from('usuarios')
-    .select('id, nombre, especialidad')
-    .eq('id', medicoId)
-    .eq('activo', true)
-    .single()
+  const medico = await getMedico(medicoId)
 
   if (!medico) notFound()
 

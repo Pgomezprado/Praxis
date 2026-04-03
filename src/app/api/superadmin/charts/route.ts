@@ -154,8 +154,11 @@ export async function GET(req: NextRequest) {
     })
 
   } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/superadmin/charts:', err)
+    }
     return Response.json(
-      { error: `Error interno: ${err instanceof Error ? err.message : String(err)}` },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     )
   }

@@ -29,8 +29,10 @@ export async function GET() {
 
     return Response.json({ horarios })
   } catch (error) {
-    console.error('Error en GET /api/horarios:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/horarios:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -82,7 +84,9 @@ export async function PUT(req: Request) {
 
     return Response.json({ horario: data })
   } catch (error) {
-    console.error('Error en PUT /api/horarios:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en PUT /api/horarios:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

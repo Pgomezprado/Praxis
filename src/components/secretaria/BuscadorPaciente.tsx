@@ -124,6 +124,7 @@ export function BuscadorPaciente({ value, onChange }: BuscadorPacienteProps) {
         </div>
         <button
           onClick={() => onChange(null)}
+          aria-label="Quitar paciente seleccionado"
           className="w-6 h-6 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-white transition-colors"
         >
           <X className="w-3.5 h-3.5" />
@@ -138,6 +139,7 @@ export function BuscadorPaciente({ value, onChange }: BuscadorPacienteProps) {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input
           type="text"
+          aria-label="Buscar paciente por nombre o RUT"
           placeholder="Buscar por nombre o RUT…"
           value={query}
           onChange={(e) => { setQuery(e.target.value); setOpen(true); setCreandoNuevo(false) }}
@@ -159,6 +161,7 @@ export function BuscadorPaciente({ value, onChange }: BuscadorPacienteProps) {
                 <input
                   key={key}
                   type={type}
+                  aria-label={label}
                   placeholder={`${label}${required ? ' *' : ''}`}
                   value={nuevo[key as keyof NuevoPacienteForm]}
                   onChange={(e) => setNuevo((prev) => ({ ...prev, [key]: e.target.value }))}
@@ -168,6 +171,7 @@ export function BuscadorPaciente({ value, onChange }: BuscadorPacienteProps) {
               <div>
                 <input
                   type="text"
+                  aria-label="RUT del nuevo paciente"
                   placeholder="RUT *"
                   value={nuevo.rut}
                   onChange={(e) => handleRutNuevo(e.target.value)}
@@ -201,6 +205,7 @@ export function BuscadorPaciente({ value, onChange }: BuscadorPacienteProps) {
                     <li key={p.id}>
                       <button
                         onClick={() => handleSelectPaciente(p)}
+                        aria-label={`Seleccionar paciente ${p.nombre}, RUT ${p.rut}`}
                         className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 transition-colors text-left"
                       >
                         <Avatar nombre={p.nombre} size="sm" />

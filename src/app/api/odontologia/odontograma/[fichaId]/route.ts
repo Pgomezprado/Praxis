@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { OdontogramaEstado, EstadoDiente } from '@/types/database'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // GET — retorna el estado actual de cada diente (último registro por numero_pieza)
 export async function GET(
@@ -8,6 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ fichaId: string }> }
 ) {
   const { fichaId } = await params
+  if (!isValidUUID(fichaId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()

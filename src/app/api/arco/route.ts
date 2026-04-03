@@ -146,7 +146,9 @@ export async function POST(req: Request) {
       .insert({ nombre, rut, email, tipo, descripcion, ip_origen: ip !== 'unknown' ? ip : null })
 
     if (dbError) {
-      console.error('Error al persistir solicitud ARCO:', dbError)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Error al persistir solicitud ARCO:', dbError)
+      }
       return Response.json(
         { error: 'No fue posible registrar tu solicitud. Intenta nuevamente o escríbenos a privacidad@praxisapp.cl' },
         { status: 500 }
@@ -164,7 +166,9 @@ export async function POST(req: Request) {
 
     return Response.json({ success: true })
   } catch (error) {
-    console.error('Error en POST /api/arco:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/arco:', error)
+    }
     return Response.json({ error: 'Error interno. Intenta nuevamente o escríbenos a privacidad@praxisapp.cl' }, { status: 500 })
   }
 }

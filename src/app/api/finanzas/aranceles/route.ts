@@ -27,8 +27,10 @@ export async function GET() {
 
     return Response.json({ aranceles: data as Arancel[] })
   } catch (error) {
-    console.error('Error en GET /api/finanzas/aranceles:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en GET /api/finanzas/aranceles:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -80,11 +82,9 @@ export async function POST(req: Request) {
 
     return Response.json({ arancel: data as Arancel }, { status: 201 })
   } catch (error) {
-    console.error('Error en POST /api/finanzas/aranceles:', error)
-    const msg =
-      error instanceof Error
-        ? error.message
-        : (error as { message?: string })?.message ?? 'Error interno'
-    return Response.json({ error: msg }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/finanzas/aranceles:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

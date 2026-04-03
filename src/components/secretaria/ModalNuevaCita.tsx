@@ -224,6 +224,7 @@ export function ModalNuevaCita({
           <h2 className="text-base font-bold text-slate-900">Nueva cita</h2>
           <button
             onClick={onClose}
+            aria-label="Cerrar formulario de nueva cita"
             className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
             <X className="w-4 h-4" />
@@ -245,6 +246,7 @@ export function ModalNuevaCita({
             <select
               value={medicoId}
               onChange={(e) => setMedicoId(e.target.value)}
+              aria-label="Seleccionar profesional"
               className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             >
               <option value="">Selecciona un médico</option>
@@ -272,6 +274,7 @@ export function ModalNuevaCita({
             <div className="space-y-3">
               <input
                 type="date"
+                aria-label="Fecha de la cita"
                 value={fecha}
                 min={getToday()}
                 onChange={(e) => setFecha(e.target.value)}
@@ -286,6 +289,7 @@ export function ModalNuevaCita({
                     <button
                       key={d}
                       type="button"
+                      aria-label={`Duración ${d} minutos`}
                       onClick={() => setDuracion(d)}
                       className={`py-2 rounded-xl text-xs font-medium transition-all ${
                         duracion === d
@@ -313,6 +317,7 @@ export function ModalNuevaCita({
                           <button
                             key={s.hora}
                             disabled={!s.disponible}
+                            aria-label={s.disponible ? `Seleccionar hora ${s.hora}` : `Hora ${s.hora} no disponible`}
                             onClick={() => { setSlot(s.hora); setHoraManual('') }}
                             className={`py-2 rounded-xl text-sm font-medium transition-all ${
                               !s.disponible
@@ -334,6 +339,7 @@ export function ModalNuevaCita({
                     <p className="text-xs font-medium text-slate-500 mb-2">O ingresa la hora manualmente</p>
                     <input
                       type="time"
+                      aria-label="Hora de inicio de la cita"
                       value={horaManual}
                       onChange={(e) => { setHoraManual(e.target.value); setSlot('') }}
                       className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -349,6 +355,7 @@ export function ModalNuevaCita({
             <SectionHeader icon={FileText} label="Detalles" />
             <div className="space-y-3">
               <textarea
+                aria-label="Motivo de consulta"
                 placeholder="Motivo de consulta (opcional)"
                 value={motivo}
                 onChange={(e) => setMotivo(e.target.value)}

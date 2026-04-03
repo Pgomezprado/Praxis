@@ -117,7 +117,9 @@ export async function POST(req: Request) {
 
     return Response.json({ rol: usuario?.rol ?? 'recepcionista' })
   } catch (error) {
-    console.error('Error en POST /api/activar-cuenta:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/activar-cuenta:', error)
+    }
     return Response.json({ error: 'Error al crear la contraseña' }, { status: 500 })
   }
 }

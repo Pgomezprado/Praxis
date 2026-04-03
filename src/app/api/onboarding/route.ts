@@ -78,7 +78,9 @@ async function crearAdminEnClinica(
       try {
         await adminClient.auth.admin.deleteUser(userId)
       } catch (rollbackErr) {
-        console.error('[onboarding] error al revertir usuario en Auth:', rollbackErr)
+        if (process.env.NODE_ENV !== 'production') {
+          console.error('[onboarding] error al revertir usuario en Auth:', rollbackErr)
+        }
       }
     }
     return { ok: false, error: usuarioError.message }
@@ -192,7 +194,9 @@ export async function POST(req: Request) {
     for (const adminExtra of admins.slice(1)) {
       const resultado = await crearAdminEnClinica(adminClient, clinica.id, adminExtra, appUrl)
       if (!resultado.ok) {
-        console.error(`[onboarding] error al crear admin adicional ${adminExtra.email}:`, resultado.error)
+        if (process.env.NODE_ENV !== 'production') {
+          console.error(`[onboarding] error al crear admin adicional ${adminExtra.email}:`, resultado.error)
+        }
         adminsAdicionales.push({ nombre: adminExtra.nombre, email: adminExtra.email, error: resultado.error })
       } else {
         adminsAdicionales.push({ nombre: adminExtra.nombre, email: adminExtra.email })
@@ -211,7 +215,9 @@ export async function POST(req: Request) {
       }),
     })
   } catch (err) {
-    console.error('[onboarding] error:', err)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('[onboarding] error:', err)
+    }
     return Response.json({ error: 'Error interno. Contacta al administrador.' }, { status: 500 })
   }
 }

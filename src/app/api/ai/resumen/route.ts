@@ -28,9 +28,11 @@ export async function POST(req: Request) {
     }
 
     // Cargar paciente filtrando por clinica_id del usuario autenticado — aislamiento multitenant
+    // Las consultas se cargan en query separada con filtro explícito de clinica_id
+    // para garantizar el aislamiento a nivel de aplicación, independiente de RLS.
     const { data: paciente } = await supabase
       .from('pacientes')
-      .select('*, consultas(*)')
+      .select('id, fecha_nac, sexo, grupo_sang, alergias, condiciones, clinica_id')
       .eq('id', pacienteId)
       .eq('clinica_id', usuario.clinica_id)
       .single()
@@ -38,6 +40,16 @@ export async function POST(req: Request) {
     if (!paciente) {
       return Response.json({ error: 'Paciente no encontrado' }, { status: 404 })
     }
+
+    // Query separada para consultas con doble filtro: paciente_id + clinica_id explícito
+    // Esto garantiza que nunca se exponen consultas de otra clínica aunque el join fallara.
+    const { data: consultas } = await supabase
+      .from('consultas')
+      .select('motivo, diagnostico, fecha')
+      .eq('paciente_id', pacienteId)
+      .eq('clinica_id', usuario.clinica_id)
+      .order('fecha', { ascending: false })
+      .limit(3)
 
     // Verificar que el paciente consintió el uso de IA (Ley 19.628 Art. 4)
     // Se busca la cita más reciente con consentimiento_ia = true, dentro de la misma clínica
@@ -88,16 +100,13 @@ export async function POST(req: Request) {
       ? paciente.condiciones.join(', ')
       : 'sin condiciones crónicas'
 
-    const consultas = paciente.consultas as Array<{motivo?: string; diagnostico?: string; fecha: string}> | null
-
     // Si no hay consultas previas, no llamar a Anthropic
+    // consultas ya está ordenada por fecha desc y limitada a 3 desde la query
     if (!consultas || consultas.length === 0) {
       return Response.json({ resumen: null, sin_historial: true })
     }
 
-    const ultimasConsultas = consultas
-      .sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime())
-      .slice(0, 3)
+    const ultimasConsultas = (consultas as Array<{motivo?: string; diagnostico?: string; fecha: string}>)
       .map((c) => `- ${c.motivo ?? 'Sin motivo'}: ${c.diagnostico ?? 'Sin diagnóstico'}`)
       .join('\n')
 
@@ -125,7 +134,9 @@ Incluye alertas de seguridad prominentes si hay alergias. Sé directo y clínico
 
     return Response.json({ resumen })
   } catch (error) {
-    console.error('Error en /api/ai/resumen:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en /api/ai/resumen:', error)
+    }
     return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

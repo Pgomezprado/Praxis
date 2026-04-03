@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // POST /api/paquetes/paciente/[id]/sesion — consumir una sesión del paquete
 // Se llama cuando una cita es atendida y el paciente tiene paquete activo.
@@ -9,6 +10,7 @@ export async function POST(
 ) {
   try {
     const { id: paqueteId } = await params
+    if (!isValidUUID(paqueteId)) return Response.json({ error: 'ID inválido' }, { status: 400 })
     const body = await req.json().catch(() => ({}))
     const { cita_id } = body as { cita_id?: string }
 
@@ -112,7 +114,9 @@ export async function POST(
         : null,
     }, { status: 201 })
   } catch (error) {
-    console.error('Error en POST /api/paquetes/paciente/[id]/sesion:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/paquetes/paciente/[id]/sesion:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

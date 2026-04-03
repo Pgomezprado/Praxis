@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { isValidUUID } from '@/lib/utils/validators'
 
 export async function PATCH(
   req: Request,
@@ -6,6 +7,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
     const body = await req.json()
 
     const supabase = await createClient()
@@ -51,7 +53,9 @@ export async function PATCH(
 
     return Response.json({ usuario: data })
   } catch (error) {
-    console.error('Error en PATCH /api/usuarios/[id]:', error)
-    return Response.json({ error: 'Error interno' }, { status: 500 })
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en PATCH /api/usuarios/[id]:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextRequest } from 'next/server'
 import { Resend } from 'resend'
 import { verificarSesionSuperadmin } from '@/lib/superadmin/auth'
+import { isValidUUID } from '@/lib/utils/validators'
 
 function getAdmin() {
   return createClient(
@@ -120,9 +121,7 @@ export async function POST(
 
   try {
     const { id } = await params
-    if (!id) {
-      return Response.json({ error: 'ID de usuario requerido' }, { status: 400 })
-    }
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
 
     const supabase = getAdmin()
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://praxisapp.cl'
@@ -203,7 +202,9 @@ export async function POST(
     })
 
     if (emailError) {
-      console.error('[enviar-acceso] Error enviando email via Resend:', emailError)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[enviar-acceso] Error enviando email via Resend:', emailError)
+      }
       return Response.json(
         { error: 'No se pudo enviar el correo' },
         { status: 500 }
@@ -215,8 +216,11 @@ export async function POST(
       tipo: esRecuperacion ? 'recuperacion' : 'invitacion',
     })
   } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/superadmin/usuarios/[id]/enviar-acceso:', err)
+    }
     return Response.json(
-      { error: `Error interno: ${err instanceof Error ? err.message : String(err)}` },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     )
   }

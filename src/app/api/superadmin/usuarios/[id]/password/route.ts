@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest } from 'next/server'
 import { verificarSesionSuperadmin } from '@/lib/superadmin/auth'
+import { isValidUUID } from '@/lib/utils/validators'
 
 function getAdmin() {
   return createClient(
@@ -19,9 +20,7 @@ export async function POST(
 
   try {
     const { id } = await params
-    if (!id) {
-      return Response.json({ error: 'ID de usuario requerido' }, { status: 400 })
-    }
+    if (!isValidUUID(id)) return Response.json({ error: 'ID inválido' }, { status: 400 })
 
     const body = await req.json() as { password?: string }
     const { password } = body
@@ -49,7 +48,9 @@ export async function POST(
     })
 
     if (errorUpdate) {
-      console.error('[password] Error actualizando contraseña:', errorUpdate.message)
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('[password] Error actualizando contraseña:', errorUpdate.message)
+      }
       return Response.json(
         { error: 'No se pudo actualizar la contraseña' },
         { status: 500 }
@@ -82,8 +83,11 @@ export async function POST(
 
     return Response.json({ ok: true })
   } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en POST /api/superadmin/usuarios/[id]/password:', err)
+    }
     return Response.json(
-      { error: `Error interno: ${err instanceof Error ? err.message : String(err)}` },
+      { error: 'Error interno del servidor' },
       { status: 500 }
     )
   }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { EstadoDienteValor, MaterialDiente, OdontogramaEstado, SuperficiesDiente } from '@/types/database'
+import { isValidUUID } from '@/lib/utils/validators'
 
 // POST — inserta un nuevo estado para un diente
 export async function POST(
@@ -8,6 +9,7 @@ export async function POST(
   { params }: { params: Promise<{ fichaId: string }> }
 ) {
   const { fichaId } = await params
+  if (!isValidUUID(fichaId)) return NextResponse.json({ error: 'ID inválido' }, { status: 400 })
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -133,7 +135,9 @@ export async function POST(
     .single()
 
   if (error) {
-    console.error('Error al guardar estado diente:', error)
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error al guardar estado diente:', error)
+    }
     return NextResponse.json({ error: 'Error al guardar estado' }, { status: 500 })
   }
 
