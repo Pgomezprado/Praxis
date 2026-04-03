@@ -124,6 +124,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  supabaseResponse.headers.set('x-pathname', pathname)
   return supabaseResponse
 }
 
