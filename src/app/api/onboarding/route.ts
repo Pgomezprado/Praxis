@@ -157,6 +157,9 @@ export async function POST(req: Request) {
         hora_apertura: '08:00',
         hora_cierre: '18:00',
         tipo_especialidad: (tipoEspecialidad as string) ?? 'medicina_general',
+        modulos_activos: tipoEspecialidad === 'veterinaria'
+          ? { veterinaria: true }
+          : {},
       })
       .select()
       .single()

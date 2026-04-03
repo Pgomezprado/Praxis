@@ -283,7 +283,7 @@ export interface SesionPaquete {
 
 // ── Odontología ────────────────────────────────────────────────────────────────
 
-export type TipoEspecialidad = 'medicina_general' | 'odontologia' | 'mixta'
+export type TipoEspecialidad = 'medicina_general' | 'odontologia' | 'mixta' | 'veterinaria'
 
 export type EstadoDienteValor =
   | 'sano'
@@ -422,6 +422,67 @@ export interface ConsentimientoOdontologico {
   metodo: string // 'verbal_registrado' | 'escrito_fisico' | 'digital'
   doctor_id: string
   created_at: string
+}
+
+// ── Veterinaria ────────────────────────────────────────────────────────────────
+
+export type EspecieMascota = 'perro' | 'gato' | 'conejo' | 'ave' | 'otro'
+
+export interface Tutor {
+  id: string
+  clinica_id: string
+  nombre: string
+  rut: string | null
+  telefono: string | null
+  email: string | null
+  direccion: string | null
+  notas: string | null
+  activo: boolean
+  created_at: string
+  updated_at: string
+  // Join opcional
+  mascotas?: Pick<Mascota, 'id' | 'nombre' | 'especie' | 'activo'>[]
+}
+
+export interface Mascota {
+  id: string
+  clinica_id: string
+  tutor_id: string
+  nombre: string
+  especie: EspecieMascota
+  raza: string | null
+  fecha_nacimiento: string | null
+  peso_kg: number | null
+  color: string | null
+  chip_numero: string | null
+  notas_clinicas: string | null
+  activo: boolean
+  created_at: string
+  updated_at: string
+  // Joins opcionales
+  tutor?: Pick<Tutor, 'id' | 'nombre' | 'telefono' | 'email'>
+  consultas_vet?: ConsultaVet[]
+}
+
+export interface ConsultaVet {
+  id: string
+  clinica_id: string
+  mascota_id: string
+  veterinario_id: string
+  fecha: string
+  motivo: string
+  examen_fisico: string | null
+  diagnostico: string | null
+  tratamiento: string | null
+  peso_kg: number | null
+  temperatura: number | null
+  notas: string | null
+  activo: boolean
+  created_at: string
+  updated_at: string
+  // Joins opcionales
+  veterinario?: Pick<Usuario, 'id' | 'nombre' | 'especialidad'>
+  mascota?: Pick<Mascota, 'id' | 'nombre' | 'especie'>
 }
 
 export type Database = {

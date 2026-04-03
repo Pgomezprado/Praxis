@@ -47,7 +47,7 @@ export function FormularioArco() {
         <CheckCircle2 className="w-10 h-10 text-green-500" />
         <p className="text-base font-semibold text-slate-800">Solicitud enviada</p>
         <p className="text-sm text-slate-500 max-w-sm">
-          Recibimos tu solicitud y te responderemos al correo indicado en un plazo de 10 días hábiles.
+          Recibimos tu solicitud y te responderemos al correo indicado en un plazo de 30 días hábiles.
         </p>
       </div>
     )

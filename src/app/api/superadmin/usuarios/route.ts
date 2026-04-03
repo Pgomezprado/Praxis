@@ -19,6 +19,7 @@ type UsuarioRow = {
   email: string
   rol: string
   activo: boolean
+  es_doctor: boolean
   created_at: string
   clinica_id: string
   clinicas: { nombre: string } | { nombre: string }[] | null
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
     const supabase = getAdmin()
     const { data, error } = await supabase
       .from('usuarios')
-      .select('id, nombre, email, rol, activo, created_at, clinica_id, clinicas(nombre)')
+      .select('id, nombre, email, rol, activo, es_doctor, created_at, clinica_id, clinicas(nombre)')
       .order('created_at', { ascending: false })
 
     if (error) {

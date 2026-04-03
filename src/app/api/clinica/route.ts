@@ -36,12 +36,25 @@ export async function PUT(req: Request) {
   const {
     nombre, rut, direccion, ciudad, telefono, email,
     timezone, dias_agenda_adelante, hora_apertura, hora_cierre,
-    tipo_especialidad,
+    tipo_especialidad, modulos_activos,
   } = body
 
   const TIPOS_VALIDOS = ['medicina_general', 'odontologia', 'mixta']
   if (tipo_especialidad !== undefined && !TIPOS_VALIDOS.includes(tipo_especialidad as string)) {
     return Response.json({ error: 'Tipo de especialidad no válido' }, { status: 400 })
+  }
+
+  // modulos_activos debe ser un objeto plano con valores booleanos
+  if (modulos_activos !== undefined) {
+    if (typeof modulos_activos !== 'object' || Array.isArray(modulos_activos)) {
+      return Response.json({ error: 'modulos_activos debe ser un objeto' }, { status: 400 })
+    }
+    const MODULOS_PERMITIDOS = ['veterinaria']
+    for (const key of Object.keys(modulos_activos as Record<string, unknown>)) {
+      if (!MODULOS_PERMITIDOS.includes(key)) {
+        return Response.json({ error: `Módulo no reconocido: ${key}` }, { status: 400 })
+      }
+    }
   }
 
   const supabase = await createClient()
@@ -59,6 +72,7 @@ export async function PUT(req: Request) {
       ...(hora_apertura !== undefined && { hora_apertura }),
       ...(hora_cierre !== undefined && { hora_cierre }),
       ...(tipo_especialidad !== undefined && { tipo_especialidad }),
+      ...(modulos_activos !== undefined && { modulos_activos }),
     })
     .eq('id', me.clinica_id)
     .select('id, nombre, slug, rut, direccion, ciudad, telefono, email, logo_url, timezone, dias_agenda_adelante, hora_apertura, hora_cierre')

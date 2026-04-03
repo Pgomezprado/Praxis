@@ -106,6 +106,7 @@ type UsuarioData = {
   email: string
   rol: string
   activo: boolean
+  es_doctor: boolean
   created_at: string
   clinica_id: string
   clinicas: { nombre: string } | null
@@ -1642,6 +1643,7 @@ function TabUsuarios({
 }) {
   const [filtroClinica, setFiltroClinica] = useState('')
   const [cambiandoId, setCambiandoId] = useState<string | null>(null)
+  const [cambiandoEsDoctorId, setCambiandoEsDoctorId] = useState<string | null>(null)
   const [enviandoId, setEnviandoId] = useState<string | null>(null)
   const [feedbackEnvio, setFeedbackEnvio] = useState<Record<string, { ok: boolean; msg: string }>>({})
   const [modalEmail, setModalEmail] = useState<UsuarioData | null>(null)
@@ -1695,6 +1697,24 @@ function TabUsuarios({
     }
   }
 
+  async function toggleEsDoctor(usuario: UsuarioData) {
+    setCambiandoEsDoctorId(usuario.id)
+    try {
+      const nuevoValor = !usuario.es_doctor
+      const res = await fetch(`/api/superadmin/usuarios/${usuario.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ es_doctor: nuevoValor }),
+      })
+      const data = await res.json() as { usuario?: UsuarioData; error?: string }
+      if (res.ok && data.usuario) {
+        onActualizado({ ...usuario, es_doctor: nuevoValor })
+      }
+    } finally {
+      setCambiandoEsDoctorId(null)
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Filtro por clínica */}
@@ -1745,7 +1765,7 @@ function TabUsuarios({
                     <td className="py-3 px-4 text-slate-500 text-xs whitespace-nowrap">{formatFecha(u.created_at)}</td>
                     <td className="py-3 px-4">
                       <div className="flex flex-col gap-1.5">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
                           <button
                             onClick={() => toggleActivo(u)}
                             disabled={cambiandoId === u.id}
@@ -1783,6 +1803,21 @@ function TabUsuarios({
                             <Pencil className="w-3.5 h-3.5" />
                             Editar correo
                           </button>
+                          {u.rol === 'admin_clinica' && (
+                            <button
+                              onClick={() => toggleEsDoctor(u)}
+                              disabled={cambiandoEsDoctorId === u.id}
+                              title={u.es_doctor ? 'Desactivar modo médico' : 'Activar modo médico'}
+                              className={`text-xs font-medium transition-colors flex items-center gap-1 whitespace-nowrap disabled:opacity-50 ${
+                                u.es_doctor
+                                  ? 'text-teal-400 hover:text-teal-300'
+                                  : 'text-slate-400 hover:text-teal-400'
+                              }`}
+                            >
+                              {cambiandoEsDoctorId === u.id ? <Spinner /> : <Stethoscope className="w-3.5 h-3.5" />}
+                              {u.es_doctor ? 'Modo médico: ON' : 'Modo médico: OFF'}
+                            </button>
+                          )}
                         </div>
                         {feedbackEnvio[u.id] && (
                           <span className={`text-xs ${feedbackEnvio[u.id].ok ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -1857,6 +1892,20 @@ function TabUsuarios({
                     {cambiandoId === u.id ? <Spinner /> : null}
                     {u.activo ? 'Desactivar' : 'Activar'}
                   </button>
+                  {u.rol === 'admin_clinica' && (
+                    <button
+                      onClick={() => toggleEsDoctor(u)}
+                      disabled={cambiandoEsDoctorId === u.id}
+                      className={`text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-50 flex items-center gap-1 ${
+                        u.es_doctor
+                          ? 'border-teal-500/30 text-teal-400 hover:bg-teal-500/10'
+                          : 'border-slate-500/30 text-slate-400 hover:bg-slate-500/10'
+                      }`}
+                    >
+                      {cambiandoEsDoctorId === u.id ? <Spinner /> : <Stethoscope className="w-3 h-3" />}
+                      {u.es_doctor ? 'Médico: ON' : 'Médico: OFF'}
+                    </button>
+                  )}
                 </div>
               </div>
               {feedbackEnvio[u.id] && (
@@ -1903,7 +1952,7 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
   const [clinicaNombre, setClinicaNombre] = useState('')
   const [clinicaCiudad, setClinicaCiudad] = useState('')
   const [clinicaSlug, setClinicaSlug] = useState('')
-  const [tipoEspecialidad, setTipoEspecialidad] = useState<'medicina_general' | 'odontologia' | 'mixta'>('medicina_general')
+  const [tipoEspecialidad, setTipoEspecialidad] = useState<'medicina_general' | 'odontologia' | 'mixta' | 'veterinaria'>('medicina_general')
   const [admins, setAdmins] = useState<AdminFormItem[]>([{ nombre: '', email: '', rut: '' }])
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
@@ -2106,12 +2155,13 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
               <label className="block text-sm text-slate-300 mb-1.5">Especialidad</label>
               <select
                 value={tipoEspecialidad}
-                onChange={e => setTipoEspecialidad(e.target.value as 'medicina_general' | 'odontologia' | 'mixta')}
+                onChange={e => setTipoEspecialidad(e.target.value as 'medicina_general' | 'odontologia' | 'mixta' | 'veterinaria')}
                 className="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="medicina_general">Medicina general</option>
                 <option value="odontologia">Odontología</option>
                 <option value="mixta">Mixta (profesional + dental)</option>
+                <option value="veterinaria">Veterinaria</option>
               </select>
             </div>
           </div>

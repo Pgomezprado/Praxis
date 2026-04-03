@@ -101,12 +101,12 @@ export async function verificarSesionSuperadmin(req: Request): Promise<boolean> 
         .gt('expires_at', new Date().toISOString())
         .maybeSingle()
 
-      // Si la tabla no existe o hay un error de DB, confiar en el HMAC (ya verificado arriba)
-      if (error) return true
+      // Si hay error de DB, denegar acceso (falla cerrada)
+      if (error) return false
       return data !== null
     } catch {
-      // Si el check de DB falla por cualquier razón, confiar en el HMAC
-      return true
+      // Si el check de DB falla por cualquier razón, denegar acceso (falla cerrada)
+      return false
     }
 
   } catch {

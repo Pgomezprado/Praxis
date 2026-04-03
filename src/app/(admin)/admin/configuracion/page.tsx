@@ -13,7 +13,7 @@ export default async function AdminConfiguracionPage() {
   const [{ data: clinicaDb }, { data: adminDb }] = await Promise.all([
     supabase
     .from('clinicas')
-    .select('id, nombre, rut, direccion, ciudad, telefono, email, logo_url, timezone, dias_agenda_adelante, hora_apertura, hora_cierre, tipo_especialidad')
+    .select('id, nombre, rut, direccion, ciudad, telefono, email, logo_url, timezone, dias_agenda_adelante, hora_apertura, hora_cierre, tipo_especialidad, modulos_activos')
     .eq('id', me.clinica_id)
     .single(),
     supabase
@@ -39,6 +39,9 @@ export default async function AdminConfiguracionPage() {
     tipoEspecialidad: (clinicaDb as { tipo_especialidad?: string } | null)?.tipo_especialidad as 'medicina_general' | 'odontologia' | 'mixta' ?? 'medicina_general',
   }
 
+  const modulosActivosInicial =
+    ((clinicaDb as { modulos_activos?: Record<string, boolean> } | null)?.modulos_activos) ?? {}
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
@@ -53,6 +56,7 @@ export default async function AdminConfiguracionPage() {
         adminId={me.id}
         adminEsDoctor={(adminDb as { es_doctor?: boolean } | null)?.es_doctor ?? false}
         adminEspecialidad={(adminDb as { especialidad?: string } | null)?.especialidad ?? ''}
+        modulosActivosInicial={modulosActivosInicial}
       />
     </div>
   )

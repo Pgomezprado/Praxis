@@ -66,8 +66,14 @@ export async function middleware(request: NextRequest) {
   // Si la cookie no es válida, la page muestra su propio formulario de login —
   // no se redirige porque /superadmin ES el punto de entrada del panel.
   if (isSuperadminPage) {
-    // Verificación usando el módulo compartido (Web Crypto API — compatible con Edge Runtime)
-    await verificarSesionSuperadmin(request)
+    // Verificación usando el módulo compartido (Web Crypto API — compatible con Edge Runtime).
+    // La ruta raíz /superadmin siempre pasa — la página renderiza su propio formulario de login
+    // cuando la sesión no es válida (autenticación client-side con cookie HMAC).
+    // Sub-rutas bajo /superadmin/ (si existen en el futuro) quedan protegidas por la redirección.
+    const sesionValida = await verificarSesionSuperadmin(request)
+    if (!sesionValida && pathname !== '/superadmin' && pathname !== '/superadmin/') {
+      return NextResponse.redirect(new URL('/superadmin', request.url))
+    }
     return supabaseResponse
   }
 

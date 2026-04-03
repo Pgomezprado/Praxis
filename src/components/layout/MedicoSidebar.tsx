@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { LayoutDashboard, CalendarDays, LogOut, Stethoscope, ShieldCheck, BookOpen, DollarSign, Users, X } from 'lucide-react'
+import { LayoutDashboard, CalendarDays, LogOut, Stethoscope, ShieldCheck, BookOpen, DollarSign, Users, PawPrint, X } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 
 interface MedicoSidebarProps {
@@ -12,10 +12,11 @@ interface MedicoSidebarProps {
   especialidad?: string
   esAdmin?: boolean
   tieneOdontologia?: boolean
+  esVeterinaria?: boolean
   onClose?: () => void
 }
 
-export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false, tieneOdontologia = false, onClose }: MedicoSidebarProps) {
+export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false, tieneOdontologia = false, esVeterinaria = false, onClose }: MedicoSidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -23,7 +24,11 @@ export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false,
   const navItems = [
     { href: '/medico/inicio',    label: 'Inicio',      icon: LayoutDashboard, exact: true  },
     { href: '/medico/citas',     label: 'Mis citas',   icon: CalendarDays,    exact: false },
-    { href: '/medico/pacientes', label: 'Pacientes',   icon: Users,           exact: false },
+    // En clínicas veterinarias se muestra "Mascotas" en lugar de "Pacientes"
+    ...(esVeterinaria
+      ? [{ href: '/medico/veterinaria', label: 'Mascotas', icon: PawPrint, exact: false }]
+      : [{ href: '/medico/pacientes',   label: 'Pacientes', icon: Users,    exact: false }]
+    ),
     ...(tieneOdontologia ? [
       { href: '/medico/odontologia/catalogo', label: 'Catálogo dental', icon: BookOpen,    exact: false },
       { href: '/medico/odontologia/finanzas', label: 'Finanzas',        icon: DollarSign,  exact: false },

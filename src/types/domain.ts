@@ -36,6 +36,8 @@ export type MockMedicoAdmin = {
   estado: 'activo' | 'inactivo'
   citasMes: number
   invitacionPendiente: boolean
+  // Campo agregado para distinguir admin-doctor del doctor puro
+  esAdmin?: boolean
 }
 
 export type MockSecretaria = {

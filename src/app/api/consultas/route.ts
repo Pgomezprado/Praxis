@@ -58,6 +58,20 @@ export async function POST(req: Request) {
       return Response.json({ error: 'paciente_id y motivo son requeridos' }, { status: 400 })
     }
 
+    // Validaciones de longitud máxima
+    if (typeof motivo === 'string' && motivo.length > 500) {
+      return Response.json({ error: 'El motivo no puede superar los 500 caracteres' }, { status: 400 })
+    }
+    if (diagnostico !== undefined && diagnostico !== null && typeof diagnostico === 'string' && diagnostico.length > 2000) {
+      return Response.json({ error: 'El diagnóstico no puede superar los 2000 caracteres' }, { status: 400 })
+    }
+    if (notas !== undefined && notas !== null && typeof notas === 'string' && notas.length > 5000) {
+      return Response.json({ error: 'Las notas no pueden superar los 5000 caracteres' }, { status: 400 })
+    }
+    if (medicamentos !== undefined && medicamentos !== null && Array.isArray(medicamentos) && medicamentos.length > 50) {
+      return Response.json({ error: 'No se pueden registrar más de 50 medicamentos por consulta' }, { status: 400 })
+    }
+
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return Response.json({ error: 'No autorizado' }, { status: 401 })

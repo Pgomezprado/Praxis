@@ -16,19 +16,21 @@ import {
   ShieldCheck,
   CalendarDays,
   DollarSign,
+  PawPrint,
   X,
 } from 'lucide-react'
 
-const navItems = [
-  { href: '/admin',              label: 'Inicio',          icon: LayoutDashboard, exact: true },
-  { href: '/admin/agenda',       label: 'Agenda',          icon: CalendarDays },
-  { href: '/admin/medicos',      label: 'Profesionales',   icon: Stethoscope },
-  { href: '/admin/secretarias',  label: 'Recepcionistas',  icon: UserCog },
-  { href: '/admin/especialidades', label: 'Especialidades', icon: Tag },
-  { href: '/admin/horarios',     label: 'Horarios',        icon: Clock },
-  { href: '/admin/pacientes',    label: 'Pacientes',       icon: Users },
-  { href: '/admin/finanzas',     label: 'Finanzas',        icon: DollarSign },
-  { href: '/admin/configuracion', label: 'Configuración',  icon: Settings },
+const navItemsBase = [
+  { href: '/admin',              label: 'Inicio',          icon: LayoutDashboard, exact: true, modulo: null },
+  { href: '/admin/agenda',       label: 'Agenda',          icon: CalendarDays,                 modulo: null },
+  { href: '/admin/medicos',      label: 'Profesionales',   icon: Stethoscope,                  modulo: null },
+  { href: '/admin/secretarias',  label: 'Recepcionistas',  icon: UserCog,                      modulo: null },
+  { href: '/admin/especialidades', label: 'Especialidades', icon: Tag,                          modulo: null },
+  { href: '/admin/horarios',     label: 'Horarios',        icon: Clock,                        modulo: null },
+  { href: '/admin/pacientes',    label: 'Pacientes',       icon: Users,                        modulo: null },
+  { href: '/admin/veterinaria',  label: 'Veterinaria',     icon: PawPrint,                     modulo: 'veterinaria' },
+  { href: '/admin/finanzas',     label: 'Finanzas',        icon: DollarSign,                   modulo: null },
+  { href: '/admin/configuracion', label: 'Configuración',  icon: Settings,                     modulo: null },
 ]
 
 interface AdminSidebarProps {
@@ -44,6 +46,8 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
   const [userEmail, setUserEmail] = useState('')
   const [userNombre, setUserNombre] = useState('')
   const [esDoctor, setEsDoctor] = useState(false)
+  const [modulosActivos, setModulosActivos] = useState<Record<string, boolean>>({})
+  const [esVeterinaria, setEsVeterinaria] = useState(false)
 
   useEffect(() => {
     async function loadData() {
@@ -52,12 +56,19 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
       setUserEmail(user.email ?? '')
       const { data: me } = await supabase
         .from('usuarios')
-        .select('nombre, clinica_id, es_doctor, clinicas(nombre)')
+        .select('nombre, clinica_id, es_doctor, clinicas(nombre, modulos_activos, tipo_especialidad)')
         .eq('id', user.id)
         .single()
       if (me?.clinicas) {
-        const c = me.clinicas as { nombre: string } | { nombre: string }[]
-        setClinicaNombre(Array.isArray(c) ? c[0]?.nombre : c.nombre)
+        const c = me.clinicas as { nombre: string; modulos_activos?: Record<string, boolean>; tipo_especialidad?: string | null } | { nombre: string; modulos_activos?: Record<string, boolean>; tipo_especialidad?: string | null }[]
+        const clinicaData = Array.isArray(c) ? c[0] : c
+        setClinicaNombre(clinicaData?.nombre ?? '')
+        if (clinicaData?.modulos_activos) {
+          setModulosActivos(clinicaData.modulos_activos)
+        }
+        if (clinicaData?.tipo_especialidad === 'veterinaria') {
+          setEsVeterinaria(true)
+        }
       }
       const meTyped = me as { nombre?: string; es_doctor?: boolean } | null
       if (meTyped?.nombre) setUserNombre(meTyped.nombre)
@@ -77,10 +88,17 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
     onClose?.()
   }
 
-  function isActive(item: typeof navItems[0]) {
+  function isActive(item: typeof navItemsBase[0]) {
     if (item.exact) return pathname === item.href
     return pathname.startsWith(item.href)
   }
+
+  // Filtrar items cuyo módulo requiere activación explícita, y ocultar Pacientes en clínicas veterinarias
+  const navItems = navItemsBase.filter(item => {
+    if (item.modulo !== null && modulosActivos[item.modulo] !== true) return false
+    if (esVeterinaria && item.href === '/admin/pacientes') return false
+    return true
+  })
 
   return (
     <aside className="w-64 min-h-screen bg-slate-900 text-white flex flex-col">

@@ -80,14 +80,58 @@ export async function DELETE(
     if (!me) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
     if ((me as { rol: string }).rol === 'doctor') return Response.json({ error: 'Sin permisos' }, { status: 403 })
 
+    const meTyped = me as { clinica_id: string; rol: string }
+
+    // Verificar que la cita existe y pertenece a esta clínica
+    const { data: cita } = await supabase
+      .from('citas')
+      .select('*')
+      .eq('id', id)
+      .eq('clinica_id', meTyped.clinica_id)
+      .single()
+
+    if (!cita) {
+      return Response.json({ error: 'Cita no encontrada o sin permisos' }, { status: 404 })
+    }
+
+    // Verificar si existen cobros asociados a esta cita
+    const { data: cobrosAsociados } = await supabase
+      .from('cobros')
+      .select('id')
+      .eq('cita_id', id)
+      .eq('activo', true)
+      .limit(1)
+
+    const cobros = cobrosAsociados as { id: string }[] | null
+    if (cobros && cobros.length > 0) {
+      return Response.json(
+        { error: 'No se puede eliminar una cita con cobros registrados. Anula el cobro primero.' },
+        { status: 400 }
+      )
+    }
+
+    // Registrar en audit_log antes de eliminar
+    await supabase
+      .from('audit_log')
+      .insert({
+        usuario_id: user.id,
+        clinica_id: meTyped.clinica_id,
+        accion: 'DELETE_CITA',
+        detalle: {
+          tabla: 'citas',
+          registro_id: id,
+          datos_anteriores: cita,
+        },
+      })
+
     const { error } = await supabase
       .from('citas')
       .delete()
       .eq('id', id)
-      .eq('clinica_id', (me as { clinica_id: string }).clinica_id)
+      .eq('clinica_id', meTyped.clinica_id)
 
     if (error) {
-      return Response.json({ error: 'No se pudo eliminar la cita' }, { status: 404 })
+      return Response.json({ error: 'No se pudo eliminar la cita' }, { status: 500 })
     }
 
     return Response.json({ ok: true })

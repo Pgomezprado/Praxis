@@ -3,12 +3,12 @@
 import { useState, useRef } from 'react'
 import {
   Building2, Clock, Bell, AlertTriangle, Save, Upload,
-  Download, Trash2, ChevronDown, CheckCircle2, Stethoscope,
+  Download, Trash2, ChevronDown, CheckCircle2, Stethoscope, PawPrint,
 } from 'lucide-react'
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
-type TipoEspecialidad = 'medicina_general' | 'odontologia' | 'mixta'
+type TipoEspecialidad = 'medicina_general' | 'odontologia' | 'mixta' | 'veterinaria'
 
 type Clinica = {
   id: string
@@ -40,6 +40,7 @@ type Props = {
   adminId: string
   adminEsDoctor: boolean
   adminEspecialidad: string
+  modulosActivosInicial: Record<string, boolean>
 }
 
 const TIMEZONES = [
@@ -57,7 +58,7 @@ const HORAS_ANTES_OPCIONES = [1, 2, 4, 6, 12, 24, 48]
 
 // ── Componente ───────────────────────────────────────────────────────────────
 
-export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, adminEspecialidad }: Props) {
+export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, adminEspecialidad, modulosActivosInicial }: Props) {
   const logoRef = useRef<HTMLInputElement>(null)
 
   // — Estado formularios —
@@ -71,6 +72,10 @@ export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, ad
     cancelacionCita:   true,
     resumenDiario:     false,
   })
+
+  // — Módulos opcionales —
+  const [modulosActivos,    setModulosActivos]    = useState<Record<string, boolean>>(modulosActivosInicial)
+  const [guardandoModulos,  setGuardandoModulos]  = useState(false)
 
   // — Perfil médico admin —
   const [esDoctor,          setEsDoctor]          = useState(adminEsDoctor)
@@ -177,6 +182,23 @@ export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, ad
       mostrarToast('Error al guardar el perfil de profesional')
     } finally {
       setGuardandoDoctor(false)
+    }
+  }
+
+  async function guardarModulos() {
+    setGuardandoModulos(true)
+    try {
+      const res = await fetch('/api/clinica', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modulos_activos: modulosActivos }),
+      })
+      if (!res.ok) throw new Error('Error al guardar')
+      mostrarToast('Módulos guardados correctamente')
+    } catch {
+      mostrarToast('Error al guardar los módulos')
+    } finally {
+      setGuardandoModulos(false)
     }
   }
 
@@ -306,6 +328,7 @@ export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, ad
                   <option value="medicina_general">Medicina general</option>
                   <option value="odontologia">Odontología</option>
                   <option value="mixta">Mixta (medicina + odontología)</option>
+                  <option value="veterinaria">Veterinaria</option>
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
               </div>
@@ -505,7 +528,61 @@ export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, ad
         </div>
       </section>
 
-      {/* ── Sección 4: Perfil de profesional del admin ── */}
+      {/* ── Sección 4: Módulos opcionales ── */}
+      <section className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/60">
+          <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+            <PawPrint className="w-4 h-4 text-emerald-600" />
+          </div>
+          <div>
+            <h2 className="text-sm font-semibold text-slate-800">Módulos opcionales</h2>
+            <p className="text-xs text-slate-500">Activa los módulos adicionales de tu plan</p>
+          </div>
+        </div>
+
+        <div className="px-6 py-5 space-y-4">
+          {/* Toggle veterinaria */}
+          <div className="flex items-center justify-between gap-4 py-2.5 border-b border-slate-50">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                <PawPrint className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div>
+                <div className="text-sm font-medium text-slate-700">Veterinaria</div>
+                <div className="text-xs text-slate-400 mt-0.5">
+                  Fichas de mascotas, tutores e historia clínica veterinaria
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setModulosActivos(prev => ({ ...prev, veterinaria: !prev.veterinaria }))}
+              className={`relative w-10 h-[22px] rounded-full transition-colors flex-shrink-0 focus:outline-none overflow-hidden ${
+                modulosActivos.veterinaria ? 'bg-emerald-600' : 'bg-slate-300'
+              }`}
+            >
+              <span className={`absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                modulosActivos.veterinaria ? 'translate-x-5' : 'translate-x-0'
+              }`} />
+            </button>
+          </div>
+
+          <div className="flex justify-end pt-1">
+            <button
+              onClick={guardarModulos}
+              disabled={guardandoModulos}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+            >
+              {guardandoModulos
+                ? <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                : <Save className="w-4 h-4" />}
+              Guardar
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Sección 5: Perfil de profesional del admin ── */}
       <section className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-100 bg-slate-50/60">
           <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">

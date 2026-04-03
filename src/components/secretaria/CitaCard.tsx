@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { XCircle, PlayCircle, CheckCircle2, Loader2, CheckCheck, FileText, DollarSign, Package, Clock } from 'lucide-react'
@@ -44,6 +44,23 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
   const [loading, setLoading] = useState(false)
   const [cobrada, setCobrada] = useState(yaCobrada)
   const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false)
+
+  // BUG-2604-04: sincronizar estadoLocal cuando React reutiliza el componente con otra cita
+  useEffect(() => {
+    setEstadoLocal(cita.estado)
+  }, [cita.id, cita.estado])
+
+  // BUG-2604-05: cerrar la confirmación propia si otra CitaCard abre la suya
+  useEffect(() => {
+    function handleOtraConfirmacion(e: Event) {
+      const id = (e as CustomEvent<string>).detail
+      if (id !== cita.id) {
+        setMostrarConfirmacion(false)
+      }
+    }
+    window.addEventListener('cita-confirmar', handleOtraConfirmacion)
+    return () => window.removeEventListener('cita-confirmar', handleOtraConfirmacion)
+  }, [cita.id])
 
   const { label, variant } = ESTADO_BADGE[estadoLocal]
   const isCancelada = estadoLocal === 'cancelada'
@@ -226,9 +243,12 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
                 <Clock className="w-3.5 h-3.5" />
               </button>
 
-              {/* Anular — abre modal de confirmación */}
+              {/* Anular — abre modal de confirmación (despacha evento para cerrar otras confirmaciones abiertas) */}
               <button
-                onClick={() => setMostrarConfirmacion(true)}
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('cita-confirmar', { detail: cita.id }))
+                  setMostrarConfirmacion(true)
+                }}
                 title="Anular cita"
                 className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
               >

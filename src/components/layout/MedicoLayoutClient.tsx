@@ -9,6 +9,7 @@ interface MedicoLayoutClientProps {
   especialidad: string
   esAdmin: boolean
   tieneOdontologia: boolean
+  esVeterinaria: boolean
   iniciales: string
   children: React.ReactNode
 }
@@ -18,6 +19,7 @@ export function MedicoLayoutClient({
   especialidad,
   esAdmin,
   tieneOdontologia,
+  esVeterinaria,
   iniciales,
   children,
 }: MedicoLayoutClientProps) {
@@ -47,6 +49,7 @@ export function MedicoLayoutClient({
           especialidad={especialidad}
           esAdmin={esAdmin}
           tieneOdontologia={tieneOdontologia}
+          esVeterinaria={esVeterinaria}
           onClose={() => setSidebarAbierto(false)}
         />
       </div>

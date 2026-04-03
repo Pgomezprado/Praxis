@@ -13,6 +13,8 @@ import {
 } from 'lucide-react'
 import type { MockCita } from '@/types/domain'
 import type { MedicoAgenda } from '@/lib/queries/agenda'
+import { DrawerDetalleCita } from '@/components/secretaria/DrawerDetalleCita'
+import { ModalCambioHora } from '@/components/secretaria/ModalCambioHora'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -67,12 +69,19 @@ const ESTADO_LABELS: Record<MockCita['estado'], string> = {
 
 // ─── Tarjeta de cita ────────────────────────────────────────────────────────
 
-function CitaColumna({ cita }: { cita: MockCita }) {
+function CitaColumna({
+  cita,
+  onClick,
+}: {
+  cita: MockCita
+  onClick: (cita: MockCita) => void
+}) {
   const isCancelada = cita.estado === 'cancelada'
 
   return (
     <div
-      className={`rounded-xl border p-3 mb-2 transition-shadow hover:shadow-md cursor-default ${
+      onClick={() => onClick(cita)}
+      className={`rounded-xl border p-3 mb-2 transition-shadow hover:shadow-md cursor-pointer ${
         isCancelada
           ? 'border-slate-200 bg-slate-50 opacity-60'
           : 'border-slate-200 bg-white hover:border-blue-200'
@@ -119,10 +128,12 @@ function ColumnaMediaco({
   medico,
   citas,
   medicoSeleccionado,
+  onCitaClick,
 }: {
   medico: MedicoAgenda
   citas: MockCita[]
   medicoSeleccionado: string | null
+  onCitaClick: (cita: MockCita) => void
 }) {
   const visible = !medicoSeleccionado || medicoSeleccionado === medico.id
   if (!visible) return null
@@ -153,7 +164,9 @@ function ColumnaMediaco({
             <p className="text-xs text-slate-400 font-medium">Sin citas este día</p>
           </div>
         ) : (
-          citasOrdenadas.map((c) => <CitaColumna key={c.id} cita={c} />)
+          citasOrdenadas.map((c) => (
+            <CitaColumna key={c.id} cita={c} onClick={onCitaClick} />
+          ))
         )}
       </div>
     </div>
@@ -180,22 +193,61 @@ export function AgendaEquipoClient({ medicos, citas, fecha }: AgendaEquipoClient
   // En móvil: selector de médico único
   const [medicoSeleccionado, setMedicoSeleccionado] = useState<string | null>(null)
 
+  // Estado local de citas para reflejar cambios del drawer sin recargar la página
+  const [citasLocales, setCitasLocales] = useState<MockCita[]>(citas)
+
+  // Drawer detalle de cita
+  const [citaSeleccionada, setCitaSeleccionada] = useState<MockCita | null>(null)
+
+  // Modal cambio de hora
+  const [modalCambioHoraOpen, setModalCambioHoraOpen] = useState(false)
+  const [citaCambioHora, setCitaCambioHora] = useState<MockCita | null>(null)
+
   function navegar(nuevaFecha: string) {
     const params = new URLSearchParams(searchParams.toString())
     params.set('fecha', nuevaFecha)
     router.push(`/admin/agenda/equipo?${params.toString()}`)
   }
 
-  // Agrupar citas por médico
-  const citasPorMedico: Record<string, MockCita[]> = {}
-  for (const medico of medicos) {
-    citasPorMedico[medico.id] = citas.filter((c) => c.medicoId === medico.id)
+  function handleEstadoCambiado(id: string, nuevoEstado: MockCita['estado']) {
+    setCitasLocales((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, estado: nuevoEstado } : c))
+    )
+    setCitaSeleccionada((prev) =>
+      prev ? { ...prev, estado: nuevoEstado } : null
+    )
   }
 
-  const totalCitas = citas.length
+  function handleAbrirCambioHora(id: string) {
+    const cita = citasLocales.find((c) => c.id === id) ?? null
+    setCitaCambioHora(cita)
+    setModalCambioHoraOpen(true)
+  }
+
+  function handleCambioHoraDone(
+    id: string,
+    nuevaFecha: string,
+    horaInicio: string,
+    horaFin: string
+  ) {
+    setCitasLocales((prev) =>
+      prev.map((c) =>
+        c.id === id ? { ...c, fecha: nuevaFecha, horaInicio, horaFin } : c
+      )
+    )
+  }
+
+  // Agrupar citas por médico usando el estado local
+  const citasPorMedico: Record<string, MockCita[]> = {}
+  for (const medico of medicos) {
+    citasPorMedico[medico.id] = citasLocales.filter((c) => c.medicoId === medico.id)
+  }
+
+  const totalCitas = citasLocales.length
   const medicosConCitas = medicos.filter(
     (m) => (citasPorMedico[m.id]?.length ?? 0) > 0
   ).length
+
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
@@ -310,6 +362,7 @@ export function AgendaEquipoClient({ medicos, citas, fecha }: AgendaEquipoClient
                 medico={medico}
                 citas={citasPorMedico[medico.id] ?? []}
                 medicoSeleccionado={null}
+                onCitaClick={setCitaSeleccionada}
               />
             ))}
           </div>
@@ -339,13 +392,45 @@ export function AgendaEquipoClient({ medicos, citas, fecha }: AgendaEquipoClient
                   ) : (
                     [...(citasPorMedico[medico.id] ?? [])]
                       .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
-                      .map((c) => <CitaColumna key={c.id} cita={c} />)
+                      .map((c) => (
+                        <CitaColumna key={c.id} cita={c} onClick={setCitaSeleccionada} />
+                      ))
                   )}
                 </div>
               ))}
           </div>
         </>
       )}
+
+      {/* Drawer detalle de cita */}
+      <DrawerDetalleCita
+        key={citaSeleccionada?.id}
+        cita={citaSeleccionada}
+        esDoctor={false}
+        fichaHref={
+          citaSeleccionada
+            ? `/admin/pacientes/${citaSeleccionada.pacienteId}`
+            : undefined
+        }
+        onClose={() => setCitaSeleccionada(null)}
+        onEstadoCambiado={handleEstadoCambiado}
+        onCambioHora={(id) => {
+          setCitaSeleccionada(null)
+          handleAbrirCambioHora(id)
+        }}
+        onEliminada={(id) =>
+          setCitasLocales((prev) => prev.filter((c) => c.id !== id))
+        }
+      />
+
+      {/* Modal cambio de hora */}
+      <ModalCambioHora
+        open={modalCambioHoraOpen}
+        onClose={() => setModalCambioHoraOpen(false)}
+        cita={citaCambioHora}
+        medicos={medicos}
+        onCambiado={handleCambioHoraDone}
+      />
     </div>
   )
 }

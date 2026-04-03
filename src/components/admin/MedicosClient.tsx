@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Search, ChevronDown, Plus, ArrowRight, Pencil, PowerOff, Send } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { DrawerMedico } from './DrawerMedico'
@@ -11,9 +12,11 @@ import { type Especialidad } from '@/types/database'
 type Props = {
   medicosIniciales: MockMedicoAdmin[]
   especialidades: Especialidad[]
+  currentUserId: string
 }
 
-export function MedicosClient({ medicosIniciales, especialidades }: Props) {
+export function MedicosClient({ medicosIniciales, especialidades, currentUserId }: Props) {
+  const router = useRouter()
   const [medicos, setMedicos] = useState<MockMedicoAdmin[]>(medicosIniciales)
   const [busqueda, setBusqueda] = useState('')
   const [filtroEsp, setFiltroEsp] = useState('')
@@ -43,6 +46,11 @@ export function MedicosClient({ medicosIniciales, especialidades }: Props) {
   }
 
   function abrirEditar(medico: MockMedicoAdmin) {
+    // El admin que edita su propio perfil va a Configuración, no al drawer de médicos
+    if (medico.id === currentUserId && medico.esAdmin) {
+      router.push('/admin/configuracion')
+      return
+    }
     setMedicoEditar(medico)
     setDrawerOpen(true)
   }
@@ -180,7 +188,14 @@ export function MedicosClient({ medicosIniciales, especialidades }: Props) {
                 <div className="flex items-center gap-3 min-w-0">
                   <Avatar nombre={medico.nombre} size="sm" />
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 truncate">{medico.nombre}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{medico.nombre}</p>
+                      {medico.esAdmin && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-violet-100 text-violet-700 border border-violet-200 shrink-0">
+                          Admin
+                        </span>
+                      )}
+                    </div>
                     <span
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium text-white mt-1"
                       style={{ backgroundColor: esp?.color ?? '#64748B' }}

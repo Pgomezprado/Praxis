@@ -17,6 +17,7 @@ export default async function AdminMedicosPage() {
     .single()
 
   const clinicaId = (me as { clinica_id: string } | null)?.clinica_id
+  const currentUserId = user!.id
 
   const todayStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
   const [ym_year, ym_month] = todayStr.split('-')
@@ -25,7 +26,7 @@ export default async function AdminMedicosPage() {
   const [{ data: doctoresDb }, { data: especialidadesDb }, { data: citasMesDb }] = await Promise.all([
     supabase
       .from('usuarios')
-      .select('id, nombre, email, especialidad, activo, rut, telefono, duracion_consulta')
+      .select('id, nombre, email, especialidad, activo, rut, telefono, duracion_consulta, rol')
       .eq('clinica_id', clinicaId)
       .or('rol.eq.doctor,es_doctor.eq.true')
       .order('nombre'),
@@ -66,6 +67,7 @@ export default async function AdminMedicosPage() {
       (e) => normalize(e.nombre) === normalize(d.especialidad ?? '')
     )
     const authEntry = authUserMap.get(d.id)
+    const row = d as typeof d & { rol?: string }
     return {
       id: d.id,
       clinicaId: clinicaId ?? '',
@@ -79,6 +81,7 @@ export default async function AdminMedicosPage() {
       estado: d.activo ? 'activo' : 'inactivo',
       citasMes: citasPorDoctor.get(d.id) ?? 0,
       invitacionPendiente: !authEntry?.email_confirmed_at,
+      esAdmin: row.rol === 'admin_clinica',
     }
   })
 
@@ -91,7 +94,7 @@ export default async function AdminMedicosPage() {
         </p>
       </div>
 
-      <MedicosClient medicosIniciales={medicos} especialidades={especialidades} />
+      <MedicosClient medicosIniciales={medicos} especialidades={especialidades} currentUserId={currentUserId} />
     </div>
   )
 }

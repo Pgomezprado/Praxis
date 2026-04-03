@@ -14,7 +14,6 @@ function ExitoContent() {
   const especialidad = params.get('especialidad') ?? ''
   const fecha = params.get('fecha') ?? ''
   const hora = params.get('hora') ?? ''
-  const email = params.get('email') ?? ''
   const clinicaNombre = params.get('clinicaNombre') ?? ''
   const clinicaDireccion = params.get('clinicaDireccion') ?? ''
   const clinicaCiudad = params.get('clinicaCiudad') ?? ''
@@ -53,7 +52,7 @@ function ExitoContent() {
           <span className="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-1 rounded-lg">{folio}</span>
         </div>
         <p className="text-xs text-slate-500 mt-1">
-          Guarda este folio como comprobante en caso de que el email no llegue.
+          Guarda el folio como comprobante de tu cita.
         </p>
 
         <div className="space-y-3">

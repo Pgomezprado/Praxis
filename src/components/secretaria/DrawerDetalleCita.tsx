@@ -58,6 +58,7 @@ export function DrawerDetalleCita({
   const [eliminando, setEliminando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmarAnular, setConfirmarAnular] = useState(false)
+  const [confirmarEliminar, setConfirmarEliminar] = useState(false)
 
   // Usa estado local si ya se cambió en el drawer, si no el de la cita original
   const estadoActual = estadoLocal ?? cita?.estado ?? 'pendiente'
@@ -93,13 +94,20 @@ export function DrawerDetalleCita({
   async function handleEliminar() {
     if (!cita) return
     setEliminando(true)
+    setError(null)
     try {
       const res = await fetch(`/api/citas/${cita.id}`, { method: 'DELETE' })
-      if (!res.ok) { setError('No se pudo eliminar la cita.'); return }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        setError((body as { error?: string }).error ?? 'No se pudo eliminar la cita.')
+        setConfirmarEliminar(false)
+        return
+      }
       onEliminada?.(cita.id)
       onClose()
     } catch {
       setError('Error de conexión.')
+      setConfirmarEliminar(false)
     } finally {
       setEliminando(false)
     }
@@ -149,7 +157,7 @@ export function DrawerDetalleCita({
               <Link
                 href={fichaHref ?? `/pacientes/${cita.pacienteId}`}
                 onClick={onClose}
-                className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex-shrink-0"
+                className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shrink-0"
               >
                 <FileText className="w-3.5 h-3.5" />
                 Ficha
@@ -159,7 +167,7 @@ export function DrawerDetalleCita({
               <Link
                 href={`/medico/pacientes/${cita.pacienteId}?cita=${cita.id}`}
                 onClick={onClose}
-                className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex-shrink-0"
+                className="ml-auto flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shrink-0"
               >
                 <FileText className="w-3.5 h-3.5" />
                 Historia clínica
@@ -173,7 +181,7 @@ export function DrawerDetalleCita({
           <div className="space-y-3">
             {/* Fecha y hora */}
             <div className="flex items-start gap-3">
-              <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
                 <Clock className="w-3.5 h-3.5 text-slate-500" />
               </div>
               <div>
@@ -184,7 +192,7 @@ export function DrawerDetalleCita({
 
             {/* Profesional */}
             <div className="flex items-start gap-3">
-              <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+              <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
                 <Stethoscope className="w-3.5 h-3.5 text-slate-500" />
               </div>
               <div>
@@ -196,7 +204,7 @@ export function DrawerDetalleCita({
             {/* Motivo */}
             {cita.motivo && (
               <div className="flex items-start gap-3">
-                <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
                   <FileText className="w-3.5 h-3.5 text-slate-500" />
                 </div>
                 <p className="text-sm text-slate-600 leading-snug">{cita.motivo}</p>
@@ -206,7 +214,7 @@ export function DrawerDetalleCita({
             {/* Paciente contacto */}
             {(cita.pacienteEmail || cita.pacienteTelefono) && (
               <div className="flex items-start gap-3">
-                <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
                   <User className="w-3.5 h-3.5 text-slate-500" />
                 </div>
                 <div>
@@ -308,7 +316,7 @@ export function DrawerDetalleCita({
                 ) : (
                   <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 space-y-3">
                     <div className="flex items-start gap-2">
-                      <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                      <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
                       <p className="text-sm text-red-700 leading-snug">
                         ¿Seguro que quieres anular esta cita? Quedará registrada como cancelada.
                       </p>
@@ -339,18 +347,46 @@ export function DrawerDetalleCita({
                 {/* Separador */}
                 <div className="h-px bg-slate-100 my-1" />
 
-                {/* Eliminar cita — solo cuando puedeActuar, muy sutil */}
-                <button
-                  onClick={handleEliminar}
-                  disabled={eliminando || loading}
-                  className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
-                >
-                  {eliminando
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    : <Trash2 className="w-3.5 h-3.5" />
-                  }
-                  Eliminar cita
-                </button>
+                {/* Eliminar cita — con confirmación inline */}
+                {!confirmarEliminar ? (
+                  <button
+                    onClick={() => setConfirmarEliminar(true)}
+                    disabled={eliminando || loading}
+                    className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Eliminar cita
+                  </button>
+                ) : (
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-700 leading-snug">
+                        ¿Eliminar permanentemente? Esta acción no se puede deshacer.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleEliminar}
+                        disabled={eliminando}
+                        className="flex items-center justify-center gap-1.5 flex-1 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                      >
+                        {eliminando
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />
+                        }
+                        Sí, eliminar
+                      </button>
+                      <button
+                        onClick={() => setConfirmarEliminar(false)}
+                        disabled={eliminando}
+                        className="flex items-center justify-center gap-1.5 flex-1 py-2 rounded-lg text-sm font-medium bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
