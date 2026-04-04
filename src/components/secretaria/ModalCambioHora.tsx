@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { X, Clock, CalendarDays, Loader2 } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { generarSlots } from '@/lib/agendamiento'
 import type { MockCita, HorarioSemanal } from '@/types/domain'
 
@@ -165,13 +166,11 @@ export function ModalCambioHora({ open, onClose, cita, medicos, onCambiado }: Mo
             </div>
 
             <div className="space-y-3">
-              <input
-                type="date"
-                aria-label="Nueva fecha de la cita"
+              <DatePicker
                 value={fecha}
                 min={getToday()}
-                onChange={(e) => setFecha(e.target.value)}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                onChange={setFecha}
+                placeholder="Seleccionar fecha"
               />
 
               {fecha && (

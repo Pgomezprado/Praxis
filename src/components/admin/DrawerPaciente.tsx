@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { X, Plus } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { validarRut, formatearRut } from '@/lib/agendamiento'
 import { type MockPacienteAdmin, type Prevision } from '@/types/domain'
 
@@ -281,11 +282,11 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
                   Fecha de nacimiento
                 </label>
-                <input
-                  type="date"
+                <DatePicker
                   value={form.fechaNacimiento}
-                  onChange={e => set('fechaNacimiento', e.target.value)}
-                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
+                  onChange={v => set('fechaNacimiento', v)}
+                  placeholder="Seleccionar fecha de nacimiento"
+                  max={new Date().toISOString().split('T')[0]}
                 />
                 {form.fechaNacimiento && (
                   <p className="text-xs text-slate-400 mt-1">

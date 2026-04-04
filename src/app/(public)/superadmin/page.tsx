@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import GraficoCrecimiento from './GraficoCrecimiento'
+import { DatePicker } from '@/components/ui/DatePicker'
 import {
   Lock,
   Building2,
@@ -621,11 +622,10 @@ function DrawerClinica({ clinica, pagos, onClose, onActualizada }: DrawerClinica
           {/* Fecha fin gratis */}
           <div>
             <label className={labelCls}>Fin período gratis</label>
-            <input
-              type="date"
+            <DatePicker
               value={form.fecha_fin_gratis}
-              onChange={e => setForm(f => ({ ...f, fecha_fin_gratis: e.target.value }))}
-              className={inputCls}
+              onChange={v => setForm(f => ({ ...f, fecha_fin_gratis: v }))}
+              placeholder="Sin período gratis"
             />
             <p className="text-xs text-slate-500 mt-1">Dejar en blanco si ya paga</p>
           </div>

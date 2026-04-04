@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { X, User, Stethoscope, CalendarDays, FileText, Loader2 } from 'lucide-react'
 import { BuscadorPaciente, type PacienteSeleccionado } from './BuscadorPaciente'
 import { Avatar } from '@/components/ui/Avatar'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { generarSlots } from '@/lib/agendamiento'
 import type { MockCita, HorarioSemanal } from '@/types/domain'
 
@@ -272,13 +273,11 @@ export function ModalNuevaCita({
           <section>
             <SectionHeader icon={CalendarDays} label="Fecha y hora" />
             <div className="space-y-3">
-              <input
-                type="date"
-                aria-label="Fecha de la cita"
+              <DatePicker
                 value={fecha}
                 min={getToday()}
-                onChange={(e) => setFecha(e.target.value)}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                onChange={setFecha}
+                placeholder="Seleccionar fecha"
               />
 
               {/* Selector de duración */}

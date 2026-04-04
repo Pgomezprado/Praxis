@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Package, X, Loader2, ToggleLeft, ToggleRight } from 'lucide-react'
+import { DatePicker } from '@/components/ui/DatePicker'
 import type { PaqueteArancel, Usuario, Especialidad } from '@/types/database'
 
 const TIPO_LABEL: Record<string, string> = {
@@ -269,24 +270,22 @@ function ModalPaquete({ open, onClose, onGuardar, medicos, especialidades }: Mod
               <label className="block text-xs font-medium text-slate-600 mb-1.5">
                 Vigente desde
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={vigenteDe}
-                onChange={e => setVigenteDe(e.target.value)}
+                onChange={setVigenteDe}
+                placeholder="Desde"
                 disabled={loading}
-                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1.5">
                 Vigente hasta (opcional)
               </label>
-              <input
-                type="date"
+              <DatePicker
                 value={vigenteHasta}
-                onChange={e => setVigenteHasta(e.target.value)}
+                onChange={setVigenteHasta}
+                placeholder="Sin vencimiento"
                 disabled={loading}
-                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>

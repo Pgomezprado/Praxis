@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Users, Search, ExternalLink, UserX, X, Loader2 } from 'lucide-react'
+import { DatePicker } from '@/components/ui/DatePicker'
 import type { EstadoPresupuesto } from '@/types/database'
 
 export interface PacienteConPresupuesto {
@@ -218,16 +219,14 @@ function ModalNuevoPaciente({ onCerrar }: ModalNuevoPacienteProps) {
 
           {/* Fecha de nacimiento */}
           <div className="flex flex-col gap-1.5">
-            <label htmlFor="fecha_nac" className="text-sm font-medium text-slate-700">
+            <label className="text-sm font-medium text-slate-700">
               Fecha de nacimiento
             </label>
-            <input
-              id="fecha_nac"
-              name="fecha_nac"
-              type="date"
+            <DatePicker
               value={form.fecha_nac}
-              onChange={handleChange}
-              className="px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={v => setForm(prev => ({ ...prev, fecha_nac: v }))}
+              placeholder="Seleccionar fecha de nacimiento"
+              max={new Date().toISOString().split('T')[0]}
             />
           </div>
 
