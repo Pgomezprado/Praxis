@@ -19,16 +19,20 @@ interface ModalEstadoDienteProps {
   fichaId: string
   onGuardado: (numeroPieza: number, nuevoEstado: EstadoDiente) => void
   onCerrar: () => void
+  skipGuardado?: boolean
 }
 
 // ── Opciones ───────────────────────────────────────────────────────────────────
 
-const ESTADOS_OPCIONES: EstadoDienteValor[] = [
+const ESTADOS_FRECUENTES: EstadoDienteValor[] = [
   'sano',
   'caries',
   'obturado',
-  'extraccion_indicada',
   'ausente',
+]
+
+const ESTADOS_ESPECIALIZADOS: EstadoDienteValor[] = [
+  'extraccion_indicada',
   'corona',
   'implante',
   'tratamiento_conducto',
@@ -68,6 +72,7 @@ export function ModalEstadoDiente({
   fichaId,
   onGuardado,
   onCerrar,
+  skipGuardado = false,
 }: ModalEstadoDienteProps) {
   const [estadoSeleccionado, setEstadoSeleccionado] = useState<EstadoDienteValor>(
     estadoActual?.estado ?? 'sano'
@@ -81,6 +86,7 @@ export function ModalEstadoDiente({
   )
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
+  const [mostrarNotas, setMostrarNotas] = useState(!!estadoActual?.notas)
 
   const requiereMaterial = estadoSeleccionado === 'obturado' || estadoSeleccionado === 'corona'
   const muestraSuperficies = ESTADOS_CON_SUPERFICIES.has(estadoSeleccionado)
@@ -96,6 +102,18 @@ export function ModalEstadoDiente({
 
     // Limpiar superficies si el estado no las admite
     const superficiesPayload = muestraSuperficies ? superficies : undefined
+
+    // Modo selección múltiple: construir el objeto y delegar sin hacer fetch
+    if (skipGuardado) {
+      onGuardado(numeroPieza, {
+        estado: estadoSeleccionado,
+        material: requiereMaterial && materialSeleccionado ? materialSeleccionado as MaterialDiente : undefined,
+        notas: notas.trim() || undefined,
+        superficies: superficiesPayload,
+      })
+      setGuardando(false)
+      return
+    }
 
     try {
       const res = await fetch(`/api/odontologia/odontograma/${fichaId}/estado`, {
@@ -159,11 +177,13 @@ export function ModalEstadoDiente({
           {/* Estado */}
           <div>
             <p className="text-sm font-semibold text-slate-700 mb-2">Estado del diente</p>
+
+            {/* Frecuentes */}
             <div className="grid grid-cols-2 gap-2">
-              {ESTADOS_OPCIONES.map((est) => (
+              {ESTADOS_FRECUENTES.map((est) => (
                 <label
                   key={est}
-                  className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                  className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition-colors ${
                     estadoSeleccionado === est
                       ? 'border-blue-500 bg-blue-50'
                       : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
@@ -189,6 +209,42 @@ export function ModalEstadoDiente({
                   </span>
                 </label>
               ))}
+            </div>
+
+            {/* Otros estados */}
+            <div className="border-t border-slate-100 pt-3 mt-1">
+              <p className="text-xs text-slate-400 mb-2">Otros estados</p>
+              <div className="grid grid-cols-2 gap-2">
+                {ESTADOS_ESPECIALIZADOS.map((est) => (
+                  <label
+                    key={est}
+                    className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-colors ${
+                      estadoSeleccionado === est
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="estado"
+                      value={est}
+                      checked={estadoSeleccionado === est}
+                      onChange={() => setEstadoSeleccionado(est)}
+                      className="sr-only"
+                    />
+                    <span
+                      className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${
+                        estadoSeleccionado === est
+                          ? 'border-blue-600 bg-blue-600'
+                          : 'border-slate-300'
+                      }`}
+                    />
+                    <span className={`text-sm ${estadoSeleccionado === est ? 'font-semibold text-blue-700' : 'text-slate-600'}`}>
+                      {ETIQUETAS_ESTADO[est]}
+                    </span>
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -259,19 +315,31 @@ export function ModalEstadoDiente({
             </div>
           )}
 
-          {/* Notas */}
+          {/* Notas — colapsable */}
           <div>
-            <label className="text-sm font-semibold text-slate-700 block mb-1.5">
-              Notas{' '}
-              <span className="text-xs font-normal text-slate-400">(opcional)</span>
-            </label>
-            <textarea
-              value={notas}
-              onChange={(e) => setNotas(e.target.value)}
-              rows={2}
-              placeholder="Observaciones clínicas..."
-              className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            />
+            {mostrarNotas ? (
+              <>
+                <label className="text-sm font-semibold text-slate-700 block mb-1.5">
+                  Notas{' '}
+                  <span className="text-xs font-normal text-slate-400">(opcional)</span>
+                </label>
+                <textarea
+                  value={notas}
+                  onChange={(e) => setNotas(e.target.value)}
+                  rows={2}
+                  placeholder="Observaciones clínicas..."
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                />
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setMostrarNotas(true)}
+                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+              >
+                + Agregar nota
+              </button>
+            )}
           </div>
 
           {/* Error */}

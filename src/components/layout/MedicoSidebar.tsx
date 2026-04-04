@@ -21,7 +21,15 @@ export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false,
   const router = useRouter()
   const supabase = createClient()
 
-  const navItems = [
+  type NavItem = {
+    href: string
+    label: string
+    icon: typeof LayoutDashboard
+    exact: boolean
+    separator?: string
+  }
+
+  const navItems: NavItem[] = [
     { href: '/medico/inicio',    label: 'Inicio',      icon: LayoutDashboard, exact: true  },
     { href: '/medico/citas',     label: 'Mis citas',   icon: CalendarDays,    exact: false },
     // En clínicas veterinarias se muestra "Mascotas" en lugar de "Pacientes"
@@ -30,8 +38,8 @@ export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false,
       : [{ href: '/medico/pacientes',   label: 'Pacientes', icon: Users,    exact: false }]
     ),
     ...(tieneOdontologia ? [
-      { href: '/medico/odontologia/catalogo', label: 'Catálogo dental', icon: BookOpen,    exact: false },
-      { href: '/medico/odontologia/finanzas', label: 'Finanzas',        icon: DollarSign,  exact: false },
+      { href: '/medico/odontologia/catalogo', label: 'Catálogo dental', icon: BookOpen,   exact: false, separator: 'Odontología' },
+      { href: '/medico/odontologia/finanzas', label: 'Finanzas dental', icon: DollarSign, exact: false },
     ] : []),
   ]
 
@@ -88,19 +96,25 @@ export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false,
             : pathname.startsWith(item.href)
           const Icon = item.icon
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={handleNavClick}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-              }`}
-            >
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              {item.label}
-            </Link>
+            <div key={item.href}>
+              {item.separator && (
+                <div className="pt-3 pb-1.5 mt-1 border-t border-slate-700/40">
+                  <p className="px-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{item.separator}</p>
+                </div>
+              )}
+              <Link
+                href={item.href}
+                onClick={handleNavClick}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                }`}
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                {item.label}
+              </Link>
+            </div>
           )
         })}
       </nav>

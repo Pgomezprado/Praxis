@@ -5,7 +5,7 @@ import {
   CheckCircle2, FileText, Building2, User, Phone, ChevronLeft,
   CreditCard, X, Loader2, AlertCircle, Mail, Printer,
 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import type { PresupuestoDental, Paciente, PlanTratamientoItem, Cobro, Pago } from '@/types/database'
 
 // ── Props ──────────────────────────────────────────────────────────────────────
@@ -368,7 +368,6 @@ export function PresupuestoDentalClient({
   cobro: cobroInicial,
   doctorId,
 }: PresupuestoDentalClientProps) {
-  const router = useRouter()
   const [nombreAcepta, setNombreAcepta] = useState('')
   const [aceptando, setAceptando] = useState(false)
   const [aceptado, setAceptado] = useState(presupuesto.estado === 'aceptado')
@@ -447,13 +446,13 @@ export function PresupuestoDentalClient({
       ` }} />
 
       {/* ── Back ── */}
-      <button
-        onClick={() => router.back()}
+      <Link
+        href={`/medico/pacientes/${paciente.id}`}
         className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
       >
         <ChevronLeft className="w-4 h-4" />
-        Volver
-      </button>
+        Volver a ficha del paciente
+      </Link>
 
       {/* ── Encabezado clínica ── */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6">

@@ -150,13 +150,28 @@ function itemVacio(): ItemFormData {
 interface FormNuevoPlanProps {
   onCrear: (nombre: string, items: { nombre_procedimiento: string; precio_unitario: number; numero_pieza?: number; arancel_id?: string }[]) => Promise<void>
   onCancelar: () => void
+  piezaSugerida?: number | null
+  onPiezaConsumida?: () => void
 }
 
-function FormNuevoPlan({ onCrear, onCancelar }: FormNuevoPlanProps) {
+function FormNuevoPlan({ onCrear, onCancelar, piezaSugerida, onPiezaConsumida }: FormNuevoPlanProps) {
   const [nombre, setNombre] = useState('')
   const [items, setItems] = useState<ItemFormData[]>([itemVacio()])
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
+
+  // Cuando el usuario hace clic en un diente del odontograma, asignar la pieza al formulario
+  useEffect(() => {
+    if (piezaSugerida != null) {
+      setItems(prev => {
+        const target = prev.find(it => !it.pieza) ?? prev[prev.length - 1]
+        if (!target) return prev
+        return prev.map(it => it.key === target.key ? { ...it, pieza: String(piezaSugerida) } : it)
+      })
+      onPiezaConsumida?.()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [piezaSugerida])
 
   function actualizarItem(key: string, campo: Partial<ItemFormData>) {
     setItems((prev) => prev.map((it) => it.key === key ? { ...it, ...campo } : it))
@@ -201,7 +216,10 @@ function FormNuevoPlan({ onCrear, onCancelar }: FormNuevoPlanProps) {
 
   return (
     <form onSubmit={handleSubmit} className="border border-blue-200 bg-blue-50/50 rounded-xl p-4 space-y-3">
-      <p className="text-sm font-semibold text-slate-800">Nuevo plan de tratamiento</p>
+      <div>
+        <p className="text-sm font-semibold text-slate-800">Nuevo plan de tratamiento</p>
+        <p className="text-xs text-blue-500 mt-0.5">Haz clic en un diente del odontograma para asignar la pieza FDI</p>
+      </div>
 
       <div>
         <label className="text-xs font-medium text-slate-600 block mb-1">Nombre del plan <span className="text-red-500">*</span></label>
@@ -493,7 +511,7 @@ function ResumenHallazgos({ fichaId, estados, generandoPlan, onGenerarPlan }: Re
   if (hallazgos.length === 0) return null
 
   return (
-    <div className="mt-4 border-t border-slate-100 pt-4">
+    <div>
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
           Hallazgos clínicos ({hallazgos.length})
@@ -799,6 +817,14 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
   // Estado del modal de edición de diente
   const [dienteSeleccionado, setDienteSeleccionado] = useState<number | null>(null)
 
+  // Selección múltiple de dientes
+  const [modoMultiple, setModoMultiple] = useState(false)
+  const [dientesMultiple, setDientesMultiple] = useState<Set<number>>(new Set())
+  const [modalMultiple, setModalMultiple] = useState(false)
+
+  // Comunicación diente→formulario de plan
+  const [piezaDesdeOdontograma, setPiezaDesdeOdontograma] = useState<number | null>(null)
+
   // UI de planes
   const [mostrarFormPlan, setMostrarFormPlan] = useState(false)
   const [planExpandido, setPlanExpandido] = useState<string | null>(null)
@@ -809,6 +835,7 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
   const [generandoPlanAuto, setGenerandoPlanAuto] = useState(false)
   const [completandoItem, setCompletandoItem] = useState<string | null>(null)
   const [eliminandoPlan, setEliminandoPlan] = useState<string | null>(null)
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState<string | null>(null)
 
   // Modal de consentimiento informado
   const [modalConsentimiento, setModalConsentimiento] = useState<{
@@ -816,6 +843,16 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
     planId: string
     nombreProcedimiento: string
   } | null>(null)
+
+  // Modal de preview antes de generar plan automático
+  const [previewPlan, setPreviewPlan] = useState<Array<{
+    pieza: number
+    estado: EstadoDiente
+    nombre: string
+    precio: number
+    sinPrecio: boolean
+  }> | null>(null)
+  const [hallazgosParaPlan, setHallazgosParaPlan] = useState<Array<[string, EstadoDiente]>>([])
 
   // ── Cargar datos iniciales ─────────────────────────────────────────────────
 
@@ -875,11 +912,50 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
   }
 
   function handleDienteClick(numeroPieza: number) {
+    if (modoMultiple) {
+      setDientesMultiple(prev => {
+        const next = new Set(prev)
+        if (next.has(numeroPieza)) next.delete(numeroPieza)
+        else next.add(numeroPieza)
+        return next
+      })
+      return
+    }
+    if (mostrarFormPlan) {
+      setPiezaDesdeOdontograma(numeroPieza)
+      return
+    }
     setDienteSeleccionado(numeroPieza)
   }
 
   function handleEstadoGuardado(numeroPieza: number, nuevoEstado: EstadoDiente) {
     setEstados((prev) => ({ ...prev, [numeroPieza]: nuevoEstado }))
+    setDienteSeleccionado(null)
+  }
+
+  async function handleAplicarEstadoMultiple(_pieza: number, estado: EstadoDiente) {
+    if (!ficha || dientesMultiple.size === 0) return
+    for (const pieza of dientesMultiple) {
+      try {
+        const res = await fetch(`/api/odontologia/odontograma/${ficha.id}/estado`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            numero_pieza: pieza,
+            estado: estado.estado,
+            material: estado.material || undefined,
+            notas: estado.notas || undefined,
+            superficies_detalle: estado.superficies ?? null,
+          }),
+        })
+        if (res.ok) {
+          setEstados(prev => ({ ...prev, [pieza]: estado }))
+        }
+      } catch { /* continuar con los demás */ }
+    }
+    setDientesMultiple(new Set())
+    setModoMultiple(false)
+    setModalMultiple(false)
     setDienteSeleccionado(null)
   }
 
@@ -922,6 +998,31 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
     setPlanes((prev) => [planConItems, ...prev])
     setMostrarFormPlan(false)
     setPlanExpandido(plan.id)
+  }
+
+  async function handlePreviewPlan(hallazgos: Array<[string, EstadoDiente]>) {
+    try {
+      const resCat = await fetch('/api/odontologia/catalogo')
+      const catJson = await resCat.json() as { categorias?: { items: ArancelDental[] }[] }
+      const catalogo = (catJson.categorias ?? []).flatMap(c => c.items)
+
+      const items = hallazgos.map(([pieza, est]) => {
+        const built = buildItemDesdeEstado(Number(pieza), est, catalogo)
+        return {
+          pieza: Number(pieza),
+          estado: est,
+          nombre: built?.nombre_procedimiento ?? est.estado,
+          precio: built?.precio_unitario ?? 0,
+          sinPrecio: !built?.precio_unitario,
+        }
+      })
+
+      setHallazgosParaPlan(hallazgos)
+      setPreviewPlan(items)
+    } catch {
+      // Si falla la carga del catálogo, ejecutar directo como antes
+      handleGenerarPlanAuto(hallazgos)
+    }
   }
 
   async function handleGenerarPlanAuto(hallazgos: Array<[string, EstadoDiente]>) {
@@ -993,7 +1094,6 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
 
   // Marcar ítem como completado — con bloqueo de consentimiento para procedimientos invasivos
   async function handleEliminarPlan(planId: string) {
-    if (!window.confirm('¿Eliminar este plan? Esta acción no se puede deshacer.')) return
     setEliminandoPlan(planId)
     try {
       const res = await fetch(`/api/odontologia/planes/plan/${planId}`, { method: 'DELETE' })
@@ -1002,6 +1102,7 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
       if (planExpandido === planId) setPlanExpandido(null)
     } finally {
       setEliminandoPlan(null)
+      setConfirmandoEliminar(null)
     }
   }
 
@@ -1038,6 +1139,29 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
           items: (p.items ?? []).map((i) => i.id === itemId ? { ...i, ...item } : i),
         }
       }))
+
+      // Verificar si todos los ítems activos del plan están completados
+      const planActual = planes.find(p => p.id === planId)
+      if (planActual) {
+        const itemsActivos = (planActual.items ?? []).filter(i => i.activo)
+        const todosCompletados = itemsActivos.every(i =>
+          i.id === itemId ? true : i.estado === 'completado'
+        )
+        if (todosCompletados && itemsActivos.length > 0) {
+          try {
+            const resPlan = await fetch(`/api/odontologia/planes/plan/${planId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ estado: 'completado' }),
+            })
+            if (resPlan.ok) {
+              setPlanes(prev => prev.map(p =>
+                p.id === planId ? { ...p, estado: 'completado' } : p
+              ))
+            }
+          } catch { /* silencioso — el estado del plan se puede actualizar manualmente */ }
+        }
+      }
     } finally {
       setCompletandoItem(null)
     }
@@ -1125,25 +1249,62 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
       {/* Layout: odontograma + planes */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
 
-        {/* ── Odontograma ── */}
-        <div className="bg-white border border-slate-200 rounded-xl p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-slate-800">Odontograma</h3>
-            <span className="text-xs text-slate-400">
-              Haz clic en un diente para editar su estado
-            </span>
-          </div>
-          <OdontogramaSVG
-            estados={estados}
-            onDienteClick={handleDienteClick}
-          />
-          {ficha && (
-            <ResumenHallazgos
-              fichaId={ficha.id}
+        {/* ── Columna izquierda: Odontograma + Hallazgos ── */}
+        <div className="space-y-4">
+          <div className="bg-white border border-slate-200 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-base font-semibold text-slate-800">Odontograma</h3>
+                {modoMultiple ? (
+                  <p className="text-xs text-blue-600 font-medium mt-0.5">Selecciona los dientes y luego aplica un estado</p>
+                ) : mostrarFormPlan ? (
+                  <p className="text-xs text-blue-500 font-medium mt-0.5">Haz clic en un diente del odontograma para asignar la pieza FDI</p>
+                ) : (
+                  <p className="text-xs text-slate-400 mt-0.5">Haz clic en un diente para editar su estado</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {modoMultiple && dientesMultiple.size > 0 && (
+                  <button
+                    onClick={() => setModalMultiple(true)}
+                    className="px-3 py-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  >
+                    Aplicar estado ({dientesMultiple.size})
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setModoMultiple(prev => !prev)
+                    setDientesMultiple(new Set())
+                  }}
+                  className={`px-3 py-1 text-xs font-medium rounded-lg border transition-colors ${
+                    modoMultiple
+                      ? 'bg-blue-50 text-blue-700 border-blue-300'
+                      : 'text-slate-500 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  {modoMultiple ? 'Cancelar selección' : 'Selección múltiple'}
+                </button>
+              </div>
+            </div>
+            <OdontogramaSVG
               estados={estados}
-              generandoPlan={generandoPlanAuto}
-              onGenerarPlan={handleGenerarPlanAuto}
+              onDienteClick={handleDienteClick}
+              modoMultiple={modoMultiple}
+              dientesSeleccionados={dientesMultiple}
             />
+          </div>
+
+          {/* Hallazgos clínicos — card separado */}
+          {ficha && (
+            <div className="bg-white border border-slate-200 rounded-xl p-4">
+              <ResumenHallazgos
+                fichaId={ficha.id}
+                estados={estados}
+                generandoPlan={generandoPlanAuto}
+                onGenerarPlan={handlePreviewPlan}
+              />
+            </div>
           )}
         </div>
 
@@ -1165,7 +1326,9 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
           {mostrarFormPlan && (
             <FormNuevoPlan
               onCrear={handleCrearPlan}
-              onCancelar={() => setMostrarFormPlan(false)}
+              onCancelar={() => { setMostrarFormPlan(false); setPiezaDesdeOdontograma(null) }}
+              piezaSugerida={piezaDesdeOdontograma}
+              onPiezaConsumida={() => setPiezaDesdeOdontograma(null)}
             />
           )}
 
@@ -1198,18 +1361,37 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
                     <div className="flex items-center gap-2">
                       <BadgeEstadoPlan estado={plan.estado} />
                       {plan.estado === 'borrador' && (
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); handleEliminarPlan(plan.id) }}
-                          disabled={eliminandoPlan === plan.id}
-                          title="Eliminar plan"
-                          className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-40 transition-colors flex-shrink-0"
-                        >
-                          {eliminandoPlan === plan.id
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <Trash2 className="w-3.5 h-3.5" />
-                          }
-                        </button>
+                        confirmandoEliminar === plan.id ? (
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmandoEliminar(null)}
+                              className="px-2 py-0.5 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+                            >
+                              No
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleEliminarPlan(plan.id)}
+                              disabled={eliminandoPlan === plan.id}
+                              className="px-2 py-0.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors flex items-center gap-1"
+                            >
+                              {eliminandoPlan === plan.id
+                                ? <Loader2 className="w-3 h-3 animate-spin" />
+                                : '¿Eliminar?'
+                              }
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setConfirmandoEliminar(plan.id) }}
+                            title="Eliminar plan"
+                            className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )
                       )}
                       <ChevronRight
                         className={`w-4 h-4 text-slate-400 transition-transform ${planExpandido === plan.id ? 'rotate-90' : ''}`}
@@ -1310,6 +1492,68 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
 
       </div>
 
+      {/* Modal de preview — confirmar plan automático */}
+      {previewPlan && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+          onClick={(e) => { if (e.target === e.currentTarget) setPreviewPlan(null) }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100">
+              <h3 className="text-lg font-bold text-slate-900">Confirmar plan de tratamiento</h3>
+              <p className="text-sm text-slate-500 mt-0.5">Se crearán {previewPlan.length} procedimientos</p>
+            </div>
+            <div className="px-5 py-4 max-h-[50vh] overflow-y-auto space-y-2">
+              {previewPlan.map((item, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center justify-between p-3 rounded-xl border ${
+                    item.sinPrecio ? 'border-amber-200 bg-amber-50' : 'border-slate-100 bg-slate-50'
+                  }`}
+                >
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{item.nombre}</p>
+                    <p className="text-xs text-slate-500">Pieza {item.pieza} — {NOMBRES_DIENTES_FDI[item.pieza]}</p>
+                  </div>
+                  <div className="text-right">
+                    {item.sinPrecio ? (
+                      <span className="text-xs font-medium text-amber-600">Sin precio</span>
+                    ) : (
+                      <span className="text-sm font-semibold text-slate-900">{formatCLP(item.precio)}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {previewPlan.some(i => i.sinPrecio) && (
+              <div className="px-5 py-2 bg-amber-50 border-t border-amber-100">
+                <p className="text-xs text-amber-700">Los items sin precio se crearán con valor $0. Puedes editarlos después.</p>
+              </div>
+            )}
+            <div className="px-5 py-4 border-t border-slate-100 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setPreviewPlan(null)}
+                className="flex-1 py-2.5 border border-slate-300 text-slate-700 text-sm font-medium rounded-xl hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => { handleGenerarPlanAuto(hallazgosParaPlan); setPreviewPlan(null) }}
+                disabled={generandoPlanAuto}
+                className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                {generandoPlanAuto
+                  ? <><Loader2 className="w-4 h-4 animate-spin" />Creando...</>
+                  : 'Crear plan'
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de estado del diente */}
       {dienteSeleccionado !== null && ficha && (
         <ModalEstadoDiente
@@ -1318,6 +1562,19 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
           fichaId={ficha.id}
           onGuardado={handleEstadoGuardado}
           onCerrar={() => setDienteSeleccionado(null)}
+        />
+      )}
+
+      {/* Modal de selección múltiple — aplica estado a todos los dientes seleccionados */}
+      {modalMultiple && dientesMultiple.size > 0 && ficha && (
+        <ModalEstadoDiente
+          numeroPieza={[...dientesMultiple][0]}
+          fichaId={ficha.id}
+          skipGuardado={true}
+          onGuardado={(_pieza, nuevoEstado) => {
+            handleAplicarEstadoMultiple(_pieza, nuevoEstado)
+          }}
+          onCerrar={() => setModalMultiple(false)}
         />
       )}
 

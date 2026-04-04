@@ -63,7 +63,32 @@ export default async function MedicoPacientesPage() {
     }
   }
 
-  // Combinar pacientes con su presupuesto más reciente
+  // Cargar planes activos por paciente
+  const { data: planesDb } = await supabase
+    .from('plan_tratamiento')
+    .select('paciente_id, estado')
+    .eq('activo', true)
+    .in('estado', ['en_curso', 'aprobado', 'borrador'])
+    .in('paciente_id', pacientesRaw.map(p => p.id))
+
+  function prioridadPlan(estado: string): number {
+    if (estado === 'en_curso') return 3
+    if (estado === 'aprobado') return 2
+    if (estado === 'borrador') return 1
+    return 0
+  }
+
+  const planActivoMap = new Map<string, string>()
+  if (planesDb) {
+    for (const plan of planesDb as { paciente_id: string; estado: string }[]) {
+      const actual = planActivoMap.get(plan.paciente_id)
+      if (!actual || prioridadPlan(plan.estado) > prioridadPlan(actual)) {
+        planActivoMap.set(plan.paciente_id, plan.estado)
+      }
+    }
+  }
+
+  // Combinar pacientes con su presupuesto más reciente y plan activo
   const pacientes: PacienteConPresupuesto[] = pacientesRaw.map((p) => ({
     id: p.id,
     nombre: p.nombre,
@@ -73,6 +98,7 @@ export default async function MedicoPacientesPage() {
     fecha_nac: p.fecha_nac,
     created_at: p.created_at,
     ultimoPresupuesto: presupuestoMap.get(p.id) ?? null,
+    planActivo: planActivoMap.get(p.id) ?? null,
   }))
 
   return <PacientesOdontologiaClient pacientes={pacientes} />

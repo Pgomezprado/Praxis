@@ -18,6 +18,7 @@ export interface PacienteConPresupuesto {
     estado: EstadoPresupuesto
     created_at: string
   } | null
+  planActivo: string | null
 }
 
 interface PacientesOdontologiaClientProps {
@@ -30,6 +31,23 @@ const ESTADO_BADGE: Record<EstadoPresupuesto, { label: string; clases: string }>
   aceptado:  { label: 'Aceptado',   clases: 'bg-green-100 text-green-700' },
   rechazado: { label: 'Rechazado',  clases: 'bg-red-100 text-red-700' },
   vencido:   { label: 'Vencido',    clases: 'bg-orange-100 text-orange-700' },
+}
+
+const PLAN_BADGE: Record<string, { label: string; clases: string }> = {
+  en_curso: { label: 'En curso',  clases: 'bg-amber-100 text-amber-700' },
+  aprobado: { label: 'Aprobado',  clases: 'bg-emerald-100 text-emerald-700' },
+  borrador: { label: 'Borrador',  clases: 'bg-slate-100 text-slate-600' },
+}
+
+function BadgePlanActivo({ estado }: { estado: string | null }) {
+  if (!estado) return <span className="text-xs text-slate-400">—</span>
+  const badge = PLAN_BADGE[estado]
+  if (!badge) return null
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.clases}`}>
+      {badge.label}
+    </span>
+  )
 }
 
 function BadgePresupuesto({ estado }: { estado: EstadoPresupuesto | null }) {
@@ -356,7 +374,10 @@ export function PacientesOdontologiaClient({ pacientes }: PacientesOdontologiaCl
                     <p className="font-semibold text-slate-900 truncate">{p.nombre}</p>
                     <p className="text-xs text-slate-500 mt-0.5">{p.rut}</p>
                   </div>
-                  <BadgePresupuesto estado={p.ultimoPresupuesto?.estado ?? null} />
+                  <div className="flex flex-col items-end gap-1">
+                    <BadgePresupuesto estado={p.ultimoPresupuesto?.estado ?? null} />
+                    <BadgePlanActivo estado={p.planActivo} />
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-1 text-xs text-slate-500">
@@ -386,6 +407,7 @@ export function PacientesOdontologiaClient({ pacientes }: PacientesOdontologiaCl
                   <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">RUT</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Teléfono</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Último presupuesto</th>
+                  <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Plan activo</th>
                   <th className="px-5 py-3" />
                 </tr>
               </thead>
@@ -404,6 +426,9 @@ export function PacientesOdontologiaClient({ pacientes }: PacientesOdontologiaCl
                           </span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <BadgePlanActivo estado={p.planActivo} />
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <Link

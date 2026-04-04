@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import type { EstadoDiente, EstadoDienteValor, EstadoSuperficie, SuperficiesDiente } from '@/types/database'
 import { FILA_SUPERIOR, FILA_INFERIOR, ETIQUETAS_ESTADO } from './nombresDientesFDI'
 
@@ -10,6 +11,8 @@ interface OdontogramaSVGProps {
   onDienteClick: (numeroPieza: number) => void
   readonly?: boolean
   selectedTooth?: number | null
+  modoMultiple?: boolean
+  dientesSeleccionados?: Set<number>
 }
 
 // ── Colores por estado de superficie ──────────────────────────────────────────
@@ -513,7 +516,7 @@ function Diente({
             isSelected={isSelected}
           />
           <span
-            style={{ color: colorNumero, fontSize: '9px', fontWeight: 600, lineHeight: 1 }}
+            style={{ color: colorNumero, fontSize: '11px', fontWeight: 600, lineHeight: 1 }}
             aria-hidden="true"
           >
             {numero}
@@ -523,7 +526,7 @@ function Diente({
         // INFERIOR: número FDI → círculo ARRIBA → silueta ABAJO
         <>
           <span
-            style={{ color: colorNumero, fontSize: '9px', fontWeight: 600, lineHeight: 1 }}
+            style={{ color: colorNumero, fontSize: '11px', fontWeight: 600, lineHeight: 1 }}
             aria-hidden="true"
           >
             {numero}
@@ -546,6 +549,8 @@ function Diente({
 // ── Leyenda ────────────────────────────────────────────────────────────────────
 
 function Leyenda() {
+  const [abierta, setAbierta] = useState(false)
+
   const itemsEstado: { estado: EstadoDienteValor; label: string }[] = [
     { estado: 'sano',                 label: 'Sano' },
     { estado: 'ausente',              label: 'Ausente' },
@@ -563,38 +568,50 @@ function Leyenda() {
   ]
 
   return (
-    <div className="mt-4 space-y-2">
-      {/* Superficies */}
-      <div className="flex flex-wrap gap-x-3 gap-y-1.5 justify-center">
-        {itemsSuperficie.map(({ label, color }) => (
-          <div key={label} className="flex items-center gap-1.5">
-            <span
-              className="w-3.5 h-3.5 rounded-sm border border-slate-200 flex-shrink-0"
-              style={{ backgroundColor: color }}
-            />
-            <span className="text-[10px] text-slate-500">{label}</span>
+    <div className="mt-3">
+      <button
+        type="button"
+        onClick={() => setAbierta(prev => !prev)}
+        className="mx-auto flex items-center gap-1.5 px-3 py-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
+      >
+        <span className="w-3 h-3 rounded-full border border-slate-300 bg-slate-50 flex-shrink-0" />
+        {abierta ? 'Ocultar leyenda' : 'Ver leyenda'}
+      </button>
+      {abierta && (
+        <div className="mt-2 space-y-2">
+          {/* Superficies */}
+          <div className="flex flex-wrap gap-x-3 gap-y-1.5 justify-center">
+            {itemsSuperficie.map(({ label, color }) => (
+              <div key={label} className="flex items-center gap-1.5">
+                <span
+                  className="w-3.5 h-3.5 rounded-sm border border-slate-200 flex-shrink-0"
+                  style={{ backgroundColor: color }}
+                />
+                <span className="text-[10px] text-slate-500">{label}</span>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      {/* Estados generales */}
-      <div className="flex flex-wrap gap-x-3 gap-y-1.5 justify-center">
-        {itemsEstado.map(({ estado, label }) => {
-          const c = COLORES_ESTADO[estado]
-          return (
-            <div key={estado} className="flex items-center gap-1.5">
-              <span
-                className="w-3.5 h-3.5 rounded-full border flex-shrink-0"
-                style={{
-                  backgroundColor: c.fill === 'none' ? 'transparent' : c.fill,
-                  borderColor: c.stroke,
-                  borderStyle: estado === 'ausente' ? 'dashed' : 'solid',
-                }}
-              />
-              <span className="text-[10px] text-slate-500">{label}</span>
-            </div>
-          )
-        })}
-      </div>
+          {/* Estados generales */}
+          <div className="flex flex-wrap gap-x-3 gap-y-1.5 justify-center">
+            {itemsEstado.map(({ estado, label }) => {
+              const c = COLORES_ESTADO[estado]
+              return (
+                <div key={estado} className="flex items-center gap-1.5">
+                  <span
+                    className="w-3.5 h-3.5 rounded-full border flex-shrink-0"
+                    style={{
+                      backgroundColor: c.fill === 'none' ? 'transparent' : c.fill,
+                      borderColor: c.stroke,
+                      borderStyle: estado === 'ausente' ? 'dashed' : 'solid',
+                    }}
+                  />
+                  <span className="text-[10px] text-slate-500">{label}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -606,6 +623,8 @@ export function OdontogramaSVG({
   onDienteClick,
   readonly = false,
   selectedTooth = null,
+  modoMultiple = false,
+  dientesSeleccionados,
 }: OdontogramaSVGProps) {
   return (
     <div className="w-full overflow-x-auto">
@@ -626,7 +645,7 @@ export function OdontogramaSVG({
                   estado={estados[num]}
                   onClick={() => onDienteClick(num)}
                   readonly={readonly}
-                  isSelected={selectedTooth === num}
+                  isSelected={selectedTooth === num || (modoMultiple && (dientesSeleccionados?.has(num) ?? false))}
                   esSuperior={true}
                 />
               ))}
@@ -642,7 +661,7 @@ export function OdontogramaSVG({
                   estado={estados[num]}
                   onClick={() => onDienteClick(num)}
                   readonly={readonly}
-                  isSelected={selectedTooth === num}
+                  isSelected={selectedTooth === num || (modoMultiple && (dientesSeleccionados?.has(num) ?? false))}
                   esSuperior={true}
                 />
               ))}
@@ -671,7 +690,7 @@ export function OdontogramaSVG({
                   estado={estados[num]}
                   onClick={() => onDienteClick(num)}
                   readonly={readonly}
-                  isSelected={selectedTooth === num}
+                  isSelected={selectedTooth === num || (modoMultiple && (dientesSeleccionados?.has(num) ?? false))}
                   esSuperior={false}
                 />
               ))}
@@ -687,7 +706,7 @@ export function OdontogramaSVG({
                   estado={estados[num]}
                   onClick={() => onDienteClick(num)}
                   readonly={readonly}
-                  isSelected={selectedTooth === num}
+                  isSelected={selectedTooth === num || (modoMultiple && (dientesSeleccionados?.has(num) ?? false))}
                   esSuperior={false}
                 />
               ))}

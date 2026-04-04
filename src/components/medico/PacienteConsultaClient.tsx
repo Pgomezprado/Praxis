@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -102,6 +102,27 @@ export function PacienteConsultaClient({
   const router = useRouter()
   const [tabActiva, setTabActiva] = useState<'clinica' | 'odontologia'>('clinica')
   const [consultasLocales, setConsultasLocales] = useState<MockConsulta[]>(consultas)
+  const [odontoBadge, setOdontoBadge] = useState<number>(0)
+
+  useEffect(() => {
+    if (!tieneOdontologia) return
+    let cancelled = false
+    async function fetchBadge() {
+      try {
+        const resFicha = await fetch(`/api/odontologia/ficha/${paciente.id}`)
+        if (!resFicha.ok) return
+        const { ficha } = await resFicha.json() as { ficha: { id: string } }
+        const resOdonto = await fetch(`/api/odontologia/odontograma/${ficha.id}`)
+        if (!resOdonto.ok) return
+        const { estados } = await resOdonto.json() as { estados: Record<string, { estado: string }> }
+        if (cancelled) return
+        const count = Object.values(estados).filter(e => e.estado !== 'sano').length
+        setOdontoBadge(count)
+      } catch { /* silencioso */ }
+    }
+    fetchBadge()
+    return () => { cancelled = true }
+  }, [tieneOdontologia, paciente.id])
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -314,6 +335,11 @@ export function PacienteConsultaClient({
             }`}
           >
             Odontograma
+            {odontoBadge > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
+                {odontoBadge}
+              </span>
+            )}
           </button>
         </div>
       )}
