@@ -26,7 +26,18 @@ function generarSlotsDia(): string[] {
 const SLOTS_DIA = generarSlotsDia()
 
 function getSlotIndex(hora: string): number {
-  return SLOTS_DIA.indexOf(hora)
+  const idx = SLOTS_DIA.indexOf(hora)
+  if (idx !== -1) return idx
+  // Si la hora no coincide exactamente con un slot (ej: "09:15"),
+  // encontrar el slot más cercano anterior
+  const [h, m] = hora.split(':').map(Number)
+  if (isNaN(h) || isNaN(m)) return 0
+  const totalMin = h * 60 + m
+  for (let i = SLOTS_DIA.length - 1; i >= 0; i--) {
+    const [sh, sm] = SLOTS_DIA[i].split(':').map(Number)
+    if (sh * 60 + sm <= totalMin) return i
+  }
+  return 0
 }
 
 export function ListaDia({ citas, showMedico = false, esDoctor = false, citasCobradas, onEstadoCambiado, onNuevaCita, onCambioHora }: ListaDiaProps) {
@@ -70,7 +81,15 @@ export function ListaDia({ citas, showMedico = false, esDoctor = false, citasCob
     }
   }
 
-  const citasByHora = new Map(sorted.map((c) => [c.horaInicio, c]))
+  // Mapear citas al slot más cercano (soporta horas no-estándar como "09:15")
+  const citasByHora = new Map<string, MockCita>()
+  for (const c of sorted) {
+    const slotIdx = getSlotIndex(c.horaInicio)
+    const slotKey = SLOTS_DIA[slotIdx] ?? c.horaInicio
+    if (!citasByHora.has(slotKey)) {
+      citasByHora.set(slotKey, c)
+    }
+  }
 
   return (
     <div className="space-y-1.5">
