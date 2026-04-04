@@ -1001,28 +1001,29 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
   }
 
   async function handlePreviewPlan(hallazgos: Array<[string, EstadoDiente]>) {
+    // Intentar cargar catálogo para mostrar precios, pero no bloquear si falla
+    let catalogo: ArancelDental[] = []
     try {
       const resCat = await fetch('/api/odontologia/catalogo')
-      const catJson = await resCat.json() as { categorias?: { items: ArancelDental[] }[] }
-      const catalogo = (catJson.categorias ?? []).flatMap(c => c.items)
+      if (resCat.ok) {
+        const catJson = await resCat.json() as { categorias?: { items: ArancelDental[] }[] }
+        catalogo = (catJson.categorias ?? []).flatMap(c => c.items)
+      }
+    } catch { /* catálogo vacío — preview mostrará todo sin precio */ }
 
-      const items = hallazgos.map(([pieza, est]) => {
-        const built = buildItemDesdeEstado(Number(pieza), est, catalogo)
-        return {
-          pieza: Number(pieza),
-          estado: est,
-          nombre: built?.nombre_procedimiento ?? est.estado,
-          precio: built?.precio_unitario ?? 0,
-          sinPrecio: !built?.precio_unitario,
-        }
-      })
+    const items = hallazgos.map(([pieza, est]) => {
+      const built = buildItemDesdeEstado(Number(pieza), est, catalogo)
+      return {
+        pieza: Number(pieza),
+        estado: est,
+        nombre: built?.nombre_procedimiento ?? (TRATAMIENTO_SUGERIDO[est.estado] ?? est.estado),
+        precio: built?.precio_unitario ?? 0,
+        sinPrecio: !built?.precio_unitario,
+      }
+    })
 
-      setHallazgosParaPlan(hallazgos)
-      setPreviewPlan(items)
-    } catch {
-      // Si falla la carga del catálogo, ejecutar directo como antes
-      handleGenerarPlanAuto(hallazgos)
-    }
+    setHallazgosParaPlan(hallazgos)
+    setPreviewPlan(items)
   }
 
   async function handleGenerarPlanAuto(hallazgos: Array<[string, EstadoDiente]>) {
