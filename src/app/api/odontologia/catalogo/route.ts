@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { puedeAtender } from '@/lib/utils/roles'
 import type { ArancelDental } from '@/types/database'
 
 // GET /api/odontologia/catalogo
@@ -113,7 +114,7 @@ export async function POST(req: Request) {
     const meTyped = me as { clinica_id: string; rol: string; es_doctor: boolean }
 
     // Solo doctores o admin pueden gestionar el catálogo dental
-    if (!meTyped.es_doctor && meTyped.rol !== 'admin_clinica') {
+    if (!puedeAtender(meTyped) && meTyped.rol !== 'admin_clinica') {
       return Response.json({ error: 'Sin permiso para gestionar el catálogo' }, { status: 403 })
     }
 

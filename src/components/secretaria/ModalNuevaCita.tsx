@@ -118,7 +118,7 @@ export function ModalNuevaCita({
   // Cuando cambia el médico, inicializar la duración con la duración default del médico
   useEffect(() => {
     if (medico) {
-      setDuracion(medico.duracion_consulta ?? 30)
+      setDuracion(Number.isFinite(medico.duracion_consulta) ? medico.duracion_consulta : 30)
     }
   }, [medicoId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -141,7 +141,8 @@ export function ModalNuevaCita({
   // Calcular hora fin según slot + duración
   function calcularHoraFin(horaInicio: string, minutos: number): string {
     const [h, m] = horaInicio.split(':').map(Number)
-    const total = h * 60 + m + minutos
+    const mins = Number.isFinite(minutos) ? minutos : 30
+    const total = h * 60 + m + mins
     return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
   }
 

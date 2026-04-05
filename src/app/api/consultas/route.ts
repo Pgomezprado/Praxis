@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { puedeAtender } from '@/lib/utils/roles'
 
 export async function GET(req: Request) {
   try {
@@ -88,7 +89,7 @@ export async function POST(req: Request) {
     if (!usuario) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
     // Solo médicos pueden registrar consultas clínicas
-    if (usuario.rol !== 'doctor' && !usuario.es_doctor) {
+    if (!puedeAtender(usuario as { rol: string; es_doctor: boolean })) {
       return Response.json({ error: 'Solo un médico puede registrar consultas' }, { status: 403 })
     }
 

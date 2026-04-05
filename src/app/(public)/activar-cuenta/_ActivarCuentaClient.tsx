@@ -96,9 +96,11 @@ function ActivarCuentaContent() {
         return
       }
       const rol = data.rol
+      const esDoctor = data.es_doctor === true
       if (rol === 'admin_clinica') {
+        // Admin con es_doctor: va a /admin donde el sidebar tiene link a "Mi agenda"
         window.location.href = '/admin'
-      } else if (rol === 'doctor') {
+      } else if (rol === 'doctor' || esDoctor) {
         window.location.href = '/medico/inicio'
       } else {
         window.location.href = '/inicio'

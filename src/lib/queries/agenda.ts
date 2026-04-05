@@ -80,6 +80,6 @@ export async function getMedicos(clinicaId: string): Promise<MedicoAgenda[]> {
     id: d.id,
     nombre: d.nombre,
     especialidad: d.especialidad ?? '',
-    duracion_consulta: (d as { duracion_consulta: number | null }).duracion_consulta ?? 30,
+    duracion_consulta: Number.isFinite((d as { duracion_consulta: number | null }).duracion_consulta) ? (d as { duracion_consulta: number | null }).duracion_consulta! : 30,
   }))
 }

@@ -97,7 +97,7 @@ export async function POST(req: Request) {
     // Retornar rol para que el cliente sepa a dónde redirigir
     const { data: usuario } = await supabase
       .from('usuarios')
-      .select('rol, clinica_id')
+      .select('rol, es_doctor, clinica_id')
       .eq('id', user.id)
       .single()
 
@@ -115,7 +115,8 @@ export async function POST(req: Request) {
       })
     }
 
-    return Response.json({ rol: usuario?.rol ?? 'recepcionista' })
+    const u = usuario as { rol: string; es_doctor?: boolean } | null
+    return Response.json({ rol: u?.rol ?? 'recepcionista', es_doctor: u?.es_doctor ?? false })
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
       console.error('Error en POST /api/activar-cuenta:', error)

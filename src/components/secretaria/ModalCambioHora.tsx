@@ -27,7 +27,8 @@ function getDiaKey(f: string): keyof HorarioSemanal {
 
 function calcularHoraFin(horaInicio: string, minutos: number): string {
   const [h, m] = horaInicio.split(':').map(Number)
-  const total = h * 60 + m + minutos
+  const mins = Number.isFinite(minutos) ? minutos : 30
+  const total = h * 60 + m + mins
   return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`
 }
 

@@ -118,7 +118,8 @@ export async function POST(req: Request) {
 
     if (!doctor) return Response.json({ error: 'Profesional no encontrado' }, { status: 404 })
 
-    const duracionDoctor = (doctor as { id: string; nombre: string; duracion_consulta: number | null }).duracion_consulta ?? 30
+    const rawDuracion = (doctor as { id: string; nombre: string; duracion_consulta: number | null }).duracion_consulta
+    const duracionDoctor = Number.isFinite(rawDuracion) ? rawDuracion! : 30
 
     // Buscar o crear paciente por RUT
     let pacienteId: string

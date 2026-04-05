@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { puedeAtender } from '@/lib/utils/roles'
 
 export interface MedicamentoReceta {
   nombre: string
@@ -56,7 +57,7 @@ export async function POST(req: Request) {
 
     if (!usuario) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
-    if (usuario.rol !== 'doctor' && !usuario.es_doctor) {
+    if (!puedeAtender(usuario as { rol: string; es_doctor: boolean })) {
       return Response.json({ error: 'Solo un médico puede emitir recetas' }, { status: 403 })
     }
 
@@ -69,7 +70,7 @@ export async function POST(req: Request) {
       .select('id')
       .eq('id', consulta_id)
       .eq('clinica_id', clinicaId)
-      .eq('medico_id', user.id)
+      .eq('doctor_id', user.id)
       .single()
 
     if (!consultaValida) {

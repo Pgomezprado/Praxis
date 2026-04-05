@@ -29,6 +29,7 @@ function NuevaContrasenaContent() {
   // null = cargando, false = sin sesión, 'temporal' = cambio obligatorio, 'recovery' = reset voluntario
   const [tipoSesion, setTipoSesion] = useState<null | false | 'temporal' | 'recovery'>(null)
   const [rolUsuario, setRolUsuario] = useState<string | null>(null)
+  const [esDoctorFlag, setEsDoctorFlag] = useState(false)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,11 +51,13 @@ function NuevaContrasenaContent() {
       // Obtener rol para saber a dónde redirigir después
       const { data: usuarioRow } = await supabase
         .from('usuarios')
-        .select('rol')
+        .select('rol, es_doctor')
         .eq('id', user.id)
         .single()
       if (usuarioRow) {
-        setRolUsuario((usuarioRow as { rol: string }).rol)
+        const u = usuarioRow as { rol: string; es_doctor?: boolean }
+        setRolUsuario(u.rol)
+        setEsDoctorFlag(u.es_doctor === true)
       }
     }
     verificar()
@@ -65,9 +68,9 @@ function NuevaContrasenaContent() {
   const coinciden = password === confirmar
   const canGuardar = passwordOk && coinciden
 
-  function destino(rol: string | null): string {
-    if (rol === 'doctor') return '/medico/inicio'
+  function destino(rol: string | null, esDoctor: boolean): string {
     if (rol === 'admin_clinica') return '/admin'
+    if (rol === 'doctor' || esDoctor) return '/medico/inicio'
     return '/inicio'
   }
 
@@ -96,7 +99,7 @@ function NuevaContrasenaContent() {
     setListo(true)
 
     // Redirigir al dashboard correspondiente
-    setTimeout(() => router.push(destino(rolUsuario)), 2000)
+    setTimeout(() => router.push(destino(rolUsuario, esDoctorFlag)), 2000)
   }
 
   if (tipoSesion === null) {

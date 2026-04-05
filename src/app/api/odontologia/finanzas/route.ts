@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { puedeAtender } from '@/lib/utils/roles'
 import type { Cobro, Pago } from '@/types/database'
 
 // ── Tipos de respuesta ──────────────────────────────────────────────────────
@@ -39,7 +40,7 @@ export async function GET() {
     const me = meData as { clinica_id: string; rol: string; es_doctor: boolean }
 
     // Solo médicos o admin_clinica pueden ver finanzas
-    if (me.rol !== 'doctor' && !me.es_doctor && me.rol !== 'admin_clinica') {
+    if (!puedeAtender(me) && me.rol !== 'admin_clinica') {
       return Response.json({ error: 'Sin permisos' }, { status: 403 })
     }
 

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { puedeAtender } from '@/lib/utils/roles'
 import type { ArancelDental } from '@/types/database'
 import { isValidUUID } from '@/lib/utils/validators'
 
@@ -32,7 +33,7 @@ export async function PUT(
     if (!me) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
     const meTyped = me as { clinica_id: string; rol: string; es_doctor: boolean }
 
-    if (!meTyped.es_doctor && meTyped.rol !== 'admin_clinica') {
+    if (!puedeAtender(meTyped) && meTyped.rol !== 'admin_clinica') {
       return Response.json({ error: 'Sin permiso para editar prestaciones' }, { status: 403 })
     }
 
@@ -126,7 +127,7 @@ export async function DELETE(
     if (!me) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
     const meTyped = me as { clinica_id: string; rol: string; es_doctor: boolean }
 
-    if (!meTyped.es_doctor && meTyped.rol !== 'admin_clinica') {
+    if (!puedeAtender(meTyped) && meTyped.rol !== 'admin_clinica') {
       return Response.json({ error: 'Sin permiso para eliminar prestaciones' }, { status: 403 })
     }
 
