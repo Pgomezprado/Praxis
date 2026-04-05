@@ -1,12 +1,22 @@
 'use client'
 
 import { Suspense, useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { createBrowserClient } from '@supabase/ssr'
 import { Eye, EyeOff, CheckCircle2, Lock } from 'lucide-react'
 
+// Bug 5: Traducción de errores del callback de auth
+const TRADUCCIONES_ERROR: Record<string, string> = {
+  'Email link is invalid or has expired': 'El enlace de activación es inválido o ha expirado.',
+  'otp_expired': 'El enlace de activación ha expirado.',
+  'sin_token': 'No se encontró un token de activación en el enlace.',
+}
+
+function traducirError(errorParam: string): string {
+  return TRADUCCIONES_ERROR[errorParam] ?? `Error de activación: ${errorParam}`
+}
+
 function ActivarCuentaContent() {
-  const router = useRouter()
   const searchParams = useSearchParams()
 
   const [password, setPassword] = useState('')
@@ -18,7 +28,7 @@ function ActivarCuentaContent() {
   const [tokenValido, setTokenValido] = useState<boolean | null>(null)
   const [nombreUsuario, setNombreUsuario] = useState('')
   const [emailUsuario, setEmailUsuario] = useState('')
-  const [debugError, setDebugError] = useState('')
+  const [mensajeInvalido, setMensajeInvalido] = useState('')
   const [aceptaTerminos, setAceptaTerminos] = useState(false)
 
   const supabase = createBrowserClient(
@@ -29,7 +39,8 @@ function ActivarCuentaContent() {
   useEffect(() => {
     const errorParam = searchParams.get('error')
     if (errorParam) {
-      setDebugError(errorParam)
+      // Bug 5: Mostrar error traducido al español
+      setMensajeInvalido(traducirError(errorParam))
       setTokenValido(false)
       return
     }
@@ -37,17 +48,26 @@ function ActivarCuentaContent() {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        setDebugError('Sin sesión activa')
+        setMensajeInvalido('Sin sesión activa. El enlace puede haber expirado.')
         setTokenValido(false)
         return
       }
       setEmailUsuario(user.email ?? '')
-      const { data: u } = await supabase
+
+      // Bug 2: Validar que el usuario existe en tabla `usuarios`
+      const { data: u, error: uError } = await supabase
         .from('usuarios')
         .select('nombre')
         .eq('id', user.id)
         .single()
-      if (u?.nombre) setNombreUsuario(u.nombre.split(' ')[0])
+
+      if (uError || !u) {
+        setMensajeInvalido('Tu cuenta no está configurada correctamente. Contacta al administrador de tu clínica.')
+        setTokenValido(false)
+        return
+      }
+
+      if (u.nombre) setNombreUsuario(u.nombre.split(' ')[0])
       setTokenValido(true)
     }
 
@@ -63,11 +83,29 @@ function ActivarCuentaContent() {
   const coinciden = password === confirmar
   const canGuardar = passwordOk && coinciden && aceptaTerminos
 
+  // Bug 6: Mensaje de validación de contraseña dinámico
+  function getMensajePassword(): string {
+    if (!password.length) return ''
+    const faltantes: string[] = []
+    if (password.length < 10) faltantes.push('mínimo 10 caracteres')
+    if (!/[A-Z]/.test(password)) faltantes.push('una mayúscula')
+    if (!/[0-9]/.test(password)) faltantes.push('un número')
+    if (!/[!@#$%^&*()_+\-=[\]{}|;':,./<>?]/.test(password)) faltantes.push('un carácter especial')
+    if (faltantes.length === 0) return ''
+    return `Falta: ${faltantes.join(', ')}`
+  }
+
   async function handleGuardar(e: React.FormEvent) {
     e.preventDefault()
     if (!canGuardar) return
     setGuardando(true)
     setError('')
+
+    // Bug 4: Validar que emailUsuario no esté vacío antes del signIn
+    if (!emailUsuario) {
+      window.location.href = '/login'
+      return
+    }
 
     const res = await fetch('/api/activar-cuenta', {
       method: 'POST',
@@ -89,12 +127,14 @@ function ActivarCuentaContent() {
       password,
     })
 
+    // Bug 3: Solo mostrar pantalla de éxito si el sign-in funcionó
+    if (signInError) {
+      window.location.href = '/login'
+      return
+    }
+
     setListo(true)
     setTimeout(() => {
-      if (signInError) {
-        window.location.href = '/login'
-        return
-      }
       const rol = data.rol
       const esDoctor = data.es_doctor === true
       if (rol === 'admin_clinica') {
@@ -128,11 +168,8 @@ function ActivarCuentaContent() {
           </div>
           <h1 className="text-lg font-semibold text-slate-900 mb-2">Link inválido o expirado</h1>
           <p className="text-sm text-slate-500">
-            Este link ya no es válido. Pide al administrador que te envíe una nueva invitación.
+            {mensajeInvalido || 'Este link ya no es válido. Pide al administrador que te envíe una nueva invitación.'}
           </p>
-          {debugError && (
-            <p className="text-xs text-slate-400 mt-4 break-all font-mono">{debugError}</p>
-          )}
         </div>
       </div>
     )
@@ -151,6 +188,8 @@ function ActivarCuentaContent() {
       </div>
     )
   }
+
+  const mensajePassword = getMensajePassword()
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
@@ -192,8 +231,9 @@ function ActivarCuentaContent() {
                 {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            {password.length > 0 && !passwordOk && (
-              <p className="text-xs text-red-500 mt-1">Mínimo 10 caracteres</p>
+            {/* Bug 6: Mensaje dinámico según qué falta */}
+            {mensajePassword && (
+              <p className="text-xs text-red-500 mt-1">{mensajePassword}</p>
             )}
           </div>
 

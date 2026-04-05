@@ -38,7 +38,8 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/superadmin/') ||
     pathname === '/api/arco' ||
     pathname === '/api/demo-request' ||
-    pathname === '/api/onboarding'
+    pathname === '/api/onboarding' ||
+    pathname === '/api/activar-cuenta'
 
   // /superadmin requiere la cookie HMAC firmada — se maneja por separado
   const isSuperadminPage = pathname.startsWith('/superadmin')
