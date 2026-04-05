@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 
 // ─── Utilidades ───────────────────────────────────────────────
@@ -97,6 +98,37 @@ export function DatePicker({
   const [viewMonth, setViewMonth] = useState(initMonth)
 
   const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const popoverRef = useRef<HTMLDivElement>(null)
+  const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({})
+
+  // Posicionar el popover relativo al trigger
+  useEffect(() => {
+    if (!open || !triggerRef.current) return
+    function updatePosition() {
+      const rect = triggerRef.current!.getBoundingClientRect()
+      const popoverHeight = 380
+      const spaceBelow = window.innerHeight - rect.bottom
+      const showAbove = spaceBelow < popoverHeight && rect.top > popoverHeight
+
+      setPopoverStyle({
+        position: 'fixed',
+        left: rect.left,
+        width: Math.max(rect.width, 280),
+        ...(showAbove
+          ? { bottom: window.innerHeight - rect.top + 6 }
+          : { top: rect.bottom + 6 }),
+        zIndex: 9999,
+      })
+    }
+    updatePosition()
+    window.addEventListener('scroll', updatePosition, true)
+    window.addEventListener('resize', updatePosition)
+    return () => {
+      window.removeEventListener('scroll', updatePosition, true)
+      window.removeEventListener('resize', updatePosition)
+    }
+  }, [open])
 
   // Sincronizar vista cuando el value externo cambia
   useEffect(() => {
@@ -111,7 +143,11 @@ export function DatePicker({
   useEffect(() => {
     if (!open) return
     function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node
+      if (
+        containerRef.current && !containerRef.current.contains(target) &&
+        popoverRef.current && !popoverRef.current.contains(target)
+      ) {
         setOpen(false)
       }
     }
@@ -186,6 +222,7 @@ export function DatePicker({
     <div ref={containerRef} className={`relative ${className}`}>
       {/* Input trigger */}
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         onClick={() => setOpen(prev => !prev)}
@@ -206,16 +243,15 @@ export function DatePicker({
         </span>
       </button>
 
-      {/* Popover */}
-      {open && (
+      {/* Popover via portal */}
+      {open && createPortal(
         <div
+          ref={popoverRef}
           className="
-            absolute z-50 mt-1.5 left-0
             bg-white border border-slate-200 rounded-2xl shadow-lg
             w-72 p-4
-            animate-in fade-in slide-in-from-top-1 duration-150
           "
-          style={{ minWidth: '280px' }}
+          style={popoverStyle}
         >
           {/* Header del calendario */}
           <div className="flex items-center gap-2 mb-4">
@@ -326,7 +362,8 @@ export function DatePicker({
               </button>
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
