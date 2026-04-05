@@ -80,7 +80,7 @@ export function OnboardingWizard({
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/superadmin/clinicas/${clinicaId}`, {
+      const res = await fetch('/api/clinica', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nombre, direccion, ciudad, telefono, email }),
