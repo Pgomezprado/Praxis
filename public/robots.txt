@@ -3,9 +3,20 @@ Allow: /
 Allow: /privacidad
 Allow: /terminos
 Allow: /agendar
+
+# Rutas internas de la app — no indexar
 Disallow: /admin/
 Disallow: /medico/
 Disallow: /superadmin/
+Disallow: /dashboard/
+Disallow: /cobro/
+Disallow: /inicio/
+Disallow: /agenda/
+Disallow: /pacientes/
+Disallow: /login
+Disallow: /recuperar-contrasena
+Disallow: /activar-cuenta
+Disallow: /nueva-contrasena
 Disallow: /api/
 
 Sitemap: https://praxisapp.cl/sitemap.xml
