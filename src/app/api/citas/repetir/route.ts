@@ -19,8 +19,8 @@ export async function POST(req: Request) {
       return Response.json({ error: 'intervalo_semanas debe ser 1 o 2' }, { status: 400 })
     }
 
-    if (![4, 6, 8, 12, 16, 20, 24].includes(repeticiones)) {
-      return Response.json({ error: 'repeticiones debe ser 4, 6, 8, 12, 16, 20 o 24' }, { status: 400 })
+    if (!Number.isInteger(repeticiones) || repeticiones < 1 || repeticiones > 52) {
+      return Response.json({ error: 'repeticiones debe ser un número entre 1 y 52' }, { status: 400 })
     }
 
     const supabase = await createClient()

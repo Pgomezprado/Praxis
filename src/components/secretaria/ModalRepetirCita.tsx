@@ -67,7 +67,7 @@ type Resultado = {
 
 export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCitaProps) {
   const [intervaloSemanas, setIntervaloSemanas] = useState<1 | 2>(1)
-  const [repeticiones, setRepeticiones] = useState<4 | 6 | 8 | 12 | 16 | 20 | 24>(4)
+  const [repeticiones, setRepeticiones] = useState(4)
   const [loading, setLoading] = useState(false)
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -181,8 +181,8 @@ export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCita
                     <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                       Cantidad de controles
                     </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {([4, 8, 12, 16, 20, 24] as const).map((n) => {
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {[4, 8, 12, 24].map((n) => {
                         const meses = (n * intervaloSemanas) / 4
                         const duracion = meses === 1 ? '1 mes' : Number.isInteger(meses) ? `${meses} meses` : `${meses.toFixed(1)} meses`
                         return (
@@ -202,6 +202,26 @@ export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCita
                           </button>
                         )
                       })}
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <label className="text-xs text-slate-500 whitespace-nowrap">O ingresa:</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={52}
+                        value={repeticiones}
+                        onChange={(e) => {
+                          const v = Math.max(1, Math.min(52, parseInt(e.target.value) || 1))
+                          setRepeticiones(v)
+                        }}
+                        className="w-20 px-3 py-2 rounded-xl text-sm font-medium border border-slate-200 text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <span className="text-xs text-slate-400">
+                        {(() => {
+                          const meses = (repeticiones * intervaloSemanas) / 4
+                          return meses === 1 ? '1 mes' : Number.isInteger(meses) ? `${meses} meses` : `${meses.toFixed(1)} meses`
+                        })()}
+                      </span>
                     </div>
                   </div>
                 </div>
