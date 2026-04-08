@@ -17,7 +17,7 @@ type CobroPendiente = {
   doctor: { nombre: string } | null
 }
 
-type MedioPago = 'efectivo' | 'tarjeta'
+type MedioPago = 'efectivo' | 'tarjeta' | 'transferencia'
 
 // ── Estado por fila ────────────────────────────────────────────────────────
 
@@ -38,6 +38,7 @@ export default function CobrosPendientesClient({
   const [estados, setEstados] = useState<Record<string, FilaEstado>>({})
   const [montoCobrar, setMontoCobrar] = useState<Record<string, string>>({})
   const [medioPago, setMedioPago] = useState<Record<string, MedioPago>>({})
+  const [referencia, setReferencia] = useState<Record<string, string>>({})
   const [errorFila, setErrorFila] = useState<Record<string, string>>({})
 
   function getEstado(id: string): FilaEstado {
@@ -57,6 +58,7 @@ export default function CobrosPendientesClient({
     setEstadoFila(cobro.id, { modo: 'cobrar' })
     setMontoCobrar(prev => ({ ...prev, [cobro.id]: String(cobro.monto_neto) }))
     setMedioPago(prev => ({ ...prev, [cobro.id]: 'efectivo' }))
+    setReferencia(prev => ({ ...prev, [cobro.id]: '' }))
     setErrorFila(prev => ({ ...prev, [cobro.id]: '' }))
   }
 
@@ -71,12 +73,14 @@ export default function CobrosPendientesClient({
     setErrorFila(prev => ({ ...prev, [cobro.id]: '' }))
 
     try {
+      const refVal = referencia[cobro.id]?.trim() || undefined
       const res = await fetch(`/api/finanzas/cobros/${cobro.id}/pagos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           monto,
           medio_pago: medioPago[cobro.id] ?? 'efectivo',
+          ...(refVal ? { referencia: refVal } : {}),
         }),
       })
 
@@ -255,9 +259,28 @@ export default function CobrosPendientesClient({
                     >
                       <option value="efectivo">Efectivo</option>
                       <option value="tarjeta">Tarjeta</option>
+                      <option value="transferencia">Transferencia</option>
                     </select>
                   </div>
                 </div>
+
+                {/* Campo voucher/referencia — visible para tarjeta y transferencia */}
+                {(medioPago[cobro.id] === 'tarjeta' || medioPago[cobro.id] === 'transferencia') && (
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">
+                      N° voucher / referencia <span className="text-slate-400 font-normal">(opcional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={medioPago[cobro.id] === 'tarjeta' ? 'Ej: 123456' : 'Ej: 123456789'}
+                      value={referencia[cobro.id] ?? ''}
+                      onChange={e =>
+                        setReferencia(prev => ({ ...prev, [cobro.id]: e.target.value }))
+                      }
+                      className="w-full text-sm border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-white"
+                    />
+                  </div>
+                )}
 
                 {error && (
                   <p className="text-xs text-red-600 flex items-center gap-1">

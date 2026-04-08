@@ -18,8 +18,8 @@ export async function POST(
       return Response.json({ error: 'monto y medio_pago son obligatorios' }, { status: 400 })
     }
 
-    if (!['efectivo', 'tarjeta'].includes(medio_pago)) {
-      return Response.json({ error: 'medio_pago debe ser "efectivo" o "tarjeta"' }, { status: 400 })
+    if (!['efectivo', 'tarjeta', 'transferencia'].includes(medio_pago)) {
+      return Response.json({ error: 'medio_pago debe ser "efectivo", "tarjeta" o "transferencia"' }, { status: 400 })
     }
 
     if (typeof monto !== 'number' || monto <= 0) {

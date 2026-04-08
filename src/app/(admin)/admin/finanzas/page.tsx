@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { DollarSign, Clock, CheckCircle2, Tag, ArrowRight, TrendingUp, Package } from 'lucide-react'
+import { Clock, CheckCircle2, Tag, ArrowRight, TrendingUp, Package } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import type { Cobro, Pago } from '@/types/database'
 import CobrosPendientesClient from '@/components/admin/CobrosPendientesClient'
+import CobrosHoyClient from '@/components/admin/CobrosHoyClient'
 
 export const metadata = { title: 'Finanzas — Praxis Admin' }
 
@@ -71,13 +72,14 @@ export default async function AdminFinanzasPage() {
   const pagosDelMes = (pagosDelMesData ?? []) as Pick<Pago, 'monto'>[]
   const ingresosMes = pagosDelMes.reduce((sum, p) => sum + p.monto, 0)
 
-  // Últimos cobros del día para lista
+  // Últimos cobros del día para lista — incluye pagos para mostrar detalle
   const { data: ultimosCobrosData } = await supabase
     .from('cobros')
     .select(`
-      id, folio_cobro, concepto, monto_neto, estado, created_at,
+      id, folio_cobro, concepto, monto_neto, estado, notas, created_at,
       paciente:pacientes!cobros_paciente_id_fkey ( nombre ),
-      doctor:usuarios!cobros_doctor_id_fkey ( nombre )
+      doctor:usuarios!cobros_doctor_id_fkey ( nombre ),
+      pagos ( id, monto, medio_pago, referencia, fecha_pago )
     `)
     .eq('clinica_id', clinicaId)
     .eq('activo', true)
@@ -99,9 +101,18 @@ export default async function AdminFinanzasPage() {
     .order('created_at', { ascending: false })
     .limit(20)
 
+  type PagoDetalle = {
+    id: string
+    monto: number
+    medio_pago: 'efectivo' | 'tarjeta' | 'transferencia'
+    referencia: string | null
+    fecha_pago: string
+  }
+
   type CobroConJoins = Cobro & {
     paciente: { nombre: string } | null
     doctor: { nombre: string } | null
+    pagos?: PagoDetalle[]
   }
   const ultimosCobros = (ultimosCobrosData ?? []) as unknown as CobroConJoins[]
   const cobrosPendientesList = (cobrosPendientesListData ?? []) as unknown as CobroConJoins[]
@@ -179,61 +190,7 @@ export default async function AdminFinanzasPage() {
           </span>
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          {ultimosCobros.length === 0 ? (
-            <div className="px-5 py-10 text-center">
-              <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                <DollarSign className="w-6 h-6 text-slate-400" />
-              </div>
-              <p className="text-sm text-slate-500">Sin cobros registrados hoy</p>
-              <p className="text-xs text-slate-400 mt-1">
-                Los cobros aparecen cuando la recepcionista marca una cita completada como pagada
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="hidden sm:grid sm:grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-3 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                <span>Paciente / Concepto</span>
-                <span className="w-36">Profesional</span>
-                <span className="w-28 text-right">Monto</span>
-                <span className="w-24 text-center">Estado</span>
-              </div>
-
-              {ultimosCobros.map((cobro, idx) => (
-                <div
-                  key={cobro.id}
-                  className={`flex flex-col sm:grid sm:grid-cols-[1fr_auto_auto_auto] gap-2 sm:gap-4 px-5 py-4 items-start sm:items-center ${
-                    idx < ultimosCobros.length - 1 ? 'border-b border-slate-100' : ''
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-800">
-                      {cobro.paciente?.nombre ?? '—'}
-                    </p>
-                    <p className="text-xs text-slate-400 truncate">{cobro.concepto}</p>
-                    <p className="text-xs text-slate-300 font-mono mt-0.5">{cobro.folio_cobro}</p>
-                  </div>
-
-                  <div className="w-36">
-                    <p className="text-sm text-slate-600 truncate">
-                      {cobro.doctor?.nombre ?? '—'}
-                    </p>
-                  </div>
-
-                  <div className="w-28 text-right">
-                    <span className="text-sm font-semibold text-slate-900">
-                      ${cobro.monto_neto.toLocaleString('es-CL')}
-                    </span>
-                  </div>
-
-                  <div className="w-24 flex justify-center">
-                    <EstadoBadge estado={cobro.estado} />
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-        </div>
+        <CobrosHoyClient cobros={ultimosCobros} />
       </section>
 
       {/* Cobros pendientes */}
@@ -291,18 +248,3 @@ export default async function AdminFinanzasPage() {
   )
 }
 
-// ── Sub-componente badge estado ────────────────────────────────
-
-function EstadoBadge({ estado }: { estado: string }) {
-  const config: Record<string, { label: string; classes: string }> = {
-    pendiente: { label: 'Pendiente', classes: 'bg-amber-100 text-amber-700 border-amber-200' },
-    pagado: { label: 'Pagado', classes: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-    anulado: { label: 'Anulado', classes: 'bg-red-100 text-red-600 border-red-200' },
-  }
-  const c = config[estado] ?? { label: estado, classes: 'bg-slate-100 text-slate-600 border-slate-200' }
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${c.classes}`}>
-      {c.label}
-    </span>
-  )
-}
