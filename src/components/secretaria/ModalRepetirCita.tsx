@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, RefreshCw, AlertTriangle, CheckCircle2, Loader2, CalendarDays, XCircle } from 'lucide-react'
+import { X, CalendarPlus, AlertTriangle, CheckCircle2, Loader2, CalendarDays, XCircle } from 'lucide-react'
 import type { MockCita } from '@/types/domain'
 import { mapCitaDb } from '@/lib/utils/mapCita'
 
@@ -67,7 +67,7 @@ type Resultado = {
 
 export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCitaProps) {
   const [intervaloSemanas, setIntervaloSemanas] = useState<1 | 2>(1)
-  const [repeticiones, setRepeticiones] = useState<4 | 6 | 8 | 12>(4)
+  const [repeticiones, setRepeticiones] = useState<4 | 6 | 8 | 12 | 16 | 20 | 24>(4)
   const [loading, setLoading] = useState(false)
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -130,13 +130,13 @@ export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCita
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
             <div className="flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 text-slate-400" />
-              <h2 className="text-sm font-bold text-slate-900">Repetir cita</h2>
+              <CalendarPlus className="w-4 h-4 text-slate-400" />
+              <h2 className="text-sm font-bold text-slate-900">Programar controles</h2>
             </div>
             <button
               onClick={onClose}
               disabled={loading}
-              aria-label="Cerrar panel de repetir cita"
+              aria-label="Cerrar panel de programar controles"
               className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50"
             >
               <X className="w-4 h-4" />
@@ -147,7 +147,7 @@ export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCita
 
             {/* Info cita origen */}
             <div className="bg-slate-50 rounded-xl px-4 py-3 space-y-1">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cita a repetir</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Cita base</p>
               <p className="text-sm font-semibold text-slate-800">{cita.pacienteNombre}</p>
               <p className="text-sm text-slate-500">{cita.medicoNombre} · {cita.horaInicio}–{cita.horaFin}</p>
             </div>
@@ -179,22 +179,29 @@ export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCita
 
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                      Cuántas veces
+                      Cantidad de controles
                     </label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {([4, 6, 8, 12] as const).map((n) => (
-                        <button
-                          key={n}
-                          onClick={() => setRepeticiones(n)}
-                          className={`py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                            repeticiones === n
-                              ? 'bg-blue-600 text-white border-blue-600'
-                              : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
-                          }`}
-                        >
-                          {n}
-                        </button>
-                      ))}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {([4, 8, 12, 16, 20, 24] as const).map((n) => {
+                        const meses = (n * intervaloSemanas) / 4
+                        const duracion = meses === 1 ? '1 mes' : Number.isInteger(meses) ? `${meses} meses` : `${meses.toFixed(1)} meses`
+                        return (
+                          <button
+                            key={n}
+                            onClick={() => setRepeticiones(n)}
+                            className={`flex flex-col items-center py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                              repeticiones === n
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
+                            }`}
+                          >
+                            {n}
+                            <span className={`text-xs ${repeticiones === n ? 'text-blue-200' : 'text-slate-400'}`}>
+                              {duracion}
+                            </span>
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
                 </div>
@@ -247,9 +254,9 @@ export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCita
                 >
                   {loading
                     ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : <RefreshCw className="w-4 h-4" />
+                    : <CalendarPlus className="w-4 h-4" />
                   }
-                  {loading ? 'Creando citas…' : `Crear ${fechasPreview.length} citas`}
+                  {loading ? 'Agendando controles…' : `Agendar ${fechasPreview.length} controles`}
                 </button>
               </>
             ) : (
@@ -277,7 +284,7 @@ export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCita
                     )}
                     {resultado.conflictos.length > 0 && (
                       <p className="text-sm text-slate-500 mt-1">
-                        {resultado.conflictos.length} omitida{resultado.conflictos.length > 1 ? 's' : ''} por conflicto de horario
+                        El médico ya tenía otra cita a esa hora. Puedes agendarlas manualmente desde la agenda.
                       </p>
                     )}
                   </div>

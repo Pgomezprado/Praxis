@@ -19,8 +19,8 @@ export async function POST(req: Request) {
       return Response.json({ error: 'intervalo_semanas debe ser 1 o 2' }, { status: 400 })
     }
 
-    if (![4, 6, 8, 12].includes(repeticiones)) {
-      return Response.json({ error: 'repeticiones debe ser 4, 6, 8 o 12' }, { status: 400 })
+    if (![4, 6, 8, 12, 16, 20, 24].includes(repeticiones)) {
+      return Response.json({ error: 'repeticiones debe ser 4, 6, 8, 12, 16, 20 o 24' }, { status: 400 })
     }
 
     const supabase = await createClient()

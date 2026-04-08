@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   X, Clock, CalendarDays, User, Stethoscope, FileText,
   CheckCheck, CheckCircle2, XCircle, PlayCircle, Loader2, DollarSign, Trash2,
-  AlertTriangle, RefreshCw,
+  AlertTriangle, CalendarPlus,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
@@ -267,6 +267,29 @@ export function DrawerDetalleCita({
                   </button>
                 )}
 
+                {/* Cambiar hora */}
+                <button
+                  onClick={() => { onCambioHora(cita.id); onClose() }}
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                >
+                  <Clock className="w-4 h-4" />
+                  Cambiar hora
+                </button>
+
+                {/* Programar controles */}
+                <button
+                  onClick={() => setMostrarModalRepetir(true)}
+                  disabled={loading}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors disabled:opacity-50"
+                >
+                  <CalendarPlus className="w-4 h-4" />
+                  Programar controles
+                </button>
+
+                {/* Separador */}
+                <div className="h-px bg-slate-100 my-1" />
+
                 {/* Iniciar consulta — solo médico */}
                 {esDoctor && (estadoActual === 'pendiente' || estadoActual === 'confirmada') && (
                   <button
@@ -294,28 +317,6 @@ export function DrawerDetalleCita({
                   }
                   Completar consulta
                 </button>
-
-                {/* Cambiar hora */}
-                <button
-                  onClick={() => { onCambioHora(cita.id); onClose() }}
-                  disabled={loading}
-                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50"
-                >
-                  <Clock className="w-4 h-4" />
-                  Cambiar hora
-                </button>
-
-                {/* Repetir cita */}
-                {!esDoctor && (
-                  <button
-                    onClick={() => setMostrarModalRepetir(true)}
-                    disabled={loading}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors disabled:opacity-50"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Repetir cita
-                  </button>
-                )}
 
                 {/* Separador */}
                 <div className="h-px bg-slate-100 my-1" />
