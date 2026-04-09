@@ -12,6 +12,9 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  Ban,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import type { Cobro, Pago } from '@/types/database'
 
@@ -52,6 +55,15 @@ function formatFecha(iso: string): string {
   })
 }
 
+function labelMedioPago(medio: string): string {
+  const mapa: Record<string, string> = {
+    efectivo: 'Efectivo',
+    tarjeta: 'Tarjeta',
+    transferencia: 'Transferencia',
+  }
+  return mapa[medio] ?? medio
+}
+
 function sumaPagada(cobro: CobroDental): number {
   return (cobro.pagos ?? [])
     .filter((p) => p.activo)
@@ -90,7 +102,7 @@ interface KpiCardProps {
 function KpiCard({ label, valor, icon, colorClass }: KpiCardProps) {
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4 flex items-start gap-3">
-      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${colorClass}`}>
+      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${colorClass}`}>
         {icon}
       </div>
       <div className="min-w-0">
@@ -237,7 +249,7 @@ function ModalPago({ cobro, onClose, onPagoRegistrado }: ModalPagoProps) {
           {/* Error */}
           {error && (
             <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
-              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
               <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
@@ -266,6 +278,226 @@ function ModalPago({ cobro, onClose, onPagoRegistrado }: ModalPagoProps) {
   )
 }
 
+// ── Modal Anular Pago ────────────────────────────────────────────────────────
+
+interface ModalAnularPagoProps {
+  pago: Pago
+  cobro: CobroDental
+  onClose: () => void
+  onPagoAnulado: (cobroId: string, pagoId: string, cobroRevertido: boolean) => void
+}
+
+function ModalAnularPago({ pago, cobro, onClose, onPagoAnulado }: ModalAnularPagoProps) {
+  const [motivo, setMotivo] = useState<'Pago duplicado' | 'Error de monto' | 'Otro' | ''>('')
+  const [motivoDetalle, setMotivoDetalle] = useState('')
+  const [anulando, setAnulando] = useState(false)
+  const [error, setError] = useState('')
+
+  const nombrePaciente = cobro.paciente?.nombre ?? '—'
+
+  async function handleAnular() {
+    if (!motivo) {
+      setError('Selecciona un motivo de anulación')
+      return
+    }
+    if (motivo === 'Otro' && motivoDetalle.trim().length === 0) {
+      setError('Especifica el detalle del motivo')
+      return
+    }
+
+    setAnulando(true)
+    setError('')
+
+    try {
+      const res = await fetch(`/api/finanzas/cobros/${cobro.id}/pagos/${pago.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          motivo,
+          motivo_detalle: motivo === 'Otro' ? motivoDetalle.trim() : undefined,
+        }),
+      })
+      const data = await res.json() as {
+        ok?: boolean
+        cobro_revertido?: boolean
+        error?: string
+      }
+      if (!res.ok || !data.ok) {
+        setError(data.error ?? 'Error al anular el pago')
+        return
+      }
+      onPagoAnulado(cobro.id, pago.id, data.cobro_revertido ?? false)
+      onClose()
+    } catch {
+      setError('Error de conexión. Intenta nuevamente.')
+    } finally {
+      setAnulando(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+      {/* Overlay */}
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Panel */}
+      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h2 className="text-base font-semibold text-slate-900">Anular pago</h2>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-5 space-y-4">
+          {/* Resumen del pago a anular */}
+          <div className="bg-red-50 border border-red-100 rounded-xl p-3 space-y-1">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Paciente</span>
+              <span className="font-medium text-slate-900">{nombrePaciente}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Monto a anular</span>
+              <span className="font-bold text-red-700">{formatCLP(pago.monto)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Medio de pago</span>
+              <span className="font-medium text-slate-700">{labelMedioPago(pago.medio_pago)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Fecha</span>
+              <span className="font-medium text-slate-700">{formatFecha(pago.fecha_pago)}</span>
+            </div>
+          </div>
+
+          {/* Motivo */}
+          <div>
+            <label className="text-sm font-medium text-slate-700 block mb-1.5">
+              Motivo de anulación <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={motivo}
+              onChange={(e) => {
+                setMotivo(e.target.value as typeof motivo)
+                setError('')
+              }}
+              className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-red-400"
+            >
+              <option value="">Selecciona un motivo...</option>
+              <option value="Pago duplicado">Pago duplicado</option>
+              <option value="Error de monto">Error de monto</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+
+          {/* Detalle condicional si motivo = "Otro" */}
+          {motivo === 'Otro' && (
+            <div>
+              <label className="text-sm font-medium text-slate-700 block mb-1.5">
+                Especifica el motivo <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                value={motivoDetalle}
+                onChange={(e) => setMotivoDetalle(e.target.value)}
+                rows={3}
+                maxLength={300}
+                placeholder="Describe el motivo de anulación..."
+                className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+              />
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-xl">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
+          {/* Botón */}
+          <button
+            onClick={handleAnular}
+            disabled={anulando || !motivo}
+            className="w-full py-3 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold text-sm rounded-xl transition-colors flex items-center justify-center gap-2"
+          >
+            {anulando ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Anulando...
+              </>
+            ) : (
+              <>
+                <Ban className="w-4 h-4" />
+                Anular pago
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Lista de pagos en tarjeta ────────────────────────────────────────────────
+
+interface ListaPagosProps {
+  cobro: CobroDental
+  onAnularPago: (pago: Pago, cobro: CobroDental) => void
+}
+
+function ListaPagos({ cobro, onAnularPago }: ListaPagosProps) {
+  const pagos = cobro.pagos ?? []
+  if (pagos.length === 0) return null
+
+  return (
+    <div className="space-y-1.5 pt-1">
+      {pagos.map((pago) => (
+        <div
+          key={pago.id}
+          className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg border ${
+            pago.activo
+              ? 'bg-slate-50 border-slate-200'
+              : 'bg-slate-50/50 border-slate-100 opacity-70'
+          }`}
+        >
+          <div className="flex-1 min-w-0">
+            <p className={`text-xs font-medium tabular-nums ${pago.activo ? 'text-slate-800' : 'text-slate-400 line-through'}`}>
+              {formatCLP(pago.monto)}
+            </p>
+            <p className={`text-xs ${pago.activo ? 'text-slate-500' : 'text-slate-400'}`}>
+              {labelMedioPago(pago.medio_pago)} · {formatFecha(pago.fecha_pago)}
+            </p>
+          </div>
+          {pago.activo ? (
+            <button
+              onClick={() => onAnularPago(pago, cobro)}
+              title="Anular pago"
+              className="flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700 transition-colors shrink-0 px-2 py-1 rounded-lg hover:bg-red-50"
+            >
+              <Ban className="w-3.5 h-3.5" />
+              Anular
+            </button>
+          ) : (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 shrink-0">
+              Anulado
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ── Componente principal ─────────────────────────────────────────────────────
 
 export function FinanzasOdontologiaClient({
@@ -277,6 +509,20 @@ export function FinanzasOdontologiaClient({
   const [pendientes, setPendientes] = useState<CobroDental[]>(pendientesIniciales)
   const [recientes, setRecientes] = useState<CobroDental[]>(recientesIniciales)
   const [cobroSeleccionado, setCobroSeleccionado] = useState<CobroDental | null>(null)
+  const [pagoAAnular, setPagoAAnular] = useState<{ pago: Pago; cobro: CobroDental } | null>(null)
+  const [cobrosExpandidos, setCobrosExpandidos] = useState<Set<string>>(new Set())
+
+  function toggleExpandido(cobroId: string) {
+    setCobrosExpandidos((prev) => {
+      const siguiente = new Set(prev)
+      if (siguiente.has(cobroId)) {
+        siguiente.delete(cobroId)
+      } else {
+        siguiente.add(cobroId)
+      }
+      return siguiente
+    })
+  }
 
   // Actualizar estado local tras registrar un pago
   function handlePagoRegistrado(cobroId: string, pago: Pago, cobroPagado: boolean) {
@@ -308,6 +554,72 @@ export function FinanzasOdontologiaClient({
         ingresos_hoy: prev.ingresos_hoy + pago.monto,
         ingresos_semana: prev.ingresos_semana + pago.monto,
         ingresos_mes: prev.ingresos_mes + pago.monto,
+      }))
+    }
+  }
+
+  // Actualizar estado local tras anular un pago
+  function handlePagoAnulado(cobroId: string, pagoId: string, cobroRevertido: boolean) {
+    // Buscar el pago anulado para conocer su monto
+    let montoAnulado = 0
+
+    function actualizarCobro(cobro: CobroDental): CobroDental {
+      if (cobro.id !== cobroId) return cobro
+      const pagosActualizados = (cobro.pagos ?? []).map((p) => {
+        if (p.id === pagoId) {
+          montoAnulado = p.monto
+          return { ...p, activo: false }
+        }
+        return p
+      })
+      return {
+        ...cobro,
+        estado: cobroRevertido ? 'pendiente' : cobro.estado,
+        pagos: pagosActualizados,
+      }
+    }
+
+    setPendientes((prev) => {
+      // Si el cobro estaba en recientes (pagado) y se revirtió, hay que añadirlo a pendientes
+      const actualizado = prev.map(actualizarCobro)
+      if (cobroRevertido) {
+        const estaEnPendientes = actualizado.some((c) => c.id === cobroId)
+        if (!estaEnPendientes) {
+          // Buscar en recientes para moverlo
+          return actualizado
+        }
+      }
+      return actualizado
+    })
+
+    setRecientes((prev) => {
+      const actualizado = prev.map(actualizarCobro)
+      // Si el cobro se revirtió a pendiente y no estaba en pendientes, añadirlo
+      if (cobroRevertido) {
+        const cobroRevertidoObj = actualizado.find((c) => c.id === cobroId)
+        if (cobroRevertidoObj) {
+          setPendientes((prevPend) => {
+            const yaEsta = prevPend.some((c) => c.id === cobroId)
+            if (!yaEsta) {
+              return [cobroRevertidoObj, ...prevPend]
+            }
+            return prevPend.map((c) => c.id === cobroId ? cobroRevertidoObj : c)
+          })
+        }
+      }
+      return actualizado
+    })
+
+    // Actualizar KPIs: restar monto anulado de ingresos, sumar a pendiente si hubo reversión
+    if (montoAnulado > 0) {
+      setKpis((prev) => ({
+        ...prev,
+        ingresos_hoy: Math.max(0, prev.ingresos_hoy - montoAnulado),
+        ingresos_semana: Math.max(0, prev.ingresos_semana - montoAnulado),
+        ingresos_mes: Math.max(0, prev.ingresos_mes - montoAnulado),
+        pendiente_cobro: cobroRevertido
+          ? prev.pendiente_cobro + montoAnulado
+          : prev.pendiente_cobro,
       }))
     }
   }
@@ -372,6 +684,7 @@ export function FinanzasOdontologiaClient({
               const porcentaje = cobro.monto_neto > 0
                 ? Math.round((pagado / cobro.monto_neto) * 100)
                 : 0
+              const tienePagos = (cobro.pagos ?? []).length > 0
 
               return (
                 <div
@@ -402,6 +715,14 @@ export function FinanzasOdontologiaClient({
                     </div>
                   </div>
 
+                  {/* Lista de pagos individuales */}
+                  {tienePagos && (
+                    <ListaPagos
+                      cobro={cobro}
+                      onAnularPago={(pago, cob) => setPagoAAnular({ pago, cobro: cob })}
+                    />
+                  )}
+
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-slate-400">{formatFecha(cobro.created_at)}</p>
                     <button
@@ -428,47 +749,89 @@ export function FinanzasOdontologiaClient({
           </h2>
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
             <div className="divide-y divide-slate-100">
-              {recientes.map((cobro) => (
-                <div
-                  key={cobro.id}
-                  className="px-4 py-3 flex items-center gap-3"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium text-slate-900 truncate">
-                        {cobro.paciente?.nombre ?? '—'}
-                      </p>
-                      <BadgeEstado estado={cobro.estado} />
+              {recientes.map((cobro) => {
+                const expandido = cobrosExpandidos.has(cobro.id)
+                const tienePagos = (cobro.pagos ?? []).length > 0
+
+                return (
+                  <div key={cobro.id} className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-slate-900 truncate">
+                            {cobro.paciente?.nombre ?? '—'}
+                          </p>
+                          <BadgeEstado estado={cobro.estado} />
+                        </div>
+                        <p className="text-xs text-slate-400 truncate mt-0.5">{cobro.concepto}</p>
+                        <p className="text-xs text-slate-400">{formatFecha(cobro.created_at)}</p>
+                      </div>
+                      <div className="text-right shrink-0 flex flex-col items-end gap-1">
+                        <p className="text-sm font-bold text-slate-900 tabular-nums">
+                          {formatCLP(cobro.monto_neto)}
+                        </p>
+                        {cobro.estado === 'pendiente' && (
+                          <button
+                            onClick={() => setCobroSeleccionado(cobro)}
+                            className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                          >
+                            Pagar
+                          </button>
+                        )}
+                        {tienePagos && (
+                          <button
+                            onClick={() => toggleExpandido(cobro.id)}
+                            className="flex items-center gap-0.5 text-xs text-slate-500 hover:text-slate-700 transition-colors"
+                          >
+                            {expandido ? (
+                              <>
+                                <ChevronUp className="w-3 h-3" />
+                                Ocultar
+                              </>
+                            ) : (
+                              <>
+                                <ChevronDown className="w-3 h-3" />
+                                Ver pagos
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-xs text-slate-400 truncate mt-0.5">{cobro.concepto}</p>
-                    <p className="text-xs text-slate-400">{formatFecha(cobro.created_at)}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-sm font-bold text-slate-900 tabular-nums">
-                      {formatCLP(cobro.monto_neto)}
-                    </p>
-                    {cobro.estado === 'pendiente' && (
-                      <button
-                        onClick={() => setCobroSeleccionado(cobro)}
-                        className="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                      >
-                        Pagar
-                      </button>
+
+                    {/* Pagos expandibles en "Últimos cobros" */}
+                    {expandido && tienePagos && (
+                      <div className="mt-3">
+                        <ListaPagos
+                          cobro={cobro}
+                          onAnularPago={(pago, cob) => setPagoAAnular({ pago, cobro: cob })}
+                        />
+                      </div>
                     )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Modal pago ── */}
+      {/* ── Modal registrar pago ── */}
       {cobroSeleccionado && (
         <ModalPago
           cobro={cobroSeleccionado}
           onClose={() => setCobroSeleccionado(null)}
           onPagoRegistrado={handlePagoRegistrado}
+        />
+      )}
+
+      {/* ── Modal anular pago ── */}
+      {pagoAAnular && (
+        <ModalAnularPago
+          pago={pagoAAnular.pago}
+          cobro={pagoAAnular.cobro}
+          onClose={() => setPagoAAnular(null)}
+          onPagoAnulado={handlePagoAnulado}
         />
       )}
     </div>

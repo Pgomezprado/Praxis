@@ -30,7 +30,7 @@ export async function GET(
         concepto, monto_neto, estado, notas, creado_por, activo, created_at,
         paciente:pacientes!cobros_paciente_id_fkey ( id, nombre, rut ),
         doctor:usuarios!cobros_doctor_id_fkey ( id, nombre, especialidad ),
-        pagos ( id, monto, medio_pago, referencia, fecha_pago, activo, created_at )
+        pagos ( id, monto, medio_pago, referencia, fecha_pago, registrado_por, activo, created_at )
       `)
       .eq('id', id)
       .eq('clinica_id', me.clinica_id)
