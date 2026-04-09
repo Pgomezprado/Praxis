@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { AgendaSemanaClient } from '@/components/secretaria/AgendaSemanaClient'
 import { getCitasByRango, getMedicos } from '@/lib/queries/agenda'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Mi agenda semanal — Praxis Médico' }
 
 export default async function MedicoAgendaSemanaPage({
@@ -46,8 +47,8 @@ export default async function MedicoAgendaSemanaPage({
   const [citas, medicos] = await Promise.all([
     getCitasByRango(
       me.clinica_id,
-      lunes.toISOString().split('T')[0],
-      domingo.toISOString().split('T')[0],
+      lunes.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }),
+      domingo.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }),
       me.id
     ),
     getMedicos(me.clinica_id),

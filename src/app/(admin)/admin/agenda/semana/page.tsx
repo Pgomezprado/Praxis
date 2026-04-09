@@ -2,6 +2,8 @@ import { Suspense } from 'react'
 import { AgendaSemanaClient } from '@/components/secretaria/AgendaSemanaClient'
 import { getClinicsId, getCitasByRango, getMedicos } from '@/lib/queries/agenda'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = { title: 'Agenda semanal — Praxis Admin' }
 
 export default async function AdminAgendaSemanaPage({
@@ -23,8 +25,8 @@ export default async function AdminAgendaSemanaPage({
   const domingo = new Date(lunes)
   domingo.setDate(lunes.getDate() + 6)
 
-  const desde = lunes.toISOString().split('T')[0]
-  const hasta = domingo.toISOString().split('T')[0]
+  const desde = lunes.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
+  const hasta = domingo.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 
   const me = await getClinicsId()
   if (!me) return (
@@ -48,6 +50,7 @@ export default async function AdminAgendaSemanaPage({
           medicoId={medicoId}
           listPath="/admin/agenda"
           semanaPath="/admin/agenda/semana"
+          mesPath="/admin/agenda/mes"
           fichaBasePath="/admin/pacientes"
         />
       </Suspense>

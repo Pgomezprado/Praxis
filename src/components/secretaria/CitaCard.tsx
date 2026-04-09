@@ -7,6 +7,7 @@ import { XCircle, PlayCircle, CheckCircle2, Loader2, CheckCheck, FileText, Dolla
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import type { MockCita } from '@/types/domain'
+import { ESTADO_BORDER } from '@/lib/agenda-colors'
 
 interface CitaCardProps {
   cita: MockCita
@@ -93,14 +94,14 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
 
   return (
     <div
-      className={`relative bg-white border rounded-xl p-4 transition-all ${
+      className={`relative bg-white border border-l-4 ${ESTADO_BORDER[estadoLocal]} rounded-xl p-4 transition-all ${
         isCancelada
-          ? 'opacity-60 border-slate-200'
+          ? 'opacity-60'
           : isEnConsulta
-          ? 'border-emerald-300 ring-1 ring-emerald-200'
+          ? 'ring-1 ring-emerald-200'
           : isCompletada
-          ? 'border-slate-200 opacity-75'
-          : 'border-slate-200 hover:border-blue-200 hover:shadow-sm'
+          ? 'opacity-75'
+          : 'hover:shadow-sm'
       }`}
     >
       <div className="flex items-start gap-3">
@@ -143,7 +144,7 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
                 </span>
               ) : estadoLocal === 'confirmada' ? (
                 <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                   {label}
                 </span>
               ) : (

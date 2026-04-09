@@ -43,11 +43,19 @@ export function HorariosClient({ medicos, horariosInicial }: HorariosClientProps
   const [medicoId, setMedicoId] = useState(medicos[0]?.id ?? '')
 
   const [horariosState, setHorariosState] = useState<Record<string, HorarioSemanal>>(() => {
+    const defaults = horarioDefault()
     const init: Record<string, HorarioSemanal> = {}
     for (const m of medicos) {
-      init[m.id] = horariosInicial[m.id]
-        ? JSON.parse(JSON.stringify(horariosInicial[m.id]))
-        : horarioDefault()
+      if (horariosInicial[m.id]) {
+        const raw = JSON.parse(JSON.stringify(horariosInicial[m.id]))
+        const merged = {} as HorarioSemanal
+        for (const d of DIAS) {
+          merged[d.key] = { ...defaults[d.key], ...raw[d.key] }
+        }
+        init[m.id] = merged
+      } else {
+        init[m.id] = horarioDefault()
+      }
     }
     return init
   })

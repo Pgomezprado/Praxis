@@ -28,7 +28,8 @@ const TIPO_CONSULTA = [
 const DURACIONES_MIN = [15, 30, 45, 60, 75, 90]
 
 function getToday() {
-  return new Date().toISOString().split('T')[0]
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 export function ModalNuevaCita({
@@ -86,7 +87,22 @@ export function ModalNuevaCita({
     if (!medicoId) { setHorarioMedico(null); return }
     fetch('/api/horarios')
       .then(r => r.json())
-      .then(data => setHorarioMedico((data.horarios?.[medicoId] as HorarioSemanal) ?? null))
+      .then(data => {
+        const raw = data.horarios?.[medicoId] as Record<string, Partial<HorarioSemanal[keyof HorarioSemanal]>> | undefined
+        if (!raw) { setHorarioMedico(null); return }
+        // Merge con defaults para garantizar campos completos
+        const defaultDia = {
+          activo: true, horaInicio: '09:00', horaFin: '18:00',
+          duracion: 30, buffer: 5,
+          tieneColacion: true, colacionInicio: '13:00', colacionFin: '14:00',
+        }
+        const diasKeys: (keyof HorarioSemanal)[] = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
+        const merged = {} as HorarioSemanal
+        for (const dia of diasKeys) {
+          merged[dia] = { ...defaultDia, ...raw[dia] }
+        }
+        setHorarioMedico(merged)
+      })
       .catch(() => {})
   }, [medicoId])
 
@@ -100,7 +116,7 @@ export function ModalNuevaCita({
         setSlotsOcupados(
           (data.citas ?? [])
             .filter((c: { estado: string }) => c.estado !== 'cancelada')
-            .map((c: { hora_inicio: string }) => c.hora_inicio)
+            .map((c: { hora_inicio: string }) => c.hora_inicio.slice(0, 5))
         )
       })
       .catch(() => { setErrorSlots(true) })
@@ -310,7 +326,7 @@ export function ModalNuevaCita({
                     {errorSlots ? (
                       <p className="text-sm text-red-500 py-2">Error al cargar horarios. Verifica tu conexión.</p>
                     ) : slotsDisponibles.length === 0 ? (
-                      <p className="text-sm text-slate-400 py-2">Sin horarios disponibles para esta fecha.</p>
+                      <p className="text-sm text-slate-400 py-2">Sin horarios disponibles para esta fecha. Puedes ingresar la hora manualmente.</p>
                     ) : (
                       <div className="grid grid-cols-4 gap-1.5">
                         {slotsDisponibles.map((s) => (
