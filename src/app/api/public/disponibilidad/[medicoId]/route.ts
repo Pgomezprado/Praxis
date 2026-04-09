@@ -93,6 +93,20 @@ export async function GET(
         .eq('fecha', fecha)
         .neq('estado', 'cancelada')
 
+      // Bloqueos del profesional para esta fecha — excluir del portal público
+      const { data: bloqueosDb } = await supabase
+        .from('bloqueos_horario')
+        .select('hora_inicio, hora_fin')
+        .eq('profesional_id', medicoId)
+        .eq('clinica_id', clinica.id)
+        .eq('fecha', fecha)
+
+      // Expandir bloqueos a horas ocupadas (usando la misma duración del doctor)
+      const bloqueosOcupados = (bloqueosDb ?? []).flatMap(b => {
+        const bRow = b as { hora_inicio: string; hora_fin: string }
+        return generarSlots(fecha, bRow.hora_inicio, bRow.hora_fin, [], duracionDoctor).map(s => s.hora)
+      })
+
       const ocupados = (citasDb ?? []).map(c => c.hora_inicio)
       const colacionOcupados = configDia.tieneColacion
         ? generarSlots(fecha, configDia.colacionInicio, configDia.colacionFin, [], duracionDoctor).map(s => s.hora)
@@ -102,7 +116,7 @@ export async function GET(
         fecha,
         configDia.horaInicio,
         configDia.horaFin,
-        [...ocupados, ...colacionOcupados],
+        [...ocupados, ...colacionOcupados, ...bloqueosOcupados],
         duracionDoctor
       )
 

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { generarFolio } from '@/lib/agendamiento'
+import { revalidatePath } from 'next/cache'
 
 export async function GET(req: Request) {
   try {
@@ -155,6 +156,12 @@ export async function POST(req: Request) {
       }
       throw error
     }
+
+    // Invalidar cache de todas las vistas de agenda
+    revalidatePath('/medico/agenda', 'page')
+    revalidatePath('/medico/agenda/semana', 'page')
+    revalidatePath('/agenda/hoy', 'page')
+    revalidatePath('/agenda/semana', 'page')
 
     return Response.json({ cita: data }, { status: 201 })
   } catch (error) {

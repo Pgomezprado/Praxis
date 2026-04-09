@@ -82,36 +82,47 @@ export async function POST(req: Request) {
       }
     }
 
-    // Generar folio autoincremental
-    const { data: folioData, error: folioError } = await supabase
-      .rpc('generar_folio_cobro', { p_clinica_id: meTyped.clinica_id })
+    // Generar folio e insertar cobro — retry en caso de colisión de folio
+    let cobro: Cobro | null = null
+    for (let intento = 0; intento < 3; intento++) {
+      const { data: folioData, error: folioError } = await supabase
+        .rpc('generar_folio_cobro', { p_clinica_id: meTyped.clinica_id })
 
-    if (folioError) throw folioError
-    const folio = folioData as string
+      if (folioError) throw folioError
+      const folio = folioData as string
 
-    // PASO 1 — Crear cobro en estado pendiente
-    const { data: cobroData, error: cobroError } = await supabase
-      .from('cobros')
-      .insert({
-        folio_cobro: folio,
-        clinica_id: meTyped.clinica_id,
-        cita_id: cita_id ?? null,
-        paciente_id,
-        doctor_id,
-        arancel_id: arancel_id ?? null,
-        concepto: concepto.trim(),
-        monto_neto: Math.round(monto_neto),
-        estado: 'pendiente',
-        notas: notas ?? null,
-        creado_por: user.id,
-        activo: true,
-      })
-      .select('id, folio_cobro, clinica_id, cita_id, paciente_id, doctor_id, arancel_id, concepto, monto_neto, estado, notas, creado_por, activo, created_at')
-      .single()
+      const { data: cobroData, error: cobroError } = await supabase
+        .from('cobros')
+        .insert({
+          folio_cobro: folio,
+          clinica_id: meTyped.clinica_id,
+          cita_id: cita_id ?? null,
+          paciente_id,
+          doctor_id,
+          arancel_id: arancel_id ?? null,
+          concepto: concepto.trim(),
+          monto_neto: Math.round(monto_neto),
+          estado: 'pendiente',
+          notas: notas ?? null,
+          creado_por: user.id,
+          activo: true,
+        })
+        .select('id, folio_cobro, clinica_id, cita_id, paciente_id, doctor_id, arancel_id, concepto, monto_neto, estado, notas, creado_por, activo, created_at')
+        .single()
 
-    if (cobroError) throw cobroError
+      if (!cobroError) {
+        cobro = cobroData as Cobro
+        break
+      }
+      // Si es error de folio duplicado, reintentar con nuevo folio
+      if (cobroError.code === '23505' && cobroError.message?.includes('folio_cobro')) {
+        if (intento === 2) throw cobroError
+        continue
+      }
+      throw cobroError
+    }
 
-    const cobro = cobroData as Cobro
+    if (!cobro) throw new Error('No se pudo crear el cobro después de 3 intentos')
 
     // PASO 2 — Registrar el pago; si falla, eliminar el cobro (rollback)
     const { data: pagoData, error: pagoError } = await supabase

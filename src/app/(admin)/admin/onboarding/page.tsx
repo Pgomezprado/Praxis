@@ -14,7 +14,7 @@ export default async function OnboardingPage() {
   const [{ data: clinicaDb }, { data: adminDb }] = await Promise.all([
     supabase
       .from('clinicas')
-      .select('id, nombre, rut, direccion, ciudad, telefono, email, hora_apertura, hora_cierre, onboarding_completado')
+      .select('id, nombre, rut, direccion, ciudad, telefono, email, hora_apertura, hora_cierre, onboarding_completado, tier')
       .eq('id', me.clinica_id)
       .single(),
     supabase
@@ -32,7 +32,7 @@ export default async function OnboardingPage() {
   type ClinicaRow = {
     id?: string; nombre?: string; rut?: string; direccion?: string;
     ciudad?: string; telefono?: string; email?: string;
-    hora_apertura?: string; hora_cierre?: string;
+    hora_apertura?: string; hora_cierre?: string; tier?: string;
   }
   type AdminRow = { nombre?: string; es_doctor?: boolean }
 
@@ -53,6 +53,7 @@ export default async function OnboardingPage() {
         adminId={me.id}
         adminNombre={a?.nombre ?? ''}
         adminEsDoctor={a?.es_doctor ?? false}
+        clinicaTier={c?.tier ?? ''}
       />
     </div>
   )

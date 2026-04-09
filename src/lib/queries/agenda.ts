@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { mapCitaDb } from '@/lib/utils/mapCita'
-import type { MockCita } from '@/types/domain'
+import type { MockCita, HorarioSemanal } from '@/types/domain'
+import type { BloqueoHorario } from '@/app/api/bloqueos/route'
 
 export type MedicoAgenda = { id: string; nombre: string; especialidad: string; duracion_consulta: number }
 
@@ -64,6 +65,47 @@ export async function getCitasByRango(
 
   const { data } = await query
   return (data ?? []).map(mapCitaDb)
+}
+
+/** Obtiene el horario semanal de un médico específico */
+export async function getHorarioMedico(
+  clinicaId: string,
+  profesionalId: string,
+): Promise<HorarioSemanal | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('horarios')
+    .select('horario')
+    .eq('clinica_id', clinicaId)
+    .eq('doctor_id', profesionalId)
+    .single()
+
+  if (!data) return null
+  const row = data as { horario: HorarioSemanal | null }
+  return row.horario ?? null
+}
+
+/** Obtiene los bloqueos de horario para un rango de fechas */
+export async function getBloqueosByRango(
+  clinicaId: string,
+  desde: string,
+  hasta: string,
+  profesionalId?: string,
+): Promise<BloqueoHorario[]> {
+  const supabase = await createClient()
+  let query = supabase
+    .from('bloqueos_horario')
+    .select('*')
+    .eq('clinica_id', clinicaId)
+    .gte('fecha', desde)
+    .lte('fecha', hasta)
+    .order('fecha')
+    .order('hora_inicio')
+
+  if (profesionalId) query = query.eq('profesional_id', profesionalId)
+
+  const { data } = await query
+  return (data ?? []) as BloqueoHorario[]
 }
 
 export async function getMedicos(clinicaId: string): Promise<MedicoAgenda[]> {

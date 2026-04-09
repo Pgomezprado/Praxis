@@ -13,7 +13,7 @@ export function DashboardLayoutClient({ nombreUsuario, children }: DashboardLayo
   const [sidebarAbierto, setSidebarAbierto] = useState(false)
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-slate-50">
       {/* Overlay para móvil */}
       {sidebarAbierto && (
         <div
@@ -56,7 +56,7 @@ export function DashboardLayoutClient({ nombreUsuario, children }: DashboardLayo
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           {children}
         </main>
       </div>

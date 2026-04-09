@@ -3,6 +3,8 @@ import { AgendaHoyClient } from '@/components/secretaria/AgendaHoyClient'
 import { getClinicsId, getCitasByFecha, getMedicos } from '@/lib/queries/agenda'
 import { createClient } from '@/lib/supabase/server'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = { title: 'Agenda del día — Praxis' }
 
 export default async function AgendaHoyPage({

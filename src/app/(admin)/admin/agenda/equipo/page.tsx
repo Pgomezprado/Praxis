@@ -3,6 +3,8 @@ import { getClinicsId, getCitasByFecha, getMedicos } from '@/lib/queries/agenda'
 import { AgendaEquipoClient } from '@/components/admin/AgendaEquipoClient'
 import { Users } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata = { title: 'Vista equipo — Praxis Admin' }
 
 export default async function AdminAgendaEquipoPage({

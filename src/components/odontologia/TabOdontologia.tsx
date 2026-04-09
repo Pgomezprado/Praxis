@@ -12,6 +12,7 @@ import { NOMBRES_DIENTES_FDI, ETIQUETAS_ESTADO } from './nombresDientesFDI'
 interface TabOdontologiaProps {
   pacienteId: string
   pacienteNombre: string
+  soloLectura?: boolean
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -807,7 +808,7 @@ function ModalConsentimiento({ itemId: _itemId, nombreProcedimiento, onConfirmar
 
 // ── Componente principal ───────────────────────────────────────────────────────
 
-export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaProps) {
+export function TabOdontologia({ pacienteId, pacienteNombre, soloLectura = false }: TabOdontologiaProps) {
   const [ficha, setFicha] = useState<FichaOdontologica | null>(null)
   const [estados, setEstados] = useState<Record<number, EstadoDiente>>({})
   const [planes, setPlanes] = useState<PlanTratamiento[]>([])
@@ -912,6 +913,7 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
   }
 
   function handleDienteClick(numeroPieza: number) {
+    if (soloLectura) return
     if (modoMultiple) {
       setDientesMultiple(prev => {
         const next = new Set(prev)
@@ -1248,7 +1250,7 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
   return (
     <div className="space-y-6">
       {/* Layout: odontograma + planes */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
+      <div className={`grid grid-cols-1 ${soloLectura ? '' : 'lg:grid-cols-[1fr_340px]'} gap-6`}>
 
         {/* ── Columna izquierda: Odontograma + Hallazgos ── */}
         <div className="space-y-4">
@@ -1261,9 +1263,10 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
                 ) : mostrarFormPlan ? (
                   <p className="text-xs text-blue-500 font-medium mt-0.5">Haz clic en un diente del odontograma para asignar la pieza FDI</p>
                 ) : (
-                  <p className="text-xs text-slate-400 mt-0.5">Haz clic en un diente para editar su estado</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{soloLectura ? 'Vista de solo lectura' : 'Haz clic en un diente para editar su estado'}</p>
                 )}
               </div>
+              {!soloLectura && (
               <div className="flex items-center gap-2">
                 {modoMultiple && dientesMultiple.size > 0 && (
                   <button
@@ -1287,17 +1290,19 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
                   {modoMultiple ? 'Cancelar selección' : 'Selección múltiple'}
                 </button>
               </div>
+              )}
             </div>
             <OdontogramaSVG
               estados={estados}
               onDienteClick={handleDienteClick}
+              readonly={soloLectura}
               modoMultiple={modoMultiple}
               dientesSeleccionados={dientesMultiple}
             />
           </div>
 
           {/* Hallazgos clínicos — card separado */}
-          {ficha && (
+          {ficha && !soloLectura && (
             <div className="bg-white border border-slate-200 rounded-xl p-4">
               <ResumenHallazgos
                 fichaId={ficha.id}
@@ -1310,10 +1315,10 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
         </div>
 
         {/* ── Planes de tratamiento ── */}
-        <div className="space-y-3">
+        {!soloLectura && <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-semibold text-slate-800">Planes de tratamiento</h3>
-            {!mostrarFormPlan && (
+            {!mostrarFormPlan && !soloLectura && (
               <button
                 onClick={() => setMostrarFormPlan(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors"
@@ -1324,7 +1329,7 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
             )}
           </div>
 
-          {mostrarFormPlan && (
+          {mostrarFormPlan && !soloLectura && (
             <FormNuevoPlan
               onCrear={handleCrearPlan}
               onCancelar={() => { setMostrarFormPlan(false); setPiezaDesdeOdontograma(null) }}
@@ -1361,7 +1366,7 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
                     </div>
                     <div className="flex items-center gap-2">
                       <BadgeEstadoPlan estado={plan.estado} />
-                      {plan.estado === 'borrador' && (
+                      {plan.estado === 'borrador' && !soloLectura && (
                         confirmandoEliminar === plan.id ? (
                           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                             <button
@@ -1428,7 +1433,7 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
                               </span>
                               {item.estado === 'completado' ? (
                                 <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                              ) : item.estado !== 'cancelado' ? (
+                              ) : item.estado !== 'cancelado' && !soloLectura ? (
                                 <button
                                   type="button"
                                   onClick={() => handleCompletarItem(item.id, plan.id, item.nombre_procedimiento)}
@@ -1489,7 +1494,7 @@ export function TabOdontologia({ pacienteId, pacienteNombre }: TabOdontologiaPro
               ))}
             </div>
           )}
-        </div>
+        </div>}
 
       </div>
 

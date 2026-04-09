@@ -16,6 +16,7 @@ interface AgendaHoyClientProps {
   medicoId: string
   listPath?: string
   semanaPath?: string
+  mesPath?: string
   hideMedicoFilter?: boolean
   esDoctor?: boolean
   /** IDs de citas que ya tienen cobro registrado (no anulado) */
@@ -32,6 +33,7 @@ export function AgendaHoyClient({
   medicoId,
   listPath,
   semanaPath,
+  mesPath,
   hideMedicoFilter,
   esDoctor = false,
   citasCobradas = [],
@@ -84,6 +86,7 @@ export function AgendaHoyClient({
         onNuevaCita={() => { setHoraPreseleccionada(undefined); setModalOpen(true) }}
         listPath={listPath}
         semanaPath={semanaPath}
+        mesPath={mesPath}
         hideMedicoFilter={hideMedicoFilter}
       />
 

@@ -116,7 +116,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { clinicaNombre, clinicaCiudad, clinicaSlug, tipoEspecialidad } = body
+    const { clinicaNombre, clinicaCiudad, clinicaSlug, tipoEspecialidad, tier } = body
 
     // Normalizar admins: aceptar formato nuevo (admins[]) o formato legacy (adminNombre/adminEmail)
     let admins: AdminInput[]
@@ -132,6 +132,9 @@ export async function POST(req: Request) {
     if (!clinicaNombre || !clinicaSlug) {
       return Response.json({ error: 'Faltan campos requeridos: nombre y slug de la clínica' }, { status: 400 })
     }
+
+    const TIERS_VALIDOS = ['particular', 'pequeno', 'mediano']
+    const tierFinal = tier && TIERS_VALIDOS.includes(tier as string) ? (tier as string) : 'pequeno'
 
     // Validar que cada admin tenga nombre y email
     for (const a of admins) {
@@ -162,6 +165,7 @@ export async function POST(req: Request) {
         modulos_activos: tipoEspecialidad === 'veterinaria'
           ? { veterinaria: true }
           : {},
+        tier: tierFinal,
       })
       .select()
       .single()
@@ -186,6 +190,14 @@ export async function POST(req: Request) {
         { error: resultadoPrincipal.error ?? 'Error al crear el administrador principal' },
         { status: 409 }
       )
+    }
+
+    // Si es particular, marcar al profesional como es_doctor
+    if (tierFinal === 'particular' && resultadoPrincipal.id) {
+      await adminClient
+        .from('usuarios')
+        .update({ es_doctor: true })
+        .eq('id', resultadoPrincipal.id)
     }
 
     // 3. Crear admins adicionales — no hacen rollback si fallan

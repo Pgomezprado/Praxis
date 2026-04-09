@@ -8,6 +8,7 @@ export default async function MedicoLayout({ children }: { children: React.React
   let nombre = ''
   let especialidad = ''
   let esAdmin = false
+  let esParticular = false
   let tieneOdontologia = false
   let esVeterinaria = false
 
@@ -26,15 +27,16 @@ export default async function MedicoLayout({ children }: { children: React.React
     if (meTyped?.clinica_id) {
       const { data: clinica } = await supabase
         .from('clinicas')
-        .select('tipo_especialidad')
+        .select('tipo_especialidad, tier')
         .eq('id', meTyped.clinica_id)
         .single()
 
-      const clinicaTyped = clinica as { tipo_especialidad: string | null } | null
+      const clinicaTyped = clinica as { tipo_especialidad: string | null; tier: string | null } | null
       tieneOdontologia =
         clinicaTyped?.tipo_especialidad === 'odontologia' ||
         clinicaTyped?.tipo_especialidad === 'mixta'
       esVeterinaria = clinicaTyped?.tipo_especialidad === 'veterinaria'
+      esParticular = clinicaTyped?.tier === 'particular'
     }
   }
 
@@ -47,6 +49,7 @@ export default async function MedicoLayout({ children }: { children: React.React
       nombre={nombre}
       especialidad={especialidad}
       esAdmin={esAdmin}
+      esParticular={esParticular}
       tieneOdontologia={tieneOdontologia}
       esVeterinaria={esVeterinaria}
       iniciales={iniciales}

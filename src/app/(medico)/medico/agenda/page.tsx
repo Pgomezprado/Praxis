@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { AgendaHoyClient } from '@/components/secretaria/AgendaHoyClient'
 import { getCitasByFecha, getMedicos } from '@/lib/queries/agenda'
 
+export const dynamic = 'force-dynamic'
 export const metadata = { title: 'Mi agenda — Praxis Médico' }
 
 export default async function MedicoAgendaPage({

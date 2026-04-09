@@ -110,7 +110,7 @@ type UsuarioData = {
   es_doctor: boolean
   created_at: string
   clinica_id: string
-  clinicas: { nombre: string } | null
+  clinicas: { nombre: string; tipo_especialidad: string | null; tier: string | null } | null
 }
 
 type TabId = 'dashboard' | 'clinicas' | 'finanzas' | 'demos' | 'usuarios' | 'nueva' | 'crecimiento'
@@ -252,15 +252,37 @@ function BadgeEstadoClinica({ clinica }: { clinica: ClinicaData }) {
   return <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border bg-emerald-500/20 text-emerald-300 border-emerald-500/30">Pagando</span>
 }
 
-function BadgeRol({ rol }: { rol: string }) {
+function tipoEspecialidadLabel(tipo: string | null | undefined): string | null {
+  if (!tipo) return null
+  const map: Record<string, string> = {
+    medicina_general: 'Medicina',
+    odontologia: 'Odontología',
+    mixta: 'Mixta',
+  }
+  return map[tipo] ?? null
+}
+
+function tierLabel(tier: string | null | undefined): string | null {
+  if (!tier) return null
+  const map: Record<string, string> = {
+    particular: 'Particular',
+    pequeno: 'Pequeño',
+    mediano: 'Mediano',
+  }
+  return map[tier] ?? null
+}
+
+function BadgeRol({ rol, tipoEspecialidad, tier }: { rol: string; tipoEspecialidad?: string | null; tier?: string | null }) {
   const map: Record<string, string> = {
     admin_clinica: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
     doctor:        'bg-blue-500/20 text-blue-300 border-blue-500/30',
     recepcionista: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
   }
+  const detalle = [tierLabel(tier), tipoEspecialidadLabel(tipoEspecialidad)].filter(Boolean).join(' ')
+  const label = detalle ? `${rolLabel(rol)} · ${detalle}` : rolLabel(rol)
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${map[rol] ?? 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}>
-      {rolLabel(rol)}
+      {label}
     </span>
   )
 }
@@ -1755,7 +1777,7 @@ function TabUsuarios({
                       <p className="text-slate-500 text-xs">{u.email}</p>
                     </td>
                     <td className="py-3 px-4 text-slate-300 text-sm">{nombreClinica}</td>
-                    <td className="py-3 px-4"><BadgeRol rol={u.rol} /></td>
+                    <td className="py-3 px-4"><BadgeRol rol={u.rol} tipoEspecialidad={u.clinicas?.tipo_especialidad} tier={u.clinicas?.tier} /></td>
                     <td className="py-3 px-4">
                       <span className={`inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-full border ${u.activo ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-slate-500/20 text-slate-400 border-slate-500/30'}`}>
                         {u.activo ? <UserCheck className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
@@ -1850,7 +1872,7 @@ function TabUsuarios({
                   <p className="text-white font-medium">{u.nombre}</p>
                   <p className="text-slate-500 text-xs">{u.email}</p>
                 </div>
-                <BadgeRol rol={u.rol} />
+                <BadgeRol rol={u.rol} tipoEspecialidad={u.clinicas?.tipo_especialidad} tier={u.clinicas?.tier} />
               </div>
               <p className="text-slate-400 text-xs mb-3">{nombreClinica}</p>
               <div className="flex items-center justify-between">
@@ -1952,7 +1974,8 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
   const [clinicaNombre, setClinicaNombre] = useState('')
   const [clinicaCiudad, setClinicaCiudad] = useState('')
   const [clinicaSlug, setClinicaSlug] = useState('')
-  const [tipoEspecialidad, setTipoEspecialidad] = useState<'medicina_general' | 'odontologia' | 'mixta' | 'veterinaria'>('medicina_general')
+  const [tipoEspecialidad, setTipoEspecialidad] = useState<'medicina_general' | 'odontologia' | 'mixta'>('medicina_general')
+  const [modalidadClinica, setModalidadClinica] = useState<'clinica' | 'particular'>('clinica')
   const [admins, setAdmins] = useState<AdminFormItem[]>([{ nombre: '', email: '', rut: '' }])
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
@@ -1996,6 +2019,7 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
           clinicaCiudad,
           clinicaSlug,
           tipoEspecialidad,
+          tier: modalidadClinica === 'particular' ? 'particular' : 'pequeno',
           admins: admins.map(a => ({
             nombre: a.nombre.trim(),
             email: a.email.trim(),
@@ -2043,7 +2067,9 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
               <CheckCircle2 className="w-5 h-5 text-emerald-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Clínica creada</h2>
+              <h2 className="text-lg font-semibold text-white">
+                {modalidadClinica === 'particular' ? 'Consulta creada' : 'Clínica creada'}
+              </h2>
               <p className="text-sm text-slate-400">
                 {adminsCreados.length === 1
                   ? 'Se envió la invitación al administrador'
@@ -2095,11 +2121,12 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
               setClinicaCiudad('')
               setClinicaSlug('')
               setTipoEspecialidad('medicina_general')
+              setModalidadClinica('clinica')
               setAdmins([{ nombre: '', email: '', rut: '' }])
             }}
             className="w-full py-2.5 rounded-xl text-sm font-medium bg-slate-700 text-white hover:bg-slate-600 transition-colors"
           >
-            Crear otra clínica
+            {modalidadClinica === 'particular' ? 'Crear otra consulta' : 'Crear otra clínica'}
           </button>
         </div>
       </div>
@@ -2113,7 +2140,9 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
         <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6">
           <div className="flex items-center gap-2 mb-5">
             <Building2 className="w-4 h-4 text-slate-400" />
-            <h2 className="text-sm font-semibold text-slate-200">Datos de la clínica</h2>
+            <h2 className="text-sm font-semibold text-slate-200">
+              {modalidadClinica === 'particular' ? 'Datos de la consulta' : 'Datos de la clínica'}
+            </h2>
           </div>
           <div className="space-y-4">
             <div>
@@ -2122,7 +2151,7 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
                 type="text"
                 value={clinicaNombre}
                 onChange={e => handleNombreClinica(e.target.value)}
-                placeholder="Clínica Santa María"
+                placeholder={modalidadClinica === 'particular' ? 'Consulta Dr. García' : 'Clínica Santa María'}
                 required
                 className={inputCls}
               />
@@ -2155,24 +2184,55 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
               <label className="block text-sm text-slate-300 mb-1.5">Especialidad</label>
               <select
                 value={tipoEspecialidad}
-                onChange={e => setTipoEspecialidad(e.target.value as 'medicina_general' | 'odontologia' | 'mixta' | 'veterinaria')}
+                onChange={e => setTipoEspecialidad(e.target.value as 'medicina_general' | 'odontologia' | 'mixta')}
                 className="w-full bg-slate-700 border border-slate-600 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="medicina_general">Medicina general</option>
                 <option value="odontologia">Odontología</option>
                 <option value="mixta">Mixta (profesional + dental)</option>
-                <option value="veterinaria">Veterinaria</option>
               </select>
+            </div>
+            <div>
+              <label className="block text-sm text-slate-300 mb-1.5">Modalidad</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setModalidadClinica('clinica')}
+                  className={`flex-1 py-2 rounded-xl text-sm border font-medium transition-colors ${
+                    modalidadClinica === 'clinica'
+                      ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                      : 'border-slate-600 bg-slate-700 text-slate-400 hover:bg-slate-600'
+                  }`}
+                >
+                  Clínica
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalidadClinica('particular')}
+                  className={`flex-1 py-2 rounded-xl text-sm border font-medium transition-colors ${
+                    modalidadClinica === 'particular'
+                      ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                      : 'border-slate-600 bg-slate-700 text-slate-400 hover:bg-slate-600'
+                  }`}
+                >
+                  Profesional particular
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Administradores */}
+        {/* Administradores / Profesional */}
         <div className="bg-slate-800 rounded-2xl border border-slate-700 p-6">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-slate-400" />
-              <h2 className="text-sm font-semibold text-slate-200">Administradores de la clínica</h2>
+              {modalidadClinica === 'particular'
+                ? <User className="w-4 h-4 text-slate-400" />
+                : <Users className="w-4 h-4 text-slate-400" />
+              }
+              <h2 className="text-sm font-semibold text-slate-200">
+                {modalidadClinica === 'particular' ? 'Profesional' : 'Administradores de la clínica'}
+              </h2>
             </div>
           </div>
 
@@ -2196,7 +2256,7 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
                 )}
                 {index === 0 && (
                   <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">
-                    Administrador principal
+                    {modalidadClinica === 'particular' ? 'Datos del profesional' : 'Administrador principal'}
                   </p>
                 )}
                 <div className="space-y-3 p-4 bg-slate-700/40 rounded-xl border border-slate-700">
@@ -2237,14 +2297,16 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
             ))}
           </div>
 
-          <button
-            type="button"
-            onClick={agregarAdmin}
-            className="mt-4 w-full py-2.5 rounded-xl text-sm font-medium border border-dashed border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors flex items-center justify-center gap-2"
-          >
-            <PlusCircle className="w-4 h-4" />
-            Agregar otro administrador
-          </button>
+          {modalidadClinica !== 'particular' && (
+            <button
+              type="button"
+              onClick={agregarAdmin}
+              className="mt-4 w-full py-2.5 rounded-xl text-sm font-medium border border-dashed border-slate-600 text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors flex items-center justify-center gap-2"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Agregar otro administrador
+            </button>
+          )}
 
           <p className="text-xs text-slate-500 mt-3">
             Se enviará una invitación a cada email para que creen su contraseña.
@@ -2261,7 +2323,7 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
           className="w-full py-3 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
         >
           {cargando && <Spinner />}
-          Crear clínica y enviar invitaciones
+          {modalidadClinica === 'particular' ? 'Crear consulta y enviar invitación' : 'Crear clínica y enviar invitaciones'}
         </button>
       </form>
     </div>

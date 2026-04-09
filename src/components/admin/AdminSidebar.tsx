@@ -21,16 +21,16 @@ import {
 } from 'lucide-react'
 
 const navItemsBase = [
-  { href: '/admin',              label: 'Inicio',          icon: LayoutDashboard, exact: true, modulo: null },
-  { href: '/admin/agenda',       label: 'Agenda',          icon: CalendarDays,                 modulo: null },
-  { href: '/admin/medicos',      label: 'Profesionales',   icon: Stethoscope,                  modulo: null },
-  { href: '/admin/secretarias',  label: 'Recepcionistas',  icon: UserCog,                      modulo: null },
-  { href: '/admin/especialidades', label: 'Especialidades', icon: Tag,                          modulo: null },
-  { href: '/admin/horarios',     label: 'Horarios',        icon: Clock,                        modulo: null },
-  { href: '/admin/pacientes',    label: 'Pacientes',       icon: Users,                        modulo: null },
-  { href: '/admin/veterinaria',  label: 'Veterinaria',     icon: PawPrint,                     modulo: 'veterinaria' },
-  { href: '/admin/finanzas',     label: 'Finanzas',        icon: DollarSign,                   modulo: null },
-  { href: '/admin/configuracion', label: 'Configuración',  icon: Settings,                     modulo: null },
+  { href: '/admin',              label: 'Inicio',          icon: LayoutDashboard, exact: true, modulo: null, ocultarParticular: false },
+  { href: '/admin/agenda',       label: 'Agenda',          icon: CalendarDays,                 modulo: null, ocultarParticular: false },
+  { href: '/admin/medicos',      label: 'Profesionales',   icon: Stethoscope,                  modulo: null, ocultarParticular: true },
+  { href: '/admin/secretarias',  label: 'Recepcionistas',  icon: UserCog,                      modulo: null, ocultarParticular: true },
+  { href: '/admin/especialidades', label: 'Especialidades', icon: Tag,                          modulo: null, ocultarParticular: true },
+  { href: '/admin/horarios',     label: 'Horarios',        icon: Clock,                        modulo: null, ocultarParticular: false },
+  { href: '/admin/pacientes',    label: 'Pacientes',       icon: Users,                        modulo: null, ocultarParticular: false },
+  { href: '/admin/veterinaria',  label: 'Veterinaria',     icon: PawPrint,                     modulo: 'veterinaria', ocultarParticular: false },
+  { href: '/admin/finanzas',     label: 'Finanzas',        icon: DollarSign,                   modulo: null, ocultarParticular: false },
+  { href: '/admin/configuracion', label: 'Configuración',  icon: Settings,                     modulo: null, ocultarParticular: false },
 ]
 
 interface AdminSidebarProps {
@@ -48,6 +48,7 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
   const [esDoctor, setEsDoctor] = useState(false)
   const [modulosActivos, setModulosActivos] = useState<Record<string, boolean>>({})
   const [esVeterinaria, setEsVeterinaria] = useState(false)
+  const [tier, setTier] = useState('')
 
   useEffect(() => {
     async function loadData() {
@@ -56,11 +57,11 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
       setUserEmail(user.email ?? '')
       const { data: me } = await supabase
         .from('usuarios')
-        .select('nombre, clinica_id, es_doctor, clinicas(nombre, modulos_activos, tipo_especialidad)')
+        .select('nombre, clinica_id, es_doctor, clinicas(nombre, modulos_activos, tipo_especialidad, tier)')
         .eq('id', user.id)
         .single()
       if (me?.clinicas) {
-        const c = me.clinicas as { nombre: string; modulos_activos?: Record<string, boolean>; tipo_especialidad?: string | null } | { nombre: string; modulos_activos?: Record<string, boolean>; tipo_especialidad?: string | null }[]
+        const c = me.clinicas as { nombre: string; modulos_activos?: Record<string, boolean>; tipo_especialidad?: string | null; tier?: string | null } | { nombre: string; modulos_activos?: Record<string, boolean>; tipo_especialidad?: string | null; tier?: string | null }[]
         const clinicaData = Array.isArray(c) ? c[0] : c
         setClinicaNombre(clinicaData?.nombre ?? '')
         if (clinicaData?.modulos_activos) {
@@ -68,6 +69,9 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
         }
         if (clinicaData?.tipo_especialidad === 'veterinaria') {
           setEsVeterinaria(true)
+        }
+        if (clinicaData?.tier) {
+          setTier(clinicaData.tier)
         }
       }
       const meTyped = me as { nombre?: string; es_doctor?: boolean } | null
@@ -93,15 +97,16 @@ export function AdminSidebar({ onClose }: AdminSidebarProps) {
     return pathname.startsWith(item.href)
   }
 
-  // Filtrar items cuyo módulo requiere activación explícita, y ocultar Pacientes en clínicas veterinarias
+  // Filtrar items según módulos activos, tier y tipo de especialidad
   const navItems = navItemsBase.filter(item => {
     if (item.modulo !== null && modulosActivos[item.modulo] !== true) return false
     if (esVeterinaria && item.href === '/admin/pacientes') return false
+    if (tier === 'particular' && item.ocultarParticular) return false
     return true
   })
 
   return (
-    <aside className="w-64 min-h-screen bg-slate-900 text-white flex flex-col">
+    <aside className="w-64 h-full bg-slate-900 text-white flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b border-slate-700/60 flex items-center justify-between">
         <div className="flex items-center gap-2.5">

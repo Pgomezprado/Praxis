@@ -13,7 +13,7 @@ export default async function AdminConfiguracionPage() {
   const [{ data: clinicaDb }, { data: adminDb }] = await Promise.all([
     supabase
     .from('clinicas')
-    .select('id, nombre, rut, direccion, ciudad, telefono, email, logo_url, timezone, dias_agenda_adelante, hora_apertura, hora_cierre, tipo_especialidad, modulos_activos')
+    .select('id, nombre, rut, direccion, ciudad, telefono, email, logo_url, timezone, dias_agenda_adelante, hora_apertura, hora_cierre, tipo_especialidad, modulos_activos, tier')
     .eq('id', me.clinica_id)
     .single(),
     supabase
@@ -57,6 +57,7 @@ export default async function AdminConfiguracionPage() {
         adminEsDoctor={(adminDb as { es_doctor?: boolean } | null)?.es_doctor ?? false}
         adminEspecialidad={(adminDb as { especialidad?: string } | null)?.especialidad ?? ''}
         modulosActivosInicial={modulosActivosInicial}
+        esParticular={(clinicaDb as { tier?: string } | null)?.tier === 'particular'}
       />
     </div>
   )

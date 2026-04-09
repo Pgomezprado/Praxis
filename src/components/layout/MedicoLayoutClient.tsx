@@ -8,6 +8,7 @@ interface MedicoLayoutClientProps {
   nombre: string
   especialidad: string
   esAdmin: boolean
+  esParticular: boolean
   tieneOdontologia: boolean
   esVeterinaria: boolean
   iniciales: string
@@ -18,6 +19,7 @@ export function MedicoLayoutClient({
   nombre,
   especialidad,
   esAdmin,
+  esParticular,
   tieneOdontologia,
   esVeterinaria,
   iniciales,
@@ -48,6 +50,7 @@ export function MedicoLayoutClient({
           nombre={nombre}
           especialidad={especialidad}
           esAdmin={esAdmin}
+          esParticular={esParticular}
           tieneOdontologia={tieneOdontologia}
           esVeterinaria={esVeterinaria}
           onClose={() => setSidebarAbierto(false)}

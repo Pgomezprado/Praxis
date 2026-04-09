@@ -4,12 +4,13 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { LayoutDashboard, CalendarDays, LogOut, Stethoscope, Users, X } from 'lucide-react'
+import { LayoutDashboard, CalendarDays, LogOut, Stethoscope, Users, X, DollarSign } from 'lucide-react'
 
 const navItems = [
   { href: '/inicio',    label: 'Inicio',        icon: LayoutDashboard, exact: true },
   { href: '/pacientes', label: 'Pacientes',      icon: Users },
   { href: '/agenda',    label: 'Agenda del día', icon: CalendarDays },
+  { href: '/finanzas',  label: 'Finanzas',       icon: DollarSign },
 ]
 
 interface SidebarProps {
@@ -32,7 +33,7 @@ export function Sidebar({ onClose }: SidebarProps) {
   }
 
   return (
-    <aside className="w-64 min-h-screen bg-slate-900 text-white flex flex-col">
+    <aside className="w-64 h-full bg-slate-900 text-white flex flex-col">
       <div className="p-6 border-b border-slate-700/60 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
