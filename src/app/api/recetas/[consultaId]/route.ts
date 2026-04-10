@@ -6,7 +6,7 @@ export interface RecetaDB {
   id: string
   consulta_id: string
   clinica_id: string
-  medico_id: string
+  doctor_id: string
   paciente_id: string
   medicamentos: MedicamentoReceta[]
   indicaciones_generales: string | null

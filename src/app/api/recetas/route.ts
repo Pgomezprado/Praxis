@@ -98,7 +98,7 @@ export async function POST(req: Request) {
         {
           consulta_id,
           clinica_id: clinicaId,
-          medico_id: user.id,
+          doctor_id: user.id,
           paciente_id,
           medicamentos: medicamentos,
           indicaciones_generales: indicaciones_generales ?? null,

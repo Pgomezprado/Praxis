@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import type { Pago, Cobro } from '@/types/database'
 import { isValidUUID } from '@/lib/utils/validators'
+import { puedeAtender } from '@/lib/utils/roles'
 
 // POST /api/finanzas/cobros/[id]/pagos — registrar un pago
 // Si la suma de pagos activos >= monto_neto, el cobro pasa a 'pagado'
@@ -32,15 +33,15 @@ export async function POST(
 
     const { data: me } = await supabase
       .from('usuarios')
-      .select('clinica_id, rol')
+      .select('clinica_id, rol, es_doctor')
       .eq('id', user.id)
       .single()
 
     if (!me) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
-    const meTyped = me as { clinica_id: string; rol: string }
+    const meTyped = me as { clinica_id: string; rol: string; es_doctor: boolean }
 
-    if (meTyped.rol !== 'doctor' && meTyped.rol !== 'admin_clinica') {
+    if (!puedeAtender(meTyped) && meTyped.rol !== 'admin_clinica') {
       return Response.json({ error: 'Sin permisos para registrar pagos' }, { status: 403 })
     }
 

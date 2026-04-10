@@ -29,7 +29,6 @@ function NuevaContrasenaContent() {
   // null = cargando, false = sin sesión, 'temporal' = cambio obligatorio, 'recovery' = reset voluntario
   const [tipoSesion, setTipoSesion] = useState<null | false | 'temporal' | 'recovery'>(null)
   const [rolUsuario, setRolUsuario] = useState<string | null>(null)
-  const [esDoctorFlag, setEsDoctorFlag] = useState(false)
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -51,26 +50,28 @@ function NuevaContrasenaContent() {
       // Obtener rol para saber a dónde redirigir después
       const { data: usuarioRow } = await supabase
         .from('usuarios')
-        .select('rol, es_doctor')
+        .select('rol')
         .eq('id', user.id)
         .single()
       if (usuarioRow) {
-        const u = usuarioRow as { rol: string; es_doctor?: boolean }
-        setRolUsuario(u.rol)
-        setEsDoctorFlag(u.es_doctor === true)
+        setRolUsuario((usuarioRow as { rol: string }).rol)
       }
     }
     verificar()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const passwordOk = password.length >= 8
+  const passwordOk =
+    password.length >= 10 &&
+    /[A-Z]/.test(password) &&
+    /[0-9]/.test(password) &&
+    /[!@#$%^&*()_+\-=[\]{}|;':,./<>?]/.test(password)
   const coinciden = password === confirmar
   const canGuardar = passwordOk && coinciden
 
-  function destino(rol: string | null, esDoctor: boolean): string {
+  function destino(rol: string | null): string {
     if (rol === 'admin_clinica') return '/admin'
-    if (rol === 'doctor' || esDoctor) return '/medico/inicio'
+    if (rol === 'doctor') return '/medico/inicio'
     return '/inicio'
   }
 
@@ -99,7 +100,7 @@ function NuevaContrasenaContent() {
     setListo(true)
 
     // Redirigir al dashboard correspondiente
-    setTimeout(() => router.push(destino(rolUsuario, esDoctorFlag)), 2000)
+    setTimeout(() => router.push(destino(rolUsuario)), 2000)
   }
 
   if (tipoSesion === null) {
@@ -190,7 +191,7 @@ function NuevaContrasenaContent() {
                   type={showPass ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder="Mínimo 10 caracteres"
                   autoFocus
                   className={`w-full px-3 py-2.5 pr-10 text-sm rounded-xl border transition-colors focus:outline-none focus:ring-2 ${
                     password.length > 0 && !passwordOk
@@ -207,7 +208,16 @@ function NuevaContrasenaContent() {
                 </button>
               </div>
               {password.length > 0 && !passwordOk && (
-                <p className="text-xs text-red-500 mt-1">Mínimo 8 caracteres</p>
+                <p className="text-xs text-red-500 mt-1">
+                  {(() => {
+                    const f: string[] = []
+                    if (password.length < 10) f.push('mínimo 10 caracteres')
+                    if (!/[A-Z]/.test(password)) f.push('una mayúscula')
+                    if (!/[0-9]/.test(password)) f.push('un número')
+                    if (!/[!@#$%^&*()_+\-=[\]{}|;':,./<>?]/.test(password)) f.push('un carácter especial')
+                    return `Falta: ${f.join(', ')}`
+                  })()}
+                </p>
               )}
             </div>
 
