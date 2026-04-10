@@ -1,6 +1,7 @@
 'use client'
 
 import { Smile, ClipboardList, DollarSign, BookOpen, CheckCircle2, Clock } from 'lucide-react'
+import { OdontogramaDemo } from './OdontogramaDemo'
 
 const FEATURES = [
   {
@@ -8,40 +9,32 @@ const FEATURES = [
     titulo: 'Odontograma digital interactivo',
     descripcion:
       'Registro visual de los 32 dientes con historial de cambios por superficie. Cumple normativa MINSAL.',
-    gradient: 'from-cyan-500 to-cyan-700',
     iconBg: 'bg-cyan-100',
     iconColor: 'text-cyan-700',
-    border: 'border-cyan-200',
   },
   {
     icon: ClipboardList,
     titulo: 'Planes de tratamiento',
     descripcion:
       'Crea planes multiítem vinculados a cada pieza dental y genera presupuestos automáticamente.',
-    gradient: 'from-blue-500 to-blue-700',
     iconBg: 'bg-blue-100',
     iconColor: 'text-blue-700',
-    border: 'border-blue-200',
   },
   {
     icon: DollarSign,
     titulo: 'Cobros y finanzas',
     descripcion:
       'Registra pagos en cuotas, abonos y deudas pendientes. Disponible en todos los planes.',
-    gradient: 'from-emerald-500 to-emerald-700',
     iconBg: 'bg-emerald-100',
     iconColor: 'text-emerald-700',
-    border: 'border-emerald-200',
   },
   {
     icon: BookOpen,
     titulo: 'Catálogo de prestaciones',
     descripcion:
       'Catálogo personalizable con aranceles privados y FONASA por categoría: endodoncia, implantología, estética y más.',
-    gradient: 'from-violet-500 to-violet-700',
     iconBg: 'bg-violet-100',
     iconColor: 'text-violet-700',
-    border: 'border-violet-200',
   },
 ]
 
@@ -133,7 +126,7 @@ export function Odontologia() {
   }
 
   return (
-    <section className="py-20 sm:py-28 bg-gradient-to-br from-cyan-50 to-blue-50">
+    <section id="odontologia" className="py-20 sm:py-28 bg-linear-to-br from-cyan-50 to-blue-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
 
         {/* Encabezado */}
@@ -155,24 +148,40 @@ export function Odontologia() {
           </p>
         </div>
 
-        {/* Grid de features */}
-        <div className="grid sm:grid-cols-2 gap-6 mb-14">
+        {/* Odontograma interactivo en vivo */}
+        <div className="mb-10">
+          <div className="bg-white border border-cyan-100 rounded-2xl shadow-md p-6 sm:p-8">
+            <OdontogramaDemo />
+          </div>
+        </div>
+
+        {/* P2 — Mini CTA después del odontograma */}
+        <p className="text-center text-sm text-slate-600 font-medium mt-4 mb-10">
+          ¿Te gustaría probarlo con tus pacientes?{' '}
+          <button
+            onClick={scrollADemo}
+            className="text-cyan-600 font-semibold hover:text-cyan-500 underline underline-offset-2 transition-colors"
+          >
+            Solicitar demo gratuita
+          </button>
+        </p>
+
+        {/* Grid de features — icono + título + descripción */}
+        <div className="grid sm:grid-cols-2 gap-5 mb-14">
           {FEATURES.map((f) => {
             const Icon = f.icon
             return (
               <div
                 key={f.titulo}
-                className={`relative bg-white rounded-2xl border ${f.border} p-6 shadow-sm hover:shadow-md transition-shadow overflow-hidden`}
+                className="flex items-start gap-4 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow p-5"
               >
-                {/* Top bar de color */}
-                <div className={`absolute top-0 left-0 right-0 h-1.5 opacity-100 bg-gradient-to-r ${f.gradient}`} />
-
-                <div className={`w-11 h-11 rounded-xl ${f.iconBg} flex items-center justify-center mb-4`}>
+                <div className={`w-10 h-10 rounded-xl ${f.iconBg} flex items-center justify-center shrink-0`}>
                   <Icon className={`w-5 h-5 ${f.iconColor}`} />
                 </div>
-
-                <h3 className="text-base font-bold text-slate-900 mb-2">{f.titulo}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">{f.descripcion}</p>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 mb-1">{f.titulo}</h3>
+                  <p className="text-sm text-slate-500 leading-relaxed">{f.descripcion}</p>
+                </div>
               </div>
             )
           })}
@@ -197,7 +206,7 @@ export function Odontologia() {
               key={plan.nombre}
               className={`relative rounded-2xl border-2 p-7 transition-shadow flex flex-col ${
                 plan.destacado
-                  ? 'border-cyan-500 bg-gradient-to-b from-cyan-50 to-white shadow-lg shadow-cyan-100 hover:shadow-xl hover:shadow-cyan-200'
+                  ? 'border-cyan-500 bg-linear-to-b from-cyan-50 to-white shadow-lg shadow-cyan-100 hover:shadow-xl hover:shadow-cyan-200'
                   : 'border-slate-200 bg-white shadow-sm hover:shadow-md'
               }`}
             >
@@ -232,9 +241,9 @@ export function Odontologia() {
                 {plan.features.map((feature) => (
                   <li key={feature.texto} className="flex items-start gap-2.5 text-sm text-slate-600">
                     {feature.proximamente ? (
-                      <Clock className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                      <Clock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                     ) : (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                     )}
                     <span>
                       {feature.texto}

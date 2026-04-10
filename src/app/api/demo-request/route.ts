@@ -20,12 +20,14 @@ interface DemoRequest {
   clinica: string
   email: string
   telefono: string
+  tipo?: string
+  profesionales?: string
 }
 
 export async function POST(request: Request) {
   try {
     const body: DemoRequest = await request.json()
-    const { nombre, clinica, email, telefono } = body
+    const { nombre, clinica, email, telefono, tipo, profesionales } = body
 
     if (!nombre || !clinica || !email || !telefono) {
       return NextResponse.json({ error: 'Todos los campos son requeridos' }, { status: 400 })
@@ -59,7 +61,7 @@ export async function POST(request: Request) {
     // Persistir solicitud en DB
     const { error: dbError } = await supabase
       .from('demo_requests')
-      .insert({ nombre, clinica, email, telefono })
+      .insert({ nombre, clinica, email, telefono, tipo: tipo || null, profesionales: profesionales || null })
 
     if (dbError) {
       if (process.env.NODE_ENV !== 'production') {
@@ -130,13 +132,29 @@ export async function POST(request: Request) {
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding:12px 18px;">
+                  <td style="padding:12px 18px;border-bottom:1px solid #e2e8f0;">
                     <p style="margin:0;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Teléfono</p>
                   </td>
-                  <td style="padding:12px 18px;">
+                  <td style="padding:12px 18px;border-bottom:1px solid #e2e8f0;">
                     <p style="margin:0;font-size:14px;color:#0f172a;">
                       <a href="tel:${escapeHtml(telefono)}" style="color:#0f172a;text-decoration:none;">${escapeHtml(telefono)}</a>
                     </p>
+                  </td>
+                </tr>
+                <tr style="background:#f8fafc;">
+                  <td style="padding:12px 18px;border-bottom:1px solid #e2e8f0;">
+                    <p style="margin:0;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Tipo</p>
+                  </td>
+                  <td style="padding:12px 18px;border-bottom:1px solid #e2e8f0;">
+                    <p style="margin:0;font-size:15px;font-weight:600;color:#0f172a;">${escapeHtml(tipo || 'No especificado')}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 18px;">
+                    <p style="margin:0;font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;">Profesionales</p>
+                  </td>
+                  <td style="padding:12px 18px;">
+                    <p style="margin:0;font-size:15px;font-weight:600;color:#0f172a;">${escapeHtml(profesionales || 'No especificado')}</p>
                   </td>
                 </tr>
               </table>

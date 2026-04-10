@@ -30,13 +30,13 @@ type Plan =
 
 const PLANES: Plan[] = [
   {
-    nombre: 'Tier Pequeño',
+    nombre: 'Consulta',
     precio: '$59.000',
     periodo: '/mes',
     descripcion: '1–2 profesionales',
     features: [
       'Agenda online para pacientes',
-      'Historia clinica electronica',
+      'Historia clínica electrónica',
       'Resumen IA pre-consulta',
       'Soporte incluido',
     ],
@@ -46,20 +46,20 @@ const PLANES: Plan[] = [
     colorBadge: '',
   },
   {
-    nombre: 'Tier Mediano',
-    precio: '$129.000',
+    nombre: 'Clínica',
+    precio: '$130.000',
     periodo: '/mes',
     descripcion: '3–8 profesionales',
     features: [
-      'Todo lo del Tier Pequeño',
+      'Todo lo del plan Consulta',
       'Multi-usuario y multi-profesional',
-      'Reportes de gestion',
+      'Reportes de gestión',
       'Onboarding dedicado',
     ],
     destacado: true,
     colorBorder: 'border-blue-500',
     colorBtn: 'bg-blue-600 text-white hover:bg-blue-700',
-    colorBadge: 'Mas popular',
+    colorBadge: 'Más popular',
   },
   {
     nombre: 'Enterprise',
@@ -67,7 +67,7 @@ const PLANES: Plan[] = [
     periodo: null,
     descripcion: '9+ profesionales o multisede',
     features: [
-      'Todo lo del Tier Mediano',
+      'Todo lo del plan Clínica',
       'Multisede',
       'SLA y soporte prioritario',
       'Integraciones a medida',
@@ -125,7 +125,7 @@ export function Precios() {
                 </div>
               ) : (
                 <div className="mb-1">
-                  <span className="text-xl font-bold text-slate-700">Cotizacion a medida</span>
+                  <span className="text-xl font-bold text-slate-700">Cotización a medida</span>
                 </div>
               )}
 
@@ -165,7 +165,7 @@ export function Precios() {
         <p className="text-center text-sm text-slate-400 mt-2">
           ¿Más de 8 profesionales o más de una sede?{' '}
           <a href="mailto:contacto@praxisapp.cl" className="text-blue-600 hover:underline">
-            Contactanos
+            Contáctanos
           </a>
         </p>
       </div>

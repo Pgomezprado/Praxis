@@ -1,13 +1,14 @@
 'use client'
 
-import { MessageCircle, ArrowRight, ShieldCheck, Zap, Clock } from 'lucide-react'
+import Image from 'next/image'
+import { MessageCircle, ArrowRight, ShieldCheck, Zap, Clock, Scale } from 'lucide-react'
 
 const WA_URL = 'https://wa.me/+56993589027'
 
 const STATS = [
   { value: '< 1 día',    label: 'Setup y capacitación' },
   { value: '24/7',       label: 'Agenda online para pacientes' },
-  { value: 'IA',         label: 'Resumen pre-consulta automático' },
+  { value: '100%',       label: 'En la nube, sin instalación' },
   { value: 'Sin contrato', label: 'Cancela cuando quieras' },
 ]
 
@@ -46,8 +47,7 @@ export function HeroSection() {
               </h1>
 
               <p className="mt-6 text-lg text-slate-300 leading-relaxed max-w-lg">
-                Historia clínica electrónica, agenda online y resúmenes con IA.
-                Todo en un solo lugar, diseñado para clínicas y consultorios en Chile.
+                Deja el Excel, el papel y el WhatsApp. Agenda, ficha clínica, cobros y resúmenes con IA — todo en un solo lugar.
               </p>
 
               <div className="mt-9 flex flex-col sm:flex-row gap-3">
@@ -82,78 +82,35 @@ export function HeroSection() {
                   <Clock className="w-4 h-4 text-blue-400" />
                   <span>Soporte incluido</span>
                 </div>
+                <div className="flex items-center gap-1.5">
+                  <Scale className="w-4 h-4 text-cyan-400" />
+                  <span>Cumple Ley 20.584</span>
+                </div>
               </div>
             </div>
 
-            {/* Mockup dashboard */}
-            <div className="hidden lg:flex justify-center">
-              <div className="relative w-full max-w-[360px]">
-                {/* Card principal */}
-                <div className="bg-slate-800/80 backdrop-blur-sm border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden">
-                  {/* Header card */}
-                  <div className="bg-slate-800 border-b border-slate-700/60 px-4 py-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-[11px] text-slate-500 font-medium">Hoy · Dr. Alejandro Muñoz</p>
-                      <p className="text-sm font-bold text-white">4 pacientes por atender</p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                      <span className="text-xs text-emerald-400 font-medium">En línea</span>
-                    </div>
-                  </div>
-
-                  {/* Citas */}
-                  <div className="p-3 space-y-2">
-                    {[
-                      { hora: '09:00', nombre: 'María J. Fernández', motivo: 'Control diabetes', estado: 'en_consulta', color: 'border-emerald-500/40 bg-emerald-500/5' },
-                      { hora: '09:30', nombre: 'Carlos Muñoz Soto',  motivo: 'Crisis asmática',  estado: 'confirmada',   color: 'border-blue-500/30 bg-blue-500/5' },
-                      { hora: '10:00', nombre: 'Valentina González', motivo: 'Chequeo anual',    estado: 'pendiente',    color: 'border-slate-600/40 bg-slate-700/30' },
-                    ].map((p) => (
-                      <div key={p.hora} className={`rounded-xl border px-3 py-2.5 ${p.color}`}>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs font-semibold text-slate-200">{p.hora} — {p.nombre}</p>
-                            <p className="text-[11px] text-slate-400 mt-0.5">{p.motivo}</p>
-                          </div>
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                            p.estado === 'en_consulta' ? 'bg-emerald-500/20 text-emerald-400' :
-                            p.estado === 'confirmada'  ? 'bg-blue-500/20 text-blue-400' :
-                            'bg-slate-600/40 text-slate-400'
-                          }`}>
-                            {p.estado === 'en_consulta' ? 'Ahora' : p.estado === 'confirmada' ? 'Confirmada' : 'Pendiente'}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Progress */}
-                  <div className="px-3 pb-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[11px] text-slate-500">Progreso del día</span>
-                      <span className="text-[11px] text-slate-400 font-medium">1 / 4</span>
-                    </div>
-                    <div className="h-1.5 bg-slate-700 rounded-full">
-                      <div className="h-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full w-1/4 transition-all" />
-                    </div>
-                  </div>
+            {/* Screenshot real del dashboard */}
+            <div className="flex justify-center mt-8 lg:mt-0">
+              <div className="relative w-full max-w-[520px]">
+                <div className="rounded-2xl overflow-hidden shadow-2xl border border-slate-700/50">
+                  <Image
+                    src="/landing/foto-C-dashboard.png"
+                    alt="Dashboard de Praxis — vista del médico con agenda del día"
+                    width={1280}
+                    height={800}
+                    priority
+                    className="w-full h-auto"
+                  />
                 </div>
-
                 {/* Badge IA flotante */}
-                <div className="absolute -bottom-3 -right-3 bg-white rounded-xl shadow-xl border border-slate-100 px-3 py-2 flex items-center gap-2.5">
-                  <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <div className="absolute -bottom-3 -right-3 bg-white rounded-xl shadow-xl border border-slate-100 px-3 py-2 hidden sm:flex items-center gap-2.5">
+                  <div className="w-8 h-8 bg-violet-100 rounded-lg flex items-center justify-center shrink-0">
                     <span className="text-violet-600 text-sm">✦</span>
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-slate-800 leading-tight">Resumen IA listo</p>
-                    <p className="text-[11px] text-slate-400">María J. Fernández</p>
+                    <p className="text-[11px] text-slate-400">Pre-consulta generada</p>
                   </div>
-                </div>
-
-                {/* Badge notificación */}
-                <div className="absolute -top-3 -left-3 bg-white rounded-xl shadow-xl border border-slate-100 px-3 py-2 flex items-center gap-2">
-                  <span className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0" />
-                  <p className="text-xs font-semibold text-slate-700">Nueva cita agendada</p>
                 </div>
               </div>
             </div>

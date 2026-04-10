@@ -13,12 +13,12 @@ const BENEFICIOS = [
 ]
 
 export function CtaDemo() {
-  const [form, setForm] = useState({ nombre: '', clinica: '', email: '', telefono: '' })
+  const [form, setForm] = useState({ nombre: '', clinica: '', email: '', telefono: '', tipo: '', profesionales: '' })
   const [loading, setLoading] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
@@ -127,6 +127,39 @@ export function CtaDemo() {
                     </div>
                   ))}
 
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-1.5">Tipo de clínica</label>
+                    <select
+                      name="tipo"
+                      value={form.tipo}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm transition-colors bg-white"
+                    >
+                      <option value="">Selecciona una opción</option>
+                      <option value="medicina">Medicina general</option>
+                      <option value="odontologia">Odontología</option>
+                      <option value="ambas">Medicina y odontología</option>
+                      <option value="otra">Otra especialidad</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-slate-700 block mb-1.5">Profesionales en tu clínica</label>
+                    <select
+                      name="profesionales"
+                      value={form.profesionales}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm transition-colors bg-white"
+                    >
+                      <option value="">Selecciona una opción</option>
+                      <option value="1-2">1–2 profesionales</option>
+                      <option value="3-8">3–8 profesionales</option>
+                      <option value="9+">9 o más profesionales</option>
+                    </select>
+                  </div>
+
                   {error && <p className="text-red-500 text-sm">{error}</p>}
 
                   <button
@@ -134,11 +167,11 @@ export function CtaDemo() {
                     disabled={loading}
                     className="w-full py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors disabled:opacity-60 text-sm shadow-sm mt-1"
                   >
-                    {loading ? 'Enviando...' : 'Solicitar demo gratuita →'}
+                    {loading ? 'Enviando...' : 'Solicitar demo gratuita'}
                   </button>
 
                   <p className="text-center text-xs text-slate-400">
-                    Sin compromiso. Te respondemos en menos de 24 h.
+                    Tus datos solo se usan para coordinar la demo. No spam.
                   </p>
                 </form>
               </>
