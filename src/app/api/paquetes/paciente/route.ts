@@ -99,6 +99,14 @@ export async function POST(req: Request) {
     if (!me) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
     const meTyped = me as { clinica_id: string }
 
+    // Verificar que paciente y médico pertenecen a esta clínica
+    const [{ data: pacienteValido }, { data: doctorValido }] = await Promise.all([
+      supabase.from('pacientes').select('id').eq('id', paciente_id).eq('clinica_id', meTyped.clinica_id).single(),
+      supabase.from('usuarios').select('id').eq('id', doctor_id).eq('clinica_id', meTyped.clinica_id).single(),
+    ])
+    if (!pacienteValido) return Response.json({ error: 'Paciente no pertenece a esta clínica' }, { status: 403 })
+    if (!doctorValido) return Response.json({ error: 'Profesional no pertenece a esta clínica' }, { status: 403 })
+
     // Crear el paquete
     const { data: paquete, error: errPaquete } = await supabase
       .from('paquetes_paciente')

@@ -11,11 +11,17 @@ export async function PUT() {
 
   const { data: usuario } = await supabase
     .from('usuarios')
-    .select('clinica_id')
+    .select('clinica_id, rol')
     .eq('id', user.id)
     .single()
 
-  const clinicaId = (usuario as { clinica_id?: string } | null)?.clinica_id
+  const u = usuario as { clinica_id?: string; rol?: string } | null
+
+  if (u?.rol !== 'admin_clinica') {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+  }
+
+  const clinicaId = u?.clinica_id
   if (!clinicaId) {
     return NextResponse.json({ error: 'Clínica no encontrada' }, { status: 404 })
   }

@@ -112,7 +112,7 @@ export default function LoginClient() {
           </div>
 
           {/* Footer */}
-          <p className="relative z-10 text-slate-600 text-xs">© 2025 Praxis · praxisapp.cl</p>
+          <p className="relative z-10 text-slate-600 text-xs">© 2026 Praxis · praxisapp.cl</p>
         </div>
 
         {/* Panel derecho — Selección de rol */}
@@ -221,7 +221,7 @@ export default function LoginClient() {
         </div>
 
         {/* Footer */}
-        <p className="relative z-10 text-slate-600 text-xs">© 2025 Praxis · praxisapp.cl</p>
+        <p className="relative z-10 text-slate-600 text-xs">© 2026 Praxis · praxisapp.cl</p>
       </div>
 
       {/* Panel derecho — Formulario */}

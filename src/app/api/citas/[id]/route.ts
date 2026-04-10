@@ -115,10 +115,39 @@ export async function DELETE(
       )
     }
 
-    // Registrar en audit_log antes de eliminar
-    await supabase
-      .from('audit_log')
-      .insert({
+    const citaTyped = cita as { consentimiento_datos?: boolean; paciente_id?: string }
+    const tieneConsentimiento = citaTyped.consentimiento_datos === true
+
+    if (tieneConsentimiento) {
+      // Cita con consentimiento firmado por el paciente — NUNCA borrar físicamente.
+      // Decreto 41 MINSAL + Ley 19.628: el consentimiento debe ser acreditable.
+      // Soft delete: marcar como cancelada y registrar en audit_log como archivada.
+      const { error: updateError } = await supabase
+        .from('citas')
+        .update({ estado: 'cancelada' })
+        .eq('id', id)
+        .eq('clinica_id', meTyped.clinica_id)
+
+      if (updateError) {
+        return Response.json({ error: 'No se pudo archivar la cita' }, { status: 500 })
+      }
+
+      await supabase.from('audit_log').insert({
+        usuario_id: user.id,
+        paciente_id: citaTyped.paciente_id ?? null,
+        clinica_id: meTyped.clinica_id,
+        accion: 'cita_archivada',
+        detalle: {
+          motivo: 'soft_delete_compliance',
+          registro_id: id,
+          consentimiento_datos: true,
+          datos_anteriores: cita,
+        },
+      })
+    } else {
+      // Cita sin consentimiento del paciente (creada manualmente por personal interno).
+      // Se permite DELETE físico porque no existe evidencia de consentimiento que preservar.
+      await supabase.from('audit_log').insert({
         usuario_id: user.id,
         clinica_id: meTyped.clinica_id,
         accion: 'DELETE_CITA',
@@ -129,14 +158,15 @@ export async function DELETE(
         },
       })
 
-    const { error } = await supabase
-      .from('citas')
-      .delete()
-      .eq('id', id)
-      .eq('clinica_id', meTyped.clinica_id)
+      const { error } = await supabase
+        .from('citas')
+        .delete()
+        .eq('id', id)
+        .eq('clinica_id', meTyped.clinica_id)
 
-    if (error) {
-      return Response.json({ error: 'No se pudo eliminar la cita' }, { status: 500 })
+      if (error) {
+        return Response.json({ error: 'No se pudo eliminar la cita' }, { status: 500 })
+      }
     }
 
     return Response.json({ ok: true })

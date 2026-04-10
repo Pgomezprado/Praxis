@@ -125,41 +125,65 @@ export function ImportarPacientesClient() {
     setEstado('importando')
     setProgreso(0)
 
-    const total = filasValidas.length
-    let ok = 0
-    let fail = 0
+    // Generar un UUID único para identificar este lote en el audit_log
+    const loteId = crypto.randomUUID()
 
-    for (let i = 0; i < total; i++) {
-      const fila = filasValidas[i]
-      try {
-        const res = await fetch('/api/pacientes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            nombre: fila.nombre,
-            rut: fila.rut,
-            fecha_nac: fila.fechaNacimiento,
-            prevision: fila.prevision,
-            email: fila.email,
-            telefono: fila.telefono,
-          }),
-        })
-        // 409 = ya existe, lo contamos como importado (idempotente)
-        if (res.ok || res.status === 409) {
-          ok++
-        } else {
-          fail++
-        }
-      } catch {
-        fail++
+    const payload = filasValidas.map(fila => ({
+      nombre: fila.nombre,
+      rut: fila.rut,
+      fecha_nac: fila.fechaNacimiento,
+      prevision: fila.prevision,
+      email: fila.email,
+      telefono: fila.telefono,
+    }))
+
+    try {
+      // Simular progreso visual mientras el servidor procesa el lote
+      const intervalo = setInterval(() => {
+        setProgreso(prev => Math.min(prev + 3, 90))
+      }, 200)
+
+      const res = await fetch('/api/pacientes/importar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filas: payload,
+          lote_id: loteId,
+          consentimiento_confirmado: consentimientoImport,
+        }),
+      })
+
+      clearInterval(intervalo)
+      setProgreso(100)
+
+      if (!res.ok) {
+        const { error } = await res.json() as { error?: string }
+        console.error('Error en importación:', error)
+        setImportados(0)
+        setFallidos(filasValidas.length + filasInvalidas.length)
+        setErroresRut(filasConErrorRut.length)
+        setEstado('terminado')
+        return
       }
-      setProgreso(Math.round(((i + 1) / total) * 100))
-    }
 
-    setImportados(ok)
-    setFallidos(fail + filasInvalidas.length)
-    setErroresRut(filasConErrorRut.length)
-    setEstado('terminado')
+      const result = await res.json() as {
+        importados: number
+        duplicados: number
+        fallidos: number
+      }
+
+      // Duplicados se cuentan como importados exitosamente (idempotente)
+      setImportados(result.importados + result.duplicados)
+      setFallidos(result.fallidos + filasInvalidas.length)
+      setErroresRut(filasConErrorRut.length)
+      setEstado('terminado')
+    } catch {
+      setProgreso(100)
+      setImportados(0)
+      setFallidos(filasValidas.length + filasInvalidas.length)
+      setErroresRut(filasConErrorRut.length)
+      setEstado('terminado')
+    }
   }
 
   function reiniciar() {

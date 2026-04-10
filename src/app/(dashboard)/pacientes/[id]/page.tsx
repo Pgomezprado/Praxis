@@ -117,10 +117,10 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
       />
 
       {/* Layout de 2 columnas — recepcionista no tiene acceso al formulario de consulta */}
-      <div className="grid grid-cols-[280px_1fr] gap-6 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 items-start">
 
         {/* COLUMNA IZQUIERDA — Alergias y condiciones (siempre visible) */}
-        <aside className="space-y-5 sticky top-6">
+        <aside className="space-y-5 md:sticky md:top-6">
           <div className="bg-white border border-slate-200 rounded-xl p-5">
             <h3 className="text-base font-semibold text-slate-800 mb-3">Alergias</h3>
             <AlergiasBadges alergias={paciente.alergias} />

@@ -203,15 +203,16 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
           )}
 
           {puedeActuar && !loading && (
-            <div className="flex items-center gap-0.5">
+            <div className="flex items-center gap-1">
               {/* Confirmar — solo si pendiente */}
               {estadoLocal === 'pendiente' && (
                 <button
                   onClick={() => cambiarEstado('confirmada')}
                   title="Confirmar cita"
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 transition-colors"
                 >
-                  <CheckCheck className="w-3.5 h-3.5" />
+                  <CheckCheck className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="hidden sm:inline">Confirmar</span>
                 </button>
               )}
 
@@ -220,9 +221,10 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
                 <button
                   onClick={() => cambiarEstado('en_consulta')}
                   title="Iniciar consulta"
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-colors"
                 >
-                  <PlayCircle className="w-3.5 h-3.5" />
+                  <PlayCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="hidden sm:inline">Iniciar</span>
                 </button>
               )}
 
@@ -230,18 +232,20 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
               <button
                 onClick={() => cambiarEstado('completada')}
                 title="Marcar completada"
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
               >
-                <CheckCircle2 className="w-3.5 h-3.5" />
+                <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="hidden sm:inline">Completar</span>
               </button>
 
               {/* Cambio de hora */}
               <button
                 onClick={() => onCambioHora?.(cita.id)}
-                title="Cambiar hora"
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                title="Reagendar"
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-amber-700 hover:bg-amber-50 transition-colors"
               >
-                <Clock className="w-3.5 h-3.5" />
+                <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="hidden sm:inline">Reagendar</span>
               </button>
 
               {/* Anular — abre modal de confirmación (despacha evento para cerrar otras confirmaciones abiertas) */}
@@ -251,9 +255,10 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
                   setMostrarConfirmacion(true)
                 }}
                 title="Anular cita"
-                className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-red-700 hover:bg-red-50 transition-colors"
               >
-                <XCircle className="w-3.5 h-3.5" />
+                <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="hidden sm:inline">Anular</span>
               </button>
             </div>
           )}
