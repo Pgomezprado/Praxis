@@ -409,7 +409,7 @@ export function DrawerDetalleCita({
             </div>
           )}
 
-          {/* Cobrar — solo secretaria, cita completada */}
+          {/* Cobrar — solo recepcionista/admin, no médico (el cobro lo hace la recepción) */}
           {!esDoctor && isCompletada && (
             <Link
               href={`/cobro/${cita.id}`}

@@ -141,7 +141,7 @@ export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false,
 
       {/* Footer: switcher + logout */}
       <div className="p-3 border-t border-slate-700/60 space-y-0.5">
-        {esAdmin && !esParticular && (
+        {esAdmin && (
           <Link
             href="/admin"
             onClick={handleNavClick}

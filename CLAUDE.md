@@ -9,18 +9,68 @@
 
 ---
 
-## Roles de usuario
+## Roles de usuario y flujos de trabajo
 
-| Rol | Valor en DB | Acceso |
-|-----|------------|--------|
-| Administrador | `admin_clinica` | `/admin/*` |
-| Médico | `doctor` | `/medico/*` |
-| Recepcionista | `recepcionista` | `/inicio`, `/pacientes`, `/agenda` |
+### Los 3 roles de una clínica
+
+| Rol | Valor en DB | Acceso | Qué hace en el día a día |
+|-----|------------|--------|--------------------------|
+| Administrador | `admin_clinica` | `/admin/*` | Maneja el negocio: define precios de consultas/aranceles, gestiona equipo, ve finanzas y reportes, configura la clínica |
+| Médico | `doctor` | `/medico/*` | Atiende pacientes, escribe historia clínica, genera recetas |
+| Recepcionista | `recepcionista` | `/inicio`, `/pacientes`, `/agenda`, `/cobro/*` | Agenda citas, recibe pacientes, cobra consultas |
 
 ```typescript
 // src/types/database.ts
 type UserRole = 'admin_clinica' | 'doctor' | 'recepcionista'
 ```
+
+### Caso especial: Admin + Doctor (`es_doctor = true`)
+
+En clínicas pequeñas el administrador también atiende pacientes. Cuando `es_doctor = true`:
+- Puede acceder a `/medico/*` además de `/admin/*`
+- En el MedicoSidebar aparece un botón "Panel de administración" para volver a `/admin`
+- **NO cobra desde el panel médico** — el cobro siempre es tarea de recepción/admin
+
+### Flujo de trabajo diario en una clínica
+
+```
+RECEPCIONISTA                    MÉDICO                         ADMIN
+─────────────                    ──────                         ─────
+1. Abre agenda del día           1. Ve su agenda                1. Ve dashboard
+2. Confirma citas pendientes     2. Llama al paciente           2. Revisa finanzas
+3. Registra pacientes nuevos     3. Abre ficha clínica          3. Configura horarios
+4. Agenda citas por teléfono     4. Escribe consulta/historia   4. Gestiona equipo
+5. Cobra citas completadas ←──── 5. Marca cita como completada
+6. Entrega boleta/comprobante    6. Genera receta si necesario
+```
+
+### Quién hace qué — reglas de negocio
+
+| Acción | Recepcionista | Médico | Admin |
+|--------|:---:|:---:|:---:|
+| Agendar citas | Si | No | Si |
+| Confirmar/cancelar citas | Si | Si (las suyas) | Si |
+| Completar cita (marcar atendida) | No | Si | Si (si es_doctor) |
+| **Cobrar consulta** | **Si** | **No** | **Si** |
+| Crear/editar paciente | Si | No | Si |
+| Escribir historia clínica | No | Si | Si (si es_doctor) |
+| Generar receta | No | Si | Si (si es_doctor) |
+| Eliminar cita | Si | No | Si |
+| Definir precios/aranceles | No | No | Si |
+| Ver reportes/finanzas | No | No | Si |
+| Configurar horarios | No | No | Si |
+
+### Regla de oro para el desarrollo
+
+> **El médico atiende, la recepción cobra.** Nunca mostrar botones de cobro en el panel médico (`esDoctor=true`).
+> El cobro vive en `/cobro/*` dentro del grupo `(dashboard)` — layout de recepcionista/admin.
+> Los redirects de error en cobro apuntan a `/agenda/hoy` (ruta de recepcionista).
+
+### Regla sobre `esDoctor` en UI
+
+- `esDoctor=true` → mostrar accesos clínicos: historia clínica, receta, completar cita
+- `esDoctor=false` → mostrar accesos operativos: cobrar, editar paciente, ficha administrativa
+- **Nunca ocultar botones de navegación** por `esDoctor` (ej: sidebar, menús)
 
 ---
 

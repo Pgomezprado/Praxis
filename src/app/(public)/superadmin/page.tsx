@@ -38,6 +38,7 @@ import {
   KeyRound,
   Eye,
   EyeOff,
+  BarChart3,
 } from 'lucide-react'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -69,6 +70,7 @@ type ClinicaData = {
   notas_internas: string | null
   medicos_activos: number
   citas_30_dias: number
+  citas_7_dias: number
   total_pacientes: number
   ultimo_pago: {
     mes: string
@@ -77,6 +79,7 @@ type ClinicaData = {
     created_at: string
   } | null
   total_pagado: number
+  health_score: number
 }
 
 type DemoData = {
@@ -113,7 +116,18 @@ type UsuarioData = {
   clinicas: { nombre: string; tipo_especialidad: string | null; tier: string | null } | null
 }
 
-type TabId = 'dashboard' | 'clinicas' | 'finanzas' | 'demos' | 'usuarios' | 'nueva' | 'crecimiento'
+type TabId = 'dashboard' | 'clinicas' | 'finanzas' | 'demos' | 'usuarios' | 'nueva' | 'crecimiento' | 'adopcion'
+
+type AdopcionClinica = {
+  clinica_id: string
+  clinica_nombre: string
+  citas_total: number
+  citas_portal: number
+  citas_manuales: number
+  fichas_completadas: number
+  cobros_realizados: number
+  pacientes_nuevos: number
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -344,15 +358,22 @@ function TabDashboard({
     return diasDesde(d.created_at) > 3
   })
 
-  // Tabla de estado por clínica — ordenada por riesgo
+  // Alertas de inactividad
+  const alertasInactividad = clinicas.filter(c => {
+    if (!c.activa) return false
+    if (diasDesde(c.created_at) <= 14) return false // clínica muy nueva
+    return (c.citas_7_dias ?? 0) === 0
+  })
+
+  const alertasOnboardingIncompleto = clinicas.filter(c => {
+    if (!c.activa) return false
+    if (diasDesde(c.created_at) <= 14) return false
+    return (c.total_pacientes ?? 0) === 0
+  })
+
+  // Tabla de estado por clínica — ordenada por health_score ascendente (peores primero)
   const clinicasOrdenadas = [...clinicas].sort((a, b) => {
-    const score = (c: ClinicaData) => {
-      if (!c.activa) return 3
-      if (c.fecha_fin_gratis && new Date(c.fecha_fin_gratis) >= hoy && new Date(c.fecha_fin_gratis) <= en7Dias) return 0
-      if (alertasSinPago.some(x => x.id === c.id)) return 1
-      return 2
-    }
-    return score(a) - score(b)
+    return (a.health_score ?? 0) - (b.health_score ?? 0)
   })
 
   return (
@@ -380,7 +401,7 @@ function TabDashboard({
       </div>
 
       {/* Alertas de acción */}
-      {(alertasVencen.length > 0 || alertasSinPago.length > 0 || alertasDemos.length > 0) && (
+      {(alertasVencen.length > 0 || alertasSinPago.length > 0 || alertasDemos.length > 0 || alertasInactividad.length > 0 || alertasOnboardingIncompleto.length > 0) && (
         <div>
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Alertas de acción</p>
           <div className="space-y-2">
@@ -420,11 +441,35 @@ function TabDashboard({
                 </span>
               </div>
             ))}
+            {alertasInactividad.map(c => (
+              <div key={`inact-${c.id}`} className="flex items-center gap-3 bg-orange-500/10 border border-orange-500/30 rounded-xl px-4 py-3">
+                <Activity className="w-4 h-4 text-orange-400 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white font-medium">{c.nombre} — Sin actividad hace más de 7 días</p>
+                  <p className="text-xs text-slate-400">{c.citas_30_dias} citas en los últimos 30 días · {c.total_pacientes} pacientes</p>
+                </div>
+                <span className="shrink-0 text-xs font-medium text-orange-300 bg-orange-500/20 border border-orange-500/30 px-2.5 py-1 rounded-full">
+                  Requiere seguimiento
+                </span>
+              </div>
+            ))}
+            {alertasOnboardingIncompleto.map(c => (
+              <div key={`onb-${c.id}`} className="flex items-center gap-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3">
+                <Users className="w-4 h-4 text-yellow-400 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white font-medium">{c.nombre} — Sin pacientes registrados</p>
+                  <p className="text-xs text-slate-400">Creada hace {diasDesde(c.created_at)} días · 0 pacientes</p>
+                </div>
+                <span className="shrink-0 text-xs font-medium text-yellow-300 bg-yellow-500/20 border border-yellow-500/30 px-2.5 py-1 rounded-full">
+                  Onboarding incompleto
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {alertasVencen.length === 0 && alertasSinPago.length === 0 && alertasDemos.length === 0 && (
+      {alertasVencen.length === 0 && alertasSinPago.length === 0 && alertasDemos.length === 0 && alertasInactividad.length === 0 && alertasOnboardingIncompleto.length === 0 && (
         <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <p className="text-sm text-slate-300">Sin alertas activas</p>
@@ -439,7 +484,7 @@ function TabDashboard({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-700">
-                  {['Clínica', 'Plan', 'Estado', 'Vence gratis', 'Profesionales', 'Pacientes', 'Citas 30d', 'Último pago', 'Total pagado'].map(h => (
+                  {['Clínica', 'Salud', 'Plan', 'Estado', 'Vence gratis', 'Profesionales', 'Pacientes', 'Citas 30d', 'Último pago', 'Total pagado'].map(h => (
                     <th key={h} className="text-left py-3 px-4 text-xs font-medium text-slate-400 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -447,11 +492,22 @@ function TabDashboard({
               <tbody>
                 {clinicasOrdenadas.map(c => {
                   const sinPago = alertasSinPago.some(x => x.id === c.id)
+                  const hs = c.health_score ?? 0
+                  const hsCls = hs >= 70
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                    : hs >= 40
+                    ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                    : 'bg-red-500/20 text-red-400 border-red-500/30'
                   return (
                     <tr key={c.id} className={`border-b border-slate-700/50 transition-colors ${sinPago ? 'bg-red-500/5' : 'hover:bg-slate-700/30'}`}>
                       <td className="py-3 px-4">
                         <p className="text-white font-medium whitespace-nowrap">{c.nombre}</p>
                         <p className="text-slate-500 text-xs">{c.ciudad ?? c.slug}</p>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full border text-xs font-bold ${hsCls}`}>
+                          {hs}
+                        </span>
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap"><BadgeTier tier={c.tier} /></td>
                       <td className="py-3 px-4 whitespace-nowrap"><BadgeEstadoClinica clinica={c} /></td>
@@ -2330,6 +2386,97 @@ function TabNuevaClinica({ onCreada }: TabNuevaClinicaProps) {
   )
 }
 
+// ─── Tab: Adopción ────────────────────────────────────────────────────────────
+
+function TabAdopcion({ adopcion, cargando }: { adopcion: AdopcionClinica[]; cargando: boolean }) {
+  if (cargando) {
+    return (
+      <div className="flex items-center gap-2 text-slate-400 text-sm py-10 justify-center">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        Cargando datos de adopción...
+      </div>
+    )
+  }
+
+  if (adopcion.length === 0) {
+    return (
+      <p className="text-slate-500 text-sm text-center py-10">Sin datos de adopción disponibles</p>
+    )
+  }
+
+  // Feature más y menos usada (suma global de todas las clínicas)
+  const totales = {
+    'Citas manuales': adopcion.reduce((s, c) => s + c.citas_manuales, 0),
+    'Citas portal': adopcion.reduce((s, c) => s + c.citas_portal, 0),
+    'Fichas': adopcion.reduce((s, c) => s + c.fichas_completadas, 0),
+    'Cobros': adopcion.reduce((s, c) => s + c.cobros_realizados, 0),
+    'Pacientes nuevos': adopcion.reduce((s, c) => s + c.pacientes_nuevos, 0),
+  }
+  const entradas = Object.entries(totales).sort((a, b) => b[1] - a[1])
+  const masUsada = entradas[0]
+  const menosUsada = entradas[entradas.length - 1]
+
+  function CeldaMetrica({ valor }: { valor: number }) {
+    return (
+      <span className={`font-medium tabular-nums ${valor === 0 ? 'text-red-400/70' : 'text-slate-200'}`}>
+        {valor}
+      </span>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Resumen global */}
+      <div className="flex flex-wrap gap-4 bg-slate-800 border border-slate-700 rounded-2xl p-4">
+        <div className="flex items-center gap-2">
+          <ArrowUpRight className="w-4 h-4 text-emerald-400" />
+          <span className="text-sm text-slate-300">
+            Feature más usada: <span className="text-emerald-400 font-semibold">{masUsada[0]}</span>
+            <span className="text-slate-500 ml-1">({masUsada[1]} usos)</span>
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <ArrowDownRight className="w-4 h-4 text-red-400" />
+          <span className="text-sm text-slate-300">
+            Feature menos usada: <span className="text-red-400 font-semibold">{menosUsada[0]}</span>
+            <span className="text-slate-500 ml-1">({menosUsada[1]} usos)</span>
+          </span>
+        </div>
+        <p className="text-xs text-slate-500 w-full">Últimos 30 días · Solo clínicas activas</p>
+      </div>
+
+      {/* Tabla */}
+      <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-700">
+                {['Clínica', 'Citas manual', 'Citas portal', 'Fichas', 'Cobros', 'Pacientes nuevos'].map(h => (
+                  <th key={h} className="text-left py-3 px-4 text-xs font-medium text-slate-400 whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {adopcion.map(c => (
+                <tr key={c.clinica_id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                  <td className="py-3 px-4">
+                    <p className="text-white font-medium whitespace-nowrap">{c.clinica_nombre}</p>
+                  </td>
+                  <td className="py-3 px-4"><CeldaMetrica valor={c.citas_manuales} /></td>
+                  <td className="py-3 px-4"><CeldaMetrica valor={c.citas_portal} /></td>
+                  <td className="py-3 px-4"><CeldaMetrica valor={c.fichas_completadas} /></td>
+                  <td className="py-3 px-4"><CeldaMetrica valor={c.cobros_realizados} /></td>
+                  <td className="py-3 px-4"><CeldaMetrica valor={c.pacientes_nuevos} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Componente principal ──────────────────────────────────────────────────────
 
 export default function SuperAdminPage() {
@@ -2344,6 +2491,8 @@ export default function SuperAdminPage() {
   const [demos, setDemos] = useState<DemoData[]>([])
   const [pagos, setPagos] = useState<PagoData[]>([])
   const [usuarios, setUsuarios] = useState<UsuarioData[]>([])
+  const [adopcion, setAdopcion] = useState<AdopcionClinica[]>([])
+  const [cargandoAdopcion, setCargandoAdopcion] = useState(false)
   const [cargandoDatos, setCargandoDatos] = useState(false)
   const [errorDatos, setErrorDatos] = useState('')
 
@@ -2380,11 +2529,30 @@ export default function SuperAdminPage() {
     }
   }, [])
 
+  const cargarAdopcion = useCallback(async () => {
+    setCargandoAdopcion(true)
+    try {
+      const res = await fetch('/api/superadmin/adopcion')
+      const data = await res.json() as { adopcion?: AdopcionClinica[]; error?: string }
+      if (data.adopcion) setAdopcion(data.adopcion)
+    } catch {
+      // silencioso — no bloquea el resto
+    } finally {
+      setCargandoAdopcion(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (autenticado) {
       cargarDatos()
     }
   }, [autenticado, cargarDatos])
+
+  useEffect(() => {
+    if (autenticado && tabActivo === 'adopcion' && adopcion.length === 0 && !cargandoAdopcion) {
+      cargarAdopcion()
+    }
+  }, [autenticado, tabActivo, adopcion.length, cargandoAdopcion, cargarAdopcion])
 
   async function handleSecret(e: React.FormEvent) {
     e.preventDefault()
@@ -2461,6 +2629,7 @@ export default function SuperAdminPage() {
     { id: 'clinicas',    label: 'Clínicas',       icon: <Hospital className="w-4 h-4" />, badge: clinicas.length },
     { id: 'finanzas',    label: 'Finanzas',        icon: <DollarSign className="w-4 h-4" /> },
     { id: 'crecimiento', label: 'Crecimiento',     icon: <TrendingUp className="w-4 h-4" /> },
+    { id: 'adopcion',   label: 'Adopción',         icon: <BarChart3 className="w-4 h-4" /> },
     { id: 'demos',       label: 'Demos',           icon: <CalendarDays className="w-4 h-4" />, badge: demos.filter(d => (d.estado ?? 'pendiente') === 'pendiente').length || undefined },
     { id: 'usuarios',    label: 'Usuarios',        icon: <Users className="w-4 h-4" />, badge: usuarios.length },
     { id: 'nueva',       label: 'Nueva clínica',   icon: <PlusCircle className="w-4 h-4" /> },
@@ -2567,6 +2736,10 @@ export default function SuperAdminPage() {
 
         {tabActivo === 'crecimiento' && (
           <GraficoCrecimiento />
+        )}
+
+        {tabActivo === 'adopcion' && (
+          <TabAdopcion adopcion={adopcion} cargando={cargandoAdopcion} />
         )}
 
         {tabActivo === 'demos' && (

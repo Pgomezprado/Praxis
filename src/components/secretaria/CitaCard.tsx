@@ -172,7 +172,7 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
         <div className="relative flex-shrink-0 flex items-center gap-1">
           {loading && <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />}
 
-          {/* Botón cobro — solo secretaria, cita completada */}
+          {/* Botón cobro — solo recepcionista/admin, no médico (el cobro lo hace la recepción) */}
           {!esDoctor && isCompletada && !isCancelada && (
             cobrada ? (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200">

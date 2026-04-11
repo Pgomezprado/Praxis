@@ -73,22 +73,34 @@ export async function GET(req: NextRequest) {
     // Conteo de citas en los últimos 30 días
     const hace30Dias = new Date()
     hace30Dias.setDate(hace30Dias.getDate() - 30)
-    const { data: citas } = await supabase
+    const { data: citas30 } = await supabase
       .from('citas')
-      .select('clinica_id')
+      .select('clinica_id, created_at')
       .in('clinica_id', ids)
       .gte('created_at', hace30Dias.toISOString())
 
-    const citasData = citas as { clinica_id: string }[] | null
+    const citas30Data = citas30 as { clinica_id: string; created_at: string }[] | null
+
+    // Citas en los últimos 7 días (para health score y alertas)
+    const hace7Dias = new Date()
+    hace7Dias.setDate(hace7Dias.getDate() - 7)
+    const citas7Data = (citas30Data ?? []).filter(
+      c => new Date(c.created_at) >= hace7Dias
+    )
 
     // Total de pacientes activos por clínica
     const { data: pacientes } = await supabase
       .from('pacientes')
-      .select('clinica_id')
+      .select('clinica_id, created_at')
       .in('clinica_id', ids)
       .eq('activo', true)
 
-    const pacientesData = pacientes as { clinica_id: string }[] | null
+    const pacientesData = pacientes as { clinica_id: string; created_at: string }[] | null
+
+    // Pacientes nuevos en últimos 30 días (para health score)
+    const pacientesNuevos30Data = (pacientesData ?? []).filter(
+      p => new Date(p.created_at) >= hace30Dias
+    )
 
     // Todos los pagos por clínica (para último pago y total acumulado)
     const { data: pagos } = await supabase
@@ -112,14 +124,55 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Mes actual en formato YYYY-MM-01 para verificar pago al día
+    const hoy = new Date()
+    const mesActualISO = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-01`
+
+    // Calcular health score por clínica
+    function calcularHealthScore(clinica: ClinicaRow): number {
+      const citas7d = citas7Data.filter(c => c.clinica_id === clinica.id).length
+      const citas30d = (citas30Data ?? []).filter(c => c.clinica_id === clinica.id).length
+      const pacientesNuevos = pacientesNuevos30Data.filter(p => p.clinica_id === clinica.id).length
+
+      // Pago al día: activa + fuera del período gratis + tiene pago este mes
+      const estaEnPeriodoGratis = clinica.fecha_fin_gratis && new Date(clinica.fecha_fin_gratis) >= hoy
+      const tienePagoEsteMes = (pagosData ?? []).some(
+        p => p.clinica_id === clinica.id && p.mes === mesActualISO
+      )
+      const pagoAlDia = estaEnPeriodoGratis ? true : tienePagoEsteMes
+
+      // Días sin actividad: basado en la cita más reciente
+      const citasClinica = (citas30Data ?? []).filter(c => c.clinica_id === clinica.id)
+      let diasSinActividad = 999
+      if (citasClinica.length > 0) {
+        const masReciente = citasClinica.reduce((max, c) =>
+          new Date(c.created_at) > new Date(max.created_at) ? c : max
+        )
+        diasSinActividad = Math.floor(
+          (hoy.getTime() - new Date(masReciente.created_at).getTime()) / (1000 * 60 * 60 * 24)
+        )
+      }
+
+      let score = 0
+      score += citas7d > 0 ? 25 : 0
+      score += Math.round(Math.min(citas30d, 20) / 20 * 25)
+      score += pacientesNuevos > 0 ? 15 : 0
+      score += pagoAlDia ? 20 : 0
+      score += diasSinActividad < 3 ? 15 : diasSinActividad < 7 ? 8 : 0
+
+      return score
+    }
+
     // Armar respuesta enriquecida
     const resultado = clinicasData.map(c => ({
       ...c,
       medicos_activos: medicosData ? medicosData.filter(m => m.clinica_id === c.id).length : 0,
-      citas_30_dias: citasData ? citasData.filter(ci => ci.clinica_id === c.id).length : 0,
+      citas_30_dias: (citas30Data ?? []).filter(ci => ci.clinica_id === c.id).length,
+      citas_7_dias: citas7Data.filter(ci => ci.clinica_id === c.id).length,
       total_pacientes: pacientesData ? pacientesData.filter(p => p.clinica_id === c.id).length : 0,
       ultimo_pago: ultimoPagoPorClinica[c.id] ?? null,
       total_pagado: totalPagadoPorClinica[c.id] ?? 0,
+      health_score: calcularHealthScore(c),
     }))
 
     return Response.json({ clinicas: resultado })
