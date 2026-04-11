@@ -72,6 +72,8 @@ type ClinicaData = {
   citas_30_dias: number
   citas_7_dias: number
   total_pacientes: number
+  pacientes_nuevos_mes: number
+  ultimo_login_clinica: string | null
   ultimo_pago: {
     mes: string
     monto: number
@@ -365,10 +367,27 @@ function TabDashboard({
     return (c.citas_7_dias ?? 0) === 0
   })
 
+  // Alerta onboarding: 0 pacientes total, clínica entre 14 y 30 días de vida
   const alertasOnboardingIncompleto = clinicas.filter(c => {
     if (!c.activa) return false
-    if (diasDesde(c.created_at) <= 14) return false
+    const edad = diasDesde(c.created_at)
+    if (edad <= 14 || edad > 30) return false
     return (c.total_pacientes ?? 0) === 0
+  })
+
+  // Alerta crecimiento detenido: 0 pacientes nuevos este mes, clínica activa > 30 días
+  const alertasSinPacientesMes = clinicas.filter(c => {
+    if (!c.activa) return false
+    if (diasDesde(c.created_at) <= 30) return false
+    return (c.pacientes_nuevos_mes ?? 0) === 0
+  })
+
+  // Alerta sin login: ningún usuario ha hecho login en 5+ días, clínica activa > 14 días
+  const alertasSinLogin = clinicas.filter(c => {
+    if (!c.activa) return false
+    if (diasDesde(c.created_at) <= 14) return false
+    if (!c.ultimo_login_clinica) return true // nunca han entrado
+    return diasDesde(c.ultimo_login_clinica) >= 5
   })
 
   // Tabla de estado por clínica — ordenada por health_score ascendente (peores primero)
@@ -401,7 +420,7 @@ function TabDashboard({
       </div>
 
       {/* Alertas de acción */}
-      {(alertasVencen.length > 0 || alertasSinPago.length > 0 || alertasDemos.length > 0 || alertasInactividad.length > 0 || alertasOnboardingIncompleto.length > 0) && (
+      {(alertasVencen.length > 0 || alertasSinPago.length > 0 || alertasDemos.length > 0 || alertasInactividad.length > 0 || alertasOnboardingIncompleto.length > 0 || alertasSinPacientesMes.length > 0 || alertasSinLogin.length > 0) && (
         <div>
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Alertas de acción</p>
           <div className="space-y-2">
@@ -465,11 +484,41 @@ function TabDashboard({
                 </span>
               </div>
             ))}
+            {alertasSinPacientesMes.map(c => (
+              <div key={`sinpac-${c.id}`} className="flex items-center gap-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-3">
+                <Users className="w-4 h-4 text-yellow-400 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white font-medium">{c.nombre} — Sin pacientes nuevos este mes</p>
+                  <p className="text-xs text-slate-400">{c.total_pacientes} pacientes totales · activa hace {diasDesde(c.created_at)} días</p>
+                </div>
+                <span className="shrink-0 text-xs font-medium text-yellow-300 bg-yellow-500/20 border border-yellow-500/30 px-2.5 py-1 rounded-full">
+                  Crecimiento detenido
+                </span>
+              </div>
+            ))}
+            {alertasSinLogin.map(c => (
+              <div key={`login-${c.id}`} className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
+                <UserX className="w-4 h-4 text-red-400 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-white font-medium">
+                    {c.nombre} — Sin login de usuarios hace {c.ultimo_login_clinica ? diasDesde(c.ultimo_login_clinica) : '—'} días
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {c.ultimo_login_clinica
+                      ? `Último acceso: ${formatFecha(c.ultimo_login_clinica)}`
+                      : 'Nunca han iniciado sesión'}
+                  </p>
+                </div>
+                <span className="shrink-0 text-xs font-medium text-red-300 bg-red-500/20 border border-red-500/30 px-2.5 py-1 rounded-full">
+                  Sin actividad
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {alertasVencen.length === 0 && alertasSinPago.length === 0 && alertasDemos.length === 0 && alertasInactividad.length === 0 && alertasOnboardingIncompleto.length === 0 && (
+      {alertasVencen.length === 0 && alertasSinPago.length === 0 && alertasDemos.length === 0 && alertasInactividad.length === 0 && alertasOnboardingIncompleto.length === 0 && alertasSinPacientesMes.length === 0 && alertasSinLogin.length === 0 && (
         <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <p className="text-sm text-slate-300">Sin alertas activas</p>

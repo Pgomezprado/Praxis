@@ -102,6 +102,33 @@ export async function GET(req: NextRequest) {
       p => new Date(p.created_at) >= hace30Dias
     )
 
+    // Último login por clínica: consultar auth.users y cruzar con usuarios
+    const { data: usuariosDB } = await supabase
+      .from('usuarios')
+      .select('id, clinica_id')
+      .in('clinica_id', ids)
+      .eq('activo', true)
+
+    const usuariosDBData = usuariosDB as { id: string; clinica_id: string }[] | null
+
+    // listUsers devuelve los usuarios de auth con last_sign_in_at
+    const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+    const authUsers = authData?.users ?? []
+
+    // Construir mapa de último login por clínica
+    const ultimoLoginPorClinica: Record<string, string> = {}
+    if (usuariosDBData) {
+      for (const u of usuariosDBData) {
+        const authUser = authUsers.find(a => a.id === u.id)
+        if (authUser?.last_sign_in_at) {
+          const loginExistente = ultimoLoginPorClinica[u.clinica_id]
+          if (!loginExistente || new Date(authUser.last_sign_in_at) > new Date(loginExistente)) {
+            ultimoLoginPorClinica[u.clinica_id] = authUser.last_sign_in_at
+          }
+        }
+      }
+    }
+
     // Todos los pagos por clínica (para último pago y total acumulado)
     const { data: pagos } = await supabase
       .from('pagos_clinica')
@@ -127,6 +154,12 @@ export async function GET(req: NextRequest) {
     // Mes actual en formato YYYY-MM-01 para verificar pago al día
     const hoy = new Date()
     const mesActualISO = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-01`
+
+    // Pacientes nuevos este mes (primer día del mes actual)
+    const inicioMesActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+    const pacientesNuesosMesData = (pacientesData ?? []).filter(
+      p => new Date(p.created_at) >= inicioMesActual
+    )
 
     // Calcular health score por clínica
     function calcularHealthScore(clinica: ClinicaRow): number {
@@ -170,9 +203,11 @@ export async function GET(req: NextRequest) {
       citas_30_dias: (citas30Data ?? []).filter(ci => ci.clinica_id === c.id).length,
       citas_7_dias: citas7Data.filter(ci => ci.clinica_id === c.id).length,
       total_pacientes: pacientesData ? pacientesData.filter(p => p.clinica_id === c.id).length : 0,
+      pacientes_nuevos_mes: pacientesNuesosMesData.filter(p => p.clinica_id === c.id).length,
       ultimo_pago: ultimoPagoPorClinica[c.id] ?? null,
       total_pagado: totalPagadoPorClinica[c.id] ?? 0,
       health_score: calcularHealthScore(c),
+      ultimo_login_clinica: ultimoLoginPorClinica[c.id] ?? null,
     }))
 
     return Response.json({ clinicas: resultado })
