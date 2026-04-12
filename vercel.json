@@ -3,6 +3,10 @@
     {
       "path": "/api/superadmin/alertas-email",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/superadmin/resumen-semanal",
+      "schedule": "0 12 * * 1"
     }
   ]
 }

@@ -43,6 +43,7 @@ import {
   CheckCheck,
   Circle,
   CalendarClock,
+  FileText,
 } from 'lucide-react'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -338,6 +339,8 @@ function TabDashboard({
 }) {
   const [enviandoEmail, setEnviandoEmail] = useState(false)
   const [feedbackEmail, setFeedbackEmail] = useState<{ ok: boolean; msg: string } | null>(null)
+  const [enviandoResumen, setEnviandoResumen] = useState(false)
+  const [feedbackResumen, setFeedbackResumen] = useState<{ ok: boolean; msg: string } | null>(null)
 
   async function handleEnviarEmail() {
     setEnviandoEmail(true)
@@ -357,6 +360,27 @@ function TabDashboard({
     } finally {
       setEnviandoEmail(false)
       setTimeout(() => setFeedbackEmail(null), 6000)
+    }
+  }
+
+  async function handleEnviarResumen() {
+    setEnviandoResumen(true)
+    setFeedbackResumen(null)
+    try {
+      const res = await fetch('/api/superadmin/resumen-semanal', { method: 'POST' })
+      const data = await res.json() as { enviado?: boolean; semana?: string; error?: string }
+      if (!res.ok) {
+        setFeedbackResumen({ ok: false, msg: data.error ?? 'Error al enviar' })
+      } else if (data.enviado) {
+        setFeedbackResumen({ ok: true, msg: `Resumen enviado — ${data.semana ?? ''}` })
+      } else {
+        setFeedbackResumen({ ok: false, msg: 'No se pudo enviar el resumen' })
+      }
+    } catch {
+      setFeedbackResumen({ ok: false, msg: 'Error de red' })
+    } finally {
+      setEnviandoResumen(false)
+      setTimeout(() => setFeedbackResumen(null), 6000)
     }
   }
 
@@ -468,18 +492,31 @@ function TabDashboard({
           <div className="flex items-center justify-between mb-3">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Alertas de acción</p>
             <div className="flex items-center gap-2">
+              {feedbackResumen && (
+                <span className={`text-xs font-medium ${feedbackResumen.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {feedbackResumen.msg}
+                </span>
+              )}
               {feedbackEmail && (
                 <span className={`text-xs font-medium ${feedbackEmail.ok ? 'text-emerald-400' : 'text-red-400'}`}>
                   {feedbackEmail.msg}
                 </span>
               )}
               <button
+                onClick={handleEnviarResumen}
+                disabled={enviandoResumen}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50 transition-colors border border-slate-600"
+              >
+                {enviandoResumen ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+                Enviar resumen semanal
+              </button>
+              <button
                 onClick={handleEnviarEmail}
                 disabled={enviandoEmail}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50 transition-colors border border-slate-600"
               >
                 {enviandoEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
-                Enviar resumen por email
+                Enviar alertas por email
               </button>
             </div>
           </div>
