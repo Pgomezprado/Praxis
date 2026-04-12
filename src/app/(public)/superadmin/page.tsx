@@ -39,6 +39,10 @@ import {
   Eye,
   EyeOff,
   BarChart3,
+  MessageSquare,
+  CheckCheck,
+  Circle,
+  CalendarClock,
 } from 'lucide-react'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -130,6 +134,19 @@ type AdopcionClinica = {
   cobros_realizados: number
   pacientes_nuevos: number
 }
+
+type NotaClinica = {
+  id: string
+  clinica_id: string
+  tipo: string
+  contenido: string
+  proxima_accion: string | null
+  fecha_proxima_accion: string | null
+  completada: boolean
+  created_at: string
+}
+
+type NotaVencida = NotaClinica & { clinica_nombre: string }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -312,10 +329,12 @@ function TabDashboard({
   clinicas,
   demos,
   pagos,
+  notasVencidas,
 }: {
   clinicas: ClinicaData[]
   demos: DemoData[]
   pagos: PagoData[]
+  notasVencidas: NotaVencida[]
 }) {
   const hoy = new Date()
   const en7Dias = new Date(); en7Dias.setDate(hoy.getDate() + 7)
@@ -420,7 +439,7 @@ function TabDashboard({
       </div>
 
       {/* Alertas de acción */}
-      {(alertasVencen.length > 0 || alertasSinPago.length > 0 || alertasDemos.length > 0 || alertasInactividad.length > 0 || alertasOnboardingIncompleto.length > 0 || alertasSinPacientesMes.length > 0 || alertasSinLogin.length > 0) && (
+      {(alertasVencen.length > 0 || alertasSinPago.length > 0 || alertasDemos.length > 0 || alertasInactividad.length > 0 || alertasOnboardingIncompleto.length > 0 || alertasSinPacientesMes.length > 0 || alertasSinLogin.length > 0 || notasVencidas.length > 0) && (
         <div>
           <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Alertas de acción</p>
           <div className="space-y-2">
@@ -514,11 +533,26 @@ function TabDashboard({
                 </span>
               </div>
             ))}
+            {notasVencidas.map(n => {
+              const diasVencida = n.fecha_proxima_accion ? diasDesde(n.fecha_proxima_accion) : 0
+              return (
+                <div key={`nota-${n.id}`} className="flex items-center gap-3 bg-purple-500/10 border border-purple-500/30 rounded-xl px-4 py-3">
+                  <Clock className="w-4 h-4 text-purple-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white font-medium">{n.clinica_nombre} — {n.proxima_accion}</p>
+                    <p className="text-xs text-slate-400 truncate">{n.contenido}</p>
+                  </div>
+                  <span className="shrink-0 text-xs font-medium text-purple-300 bg-purple-500/20 border border-purple-500/30 px-2.5 py-1 rounded-full whitespace-nowrap">
+                    Vencida hace {diasVencida}d
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
 
-      {alertasVencen.length === 0 && alertasSinPago.length === 0 && alertasDemos.length === 0 && alertasInactividad.length === 0 && alertasOnboardingIncompleto.length === 0 && alertasSinPacientesMes.length === 0 && alertasSinLogin.length === 0 && (
+      {alertasVencen.length === 0 && alertasSinPago.length === 0 && alertasDemos.length === 0 && alertasInactividad.length === 0 && alertasOnboardingIncompleto.length === 0 && alertasSinPacientesMes.length === 0 && alertasSinLogin.length === 0 && notasVencidas.length === 0 && (
         <div className="flex items-center gap-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl px-4 py-3">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <p className="text-sm text-slate-300">Sin alertas activas</p>
@@ -622,6 +656,76 @@ function DrawerClinica({ clinica, pagos, onClose, onActualizada }: DrawerClinica
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
   const [exito, setExito] = useState(false)
+
+  // ── Estado de notas de seguimiento ──────────────────────────────────────────
+  const [notas, setNotas] = useState<NotaClinica[]>([])
+  const [cargandoNotas, setCargandoNotas] = useState(false)
+  const [notaForm, setNotaForm] = useState({
+    tipo: 'general',
+    contenido: '',
+    proxima_accion: '',
+    fecha_proxima_accion: '',
+  })
+  const [guardandoNota, setGuardandoNota] = useState(false)
+  const [errorNota, setErrorNota] = useState('')
+
+  useEffect(() => {
+    async function cargarNotas() {
+      setCargandoNotas(true)
+      try {
+        const res = await fetch(`/api/superadmin/notas?clinica_id=${clinica.id}`)
+        const data = await res.json() as { notas?: NotaClinica[]; error?: string }
+        if (data.notas) setNotas(data.notas)
+      } catch {
+        // silencioso
+      } finally {
+        setCargandoNotas(false)
+      }
+    }
+    cargarNotas()
+  }, [clinica.id])
+
+  async function handleAgregarNota(e: React.FormEvent) {
+    e.preventDefault()
+    if (!notaForm.contenido.trim()) return
+    setGuardandoNota(true)
+    setErrorNota('')
+    try {
+      const res = await fetch('/api/superadmin/notas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clinica_id: clinica.id,
+          tipo: notaForm.tipo,
+          contenido: notaForm.contenido,
+          proxima_accion: notaForm.proxima_accion || null,
+          fecha_proxima_accion: notaForm.fecha_proxima_accion || null,
+        }),
+      })
+      const data = await res.json() as { nota?: NotaClinica; error?: string }
+      if (!res.ok || data.error) { setErrorNota(data.error ?? 'Error al guardar'); return }
+      if (data.nota) setNotas(prev => [data.nota!, ...prev])
+      setNotaForm({ tipo: 'general', contenido: '', proxima_accion: '', fecha_proxima_accion: '' })
+    } catch (err) {
+      setErrorNota(String(err))
+    } finally {
+      setGuardandoNota(false)
+    }
+  }
+
+  async function handleToggleCompletada(nota: NotaClinica) {
+    try {
+      const res = await fetch(`/api/superadmin/notas?id=${nota.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completada: !nota.completada }),
+      })
+      const data = await res.json() as { nota?: NotaClinica; error?: string }
+      if (data.nota) setNotas(prev => prev.map(n => n.id === nota.id ? data.nota! : n))
+    } catch {
+      // silencioso
+    }
+  }
 
   const pagosClinica = pagos
     .filter(p => p.clinica_id === clinica.id)
@@ -792,6 +896,162 @@ function DrawerClinica({ clinica, pagos, onClose, onActualizada }: DrawerClinica
               )}
             </div>
           )}
+
+          {/* ── Notas de seguimiento ───────────────────────────────────────────── */}
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <MessageSquare className="w-3.5 h-3.5 text-slate-400" />
+              <label className="text-xs font-medium text-slate-400 uppercase tracking-wider">Seguimiento</label>
+            </div>
+
+            {/* Formulario nueva nota */}
+            <form onSubmit={handleAgregarNota} className="space-y-2.5 mb-4">
+              {/* Tipo */}
+              <div className="flex gap-1.5 flex-wrap">
+                {[
+                  { v: 'contacto',    label: 'Contacto' },
+                  { v: 'compromiso',  label: 'Compromiso' },
+                  { v: 'seguimiento', label: 'Seguimiento' },
+                  { v: 'general',     label: 'General' },
+                ].map(opt => (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => setNotaForm(f => ({ ...f, tipo: opt.v }))}
+                    className={`px-2.5 py-1 rounded-lg text-xs border font-medium transition-colors ${
+                      notaForm.tipo === opt.v
+                        ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                        : 'border-slate-600 bg-slate-700 text-slate-400 hover:bg-slate-600'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Contenido */}
+              <textarea
+                value={notaForm.contenido}
+                onChange={e => setNotaForm(f => ({ ...f, contenido: e.target.value }))}
+                placeholder="¿Qué hablaron? ¿Qué acordaron?"
+                rows={2}
+                className={`${inputCls} resize-none`}
+              />
+
+              {/* Próxima acción */}
+              <input
+                type="text"
+                value={notaForm.proxima_accion}
+                onChange={e => setNotaForm(f => ({ ...f, proxima_accion: e.target.value }))}
+                placeholder="Próximo paso... (opcional)"
+                className={inputCls}
+              />
+
+              {/* Fecha próxima acción */}
+              {notaForm.proxima_accion.trim() && (
+                <DatePicker
+                  value={notaForm.fecha_proxima_accion}
+                  onChange={v => setNotaForm(f => ({ ...f, fecha_proxima_accion: v }))}
+                  placeholder="Fecha del próximo paso (opcional)"
+                />
+              )}
+
+              {errorNota && (
+                <p className="text-xs text-red-400 bg-red-500/10 px-3 py-2 rounded-lg border border-red-500/20">{errorNota}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={guardandoNota || !notaForm.contenido.trim()}
+                className="w-full py-2 rounded-xl text-xs font-medium bg-slate-700 hover:bg-slate-600 text-slate-200 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5 border border-slate-600"
+              >
+                {guardandoNota ? <Spinner /> : <MessageSquare className="w-3.5 h-3.5" />}
+                Agregar nota
+              </button>
+            </form>
+
+            {/* Lista de notas */}
+            {cargandoNotas ? (
+              <div className="flex justify-center py-4">
+                <Spinner size="md" />
+              </div>
+            ) : notas.length === 0 ? (
+              <p className="text-xs text-slate-600 text-center py-3">Sin notas registradas</p>
+            ) : (
+              <div className="space-y-2">
+                {notas.map(nota => {
+                  const hoy = new Date().toISOString().split('T')[0]
+                  const vencida = !nota.completada
+                    && nota.fecha_proxima_accion !== null
+                    && nota.fecha_proxima_accion < hoy
+
+                  const tipoCls: Record<string, string> = {
+                    contacto:    'bg-blue-500/20 text-blue-300 border-blue-500/30',
+                    compromiso:  'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                    seguimiento: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+                    general:     'bg-slate-500/20 text-slate-300 border-slate-500/30',
+                  }
+                  const tipoLabel: Record<string, string> = {
+                    contacto: 'Contacto', compromiso: 'Compromiso',
+                    seguimiento: 'Seguimiento', general: 'General',
+                  }
+
+                  return (
+                    <div
+                      key={nota.id}
+                      className={`rounded-xl p-3 space-y-1.5 border ${
+                        vencida
+                          ? 'bg-orange-500/10 border-orange-500/30'
+                          : 'bg-slate-800 border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border ${tipoCls[nota.tipo] ?? tipoCls.general}`}>
+                          {tipoLabel[nota.tipo] ?? nota.tipo}
+                        </span>
+                        <p className="text-xs text-slate-300 flex-1 leading-relaxed">{nota.contenido}</p>
+                      </div>
+
+                      {nota.proxima_accion && (
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleCompletada(nota)}
+                            title={nota.completada ? 'Marcar como pendiente' : 'Marcar como completada'}
+                            className={`shrink-0 w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${
+                              nota.completada
+                                ? 'border-emerald-500 bg-emerald-500/30 text-emerald-400'
+                                : vencida
+                                ? 'border-orange-500 text-orange-400 hover:bg-orange-500/20'
+                                : 'border-slate-500 text-slate-500 hover:border-slate-400'
+                            }`}
+                          >
+                            {nota.completada
+                              ? <CheckCheck className="w-2.5 h-2.5" />
+                              : <Circle className="w-2.5 h-2.5" />
+                            }
+                          </button>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <CalendarClock className={`w-3 h-3 shrink-0 ${nota.completada ? 'text-slate-600' : vencida ? 'text-orange-400' : 'text-slate-500'}`} />
+                            <p className={`text-xs truncate ${nota.completada ? 'text-slate-600 line-through' : vencida ? 'text-orange-300' : 'text-slate-400'}`}>
+                              {nota.proxima_accion}
+                              {nota.fecha_proxima_accion && (
+                                <span className="ml-1 opacity-70">· {formatFecha(nota.fecha_proxima_accion)}</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="text-[10px] text-slate-600">
+                        {formatFecha(nota.created_at)}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
 
           {error && (
             <p className="text-sm text-red-400 bg-red-500/10 px-4 py-3 rounded-xl border border-red-500/20">{error}</p>
@@ -2541,6 +2801,7 @@ export default function SuperAdminPage() {
   const [pagos, setPagos] = useState<PagoData[]>([])
   const [usuarios, setUsuarios] = useState<UsuarioData[]>([])
   const [adopcion, setAdopcion] = useState<AdopcionClinica[]>([])
+  const [notasVencidas, setNotasVencidas] = useState<NotaVencida[]>([])
   const [cargandoAdopcion, setCargandoAdopcion] = useState(false)
   const [cargandoDatos, setCargandoDatos] = useState(false)
   const [errorDatos, setErrorDatos] = useState('')
@@ -2550,24 +2811,36 @@ export default function SuperAdminPage() {
     setErrorDatos('')
 
     try {
-      const [resClinicas, resDemos, resPagos, resUsuarios] = await Promise.all([
+      const [resClinicas, resDemos, resPagos, resUsuarios, resNotasVencidas] = await Promise.all([
         fetch('/api/superadmin/clinicas'),
         fetch('/api/superadmin/demos'),
         fetch('/api/superadmin/pagos'),
         fetch('/api/superadmin/usuarios'),
+        fetch('/api/superadmin/notas?todas=true'),
       ])
 
-      const [dataClinicas, dataDemos, dataPagos, dataUsuarios] = await Promise.all([
+      const [dataClinicas, dataDemos, dataPagos, dataUsuarios, dataNotasVencidas] = await Promise.all([
         resClinicas.json() as Promise<{ clinicas?: ClinicaData[]; error?: string }>,
         resDemos.json() as Promise<{ demos?: DemoData[]; error?: string }>,
         resPagos.json() as Promise<{ pagos?: PagoData[]; error?: string }>,
         resUsuarios.json() as Promise<{ usuarios?: UsuarioData[]; error?: string }>,
+        resNotasVencidas.json() as Promise<{ notas?: NotaClinica[]; error?: string }>,
       ])
 
       if (dataClinicas.clinicas) setClinicas(dataClinicas.clinicas)
       if (dataDemos.demos) setDemos(dataDemos.demos)
       if (dataPagos.pagos) setPagos(dataPagos.pagos)
       if (dataUsuarios.usuarios) setUsuarios(dataUsuarios.usuarios)
+
+      // Enriquecer notas vencidas con nombre de clínica
+      if (dataNotasVencidas.notas && dataClinicas.clinicas) {
+        const clinicasMap = new Map(dataClinicas.clinicas.map(c => [c.id, c.nombre]))
+        const enriched = dataNotasVencidas.notas.map(n => ({
+          ...n,
+          clinica_nombre: clinicasMap.get(n.clinica_id) ?? n.clinica_id,
+        })) as NotaVencida[]
+        setNotasVencidas(enriched)
+      }
 
       const err = dataClinicas.error ?? dataDemos.error ?? dataPagos.error ?? dataUsuarios.error
       if (err) setErrorDatos(err)
@@ -2764,7 +3037,7 @@ export default function SuperAdminPage() {
         )}
 
         {tabActivo === 'dashboard' && (
-          <TabDashboard clinicas={clinicas} demos={demos} pagos={pagos} />
+          <TabDashboard clinicas={clinicas} demos={demos} pagos={pagos} notasVencidas={notasVencidas} />
         )}
 
         {tabActivo === 'clinicas' && (
