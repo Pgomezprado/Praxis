@@ -133,7 +133,7 @@ export async function POST(req: Request) {
         monto: Math.round(monto_neto),
         medio_pago,
         referencia: referencia ?? null,
-        fecha_pago: fecha_pago ?? new Date().toISOString().split('T')[0],
+        fecha_pago: fecha_pago ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }),
         registrado_por: user.id,
         activo: true,
       })

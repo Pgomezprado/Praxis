@@ -87,14 +87,14 @@ export async function GET() {
 
     // ── KPIs ────────────────────────────────────────────────────────────────
     const ahora = new Date()
-    const hoyStr = ahora.toISOString().split('T')[0]
+    const hoyStr = ahora.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 
     // Inicio de semana (lunes)
     const diaSemana = ahora.getDay() // 0=dom, 1=lun...
     const diasDesdeElLunes = diaSemana === 0 ? 6 : diaSemana - 1
     const inicioSemana = new Date(ahora)
     inicioSemana.setDate(ahora.getDate() - diasDesdeElLunes)
-    const inicioSemanaStr = inicioSemana.toISOString().split('T')[0]
+    const inicioSemanaStr = inicioSemana.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 
     // Inicio de mes
     const inicioMesStr = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-01`

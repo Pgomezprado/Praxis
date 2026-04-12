@@ -121,7 +121,7 @@ export async function POST(req: Request) {
         num_cuotas: modalidad_pago === 'cuotas' ? Math.round(num_cuotas) : 1,
         precio_total: Math.round(precio_total),
         estado: 'activo',
-        fecha_inicio: fecha_inicio ?? new Date().toISOString().split('T')[0],
+        fecha_inicio: fecha_inicio ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }),
         fecha_vencimiento: fecha_vencimiento ?? null,
         notas: notas ?? null,
         activo: true,
@@ -158,7 +158,7 @@ export async function POST(req: Request) {
         numero_cuota: i + 1,
         // Última cuota absorbe el redondeo
         monto: i === totalCuotas - 1 ? montoPorCuota + diferencia : montoPorCuota,
-        fecha_vencimiento: fechaVenc.toISOString().split('T')[0],
+        fecha_vencimiento: fechaVenc.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }),
         fecha_pago: modalidad_pago === 'contado' ? new Date().toISOString() : null,
         medio_pago: null,
         estado: modalidad_pago === 'contado' ? 'pagada' : 'pendiente',

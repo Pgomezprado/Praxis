@@ -286,7 +286,7 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
                   value={form.fechaNacimiento}
                   onChange={v => set('fechaNacimiento', v)}
                   placeholder="Seleccionar fecha de nacimiento"
-                  max={new Date().toISOString().split('T')[0]}
+                  max={new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })}
                 />
                 {form.fechaNacimiento && (
                   <p className="text-xs text-slate-400 mt-1">

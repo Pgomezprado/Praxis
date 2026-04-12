@@ -100,7 +100,7 @@ export async function POST(req: Request) {
         prevision: prevision ?? 'particular',
         num_sesiones: Math.round(num_sesiones),
         precio_total: Math.round(precio_total),
-        vigente_desde: vigente_desde ?? new Date().toISOString().split('T')[0],
+        vigente_desde: vigente_desde ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }),
         vigente_hasta: vigente_hasta ?? null,
         activo: true,
       })

@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || isNaN(Date.parse(fecha))) {
       return Response.json({ error: 'Formato de fecha inválido' }, { status: 400 })
     }
-    if (new Date(fecha) < new Date(new Date().toISOString().split('T')[0])) {
+    if (fecha < new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })) {
       return Response.json({ error: 'No se pueden agendar citas en fechas pasadas' }, { status: 400 })
     }
     const tipoFinal = TIPOS_VALIDOS.includes(tipo) ? tipo : 'control'

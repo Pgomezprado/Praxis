@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
   try {
     if (todas) {
       // Solo notas con próxima acción pendiente y no completada (para alertas en dashboard)
-      const hoy = new Date().toISOString().split('T')[0]
+      const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
       const { data, error } = await supabase
         .from('notas_clinica')
         .select('id, clinica_id, tipo, contenido, proxima_accion, fecha_proxima_accion, completada, created_at')

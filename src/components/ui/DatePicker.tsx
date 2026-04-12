@@ -57,7 +57,7 @@ function buildAnios(minYear: number, maxYear: number): number[] {
 }
 
 function hoyISO(): string {
-  return new Date().toISOString().split('T')[0]
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 }
 
 // ─── Props ────────────────────────────────────────────────────

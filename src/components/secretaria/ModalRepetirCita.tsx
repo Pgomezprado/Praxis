@@ -45,7 +45,7 @@ function agregarDias(fechaStr: string, dias: number): string {
   const [y, m, d] = fechaStr.split('-').map(Number)
   const fecha = new Date(y, m - 1, d)
   fecha.setDate(fecha.getDate() + dias)
-  return fecha.toISOString().split('T')[0]
+  return fecha.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 }
 
 function formatFechaCorta(fechaStr: string): string {

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { validarRut } from '@/lib/utils/formatters'
 
 type FilaImport = {
   nombre: string
@@ -48,13 +49,20 @@ export async function POST(req: Request) {
 
     const { data: usuario } = await supabase
       .from('usuarios')
-      .select('clinica_id')
+      .select('clinica_id, rol')
       .eq('id', user.id)
       .single()
 
     if (!usuario) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
-    const clinicaId = (usuario as { clinica_id: string }).clinica_id
+    const me = usuario as { clinica_id: string; rol: string }
+
+    // Solo admins pueden importar pacientes en masa
+    if (me.rol !== 'admin_clinica') {
+      return Response.json({ error: 'Solo el administrador puede importar pacientes' }, { status: 403 })
+    }
+
+    const clinicaId = me.clinica_id
 
     // Obtener IP para auditoría (header forwarded por Vercel/proxy)
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
@@ -86,6 +94,12 @@ export async function POST(req: Request) {
 
       if (!nombre || !rut) {
         resultados.push({ rut: rut ?? '', ok: false, duplicado: false, error: 'nombre y rut requeridos' })
+        fallidos++
+        continue
+      }
+
+      if (!validarRut(rut)) {
+        resultados.push({ rut, ok: false, duplicado: false, error: 'RUT inválido' })
         fallidos++
         continue
       }

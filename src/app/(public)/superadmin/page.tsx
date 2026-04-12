@@ -1058,7 +1058,7 @@ function DrawerClinica({ clinica, pagos, onClose, onActualizada }: DrawerClinica
             ) : (
               <div className="space-y-2">
                 {notas.map(nota => {
-                  const hoy = new Date().toISOString().split('T')[0]
+                  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
                   const vencida = !nota.completada
                     && nota.fecha_proxima_accion !== null
                     && nota.fecha_proxima_accion < hoy
@@ -2039,7 +2039,7 @@ function ModalContrasenaTemp({ usuario, onClose }: ModalContrasenaTempProps) {
                   type={mostrar ? 'text' : 'password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  placeholder="Mínimo 8 caracteres"
+                  placeholder="Mínimo 10 caracteres"
                   autoComplete="new-password"
                   className={`${inputCls} pr-10`}
                 />

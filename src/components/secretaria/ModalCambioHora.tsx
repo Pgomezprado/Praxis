@@ -16,7 +16,7 @@ interface ModalCambioHoraProps {
 }
 
 function getToday() {
-  return new Date().toISOString().split('T')[0]
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 }
 
 function getDiaKey(f: string): keyof HorarioSemanal {

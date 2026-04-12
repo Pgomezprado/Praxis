@@ -184,7 +184,7 @@ export async function POST(req: Request) {
           monto: Math.round(pago.monto),
           medio_pago: pago.medio_pago,
           referencia: pago.referencia ?? null,
-          fecha_pago: pago.fecha_pago ?? new Date().toISOString().split('T')[0],
+          fecha_pago: pago.fecha_pago ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }),
           registrado_por: user.id,
           activo: true,
         })

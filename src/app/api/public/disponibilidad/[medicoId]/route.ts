@@ -15,7 +15,7 @@ function addDays(fecha: Date, days: number): Date {
 }
 
 function toISODate(d: Date): string {
-  return d.toISOString().split('T')[0]
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 }
 
 // Endpoint público — devuelve fechas disponibles y slots para un médico

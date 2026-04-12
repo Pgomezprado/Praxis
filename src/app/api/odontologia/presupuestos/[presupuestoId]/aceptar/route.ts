@@ -108,7 +108,7 @@ export async function PUT(
     .from('plan_tratamiento')
     .update({
       estado: 'aprobado',
-      fecha_aprobacion: new Date().toISOString().split('T')[0],
+      fecha_aprobacion: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }),
     })
     .eq('id', presupuesto.plan_tratamiento_id)
     .eq('clinica_id', clinicaId)

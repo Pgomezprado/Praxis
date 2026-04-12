@@ -23,11 +23,11 @@ function formatFechaDisplay(fecha: string): string {
 function addDays(fecha: string, days: number): string {
   const [y, m, d] = fecha.split('-').map(Number)
   const date = new Date(y, m - 1, d + days)
-  return date.toISOString().split('T')[0]
+  return date.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 }
 
 function getToday(): string {
-  return new Date().toISOString().split('T')[0]
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 }
 
 export function AgendaToolbar({ citas, medicos, onNuevaCita, listPath = '/agenda/hoy', semanaPath = '/agenda/semana', mesPath, hideMedicoFilter = false }: AgendaToolbarProps) {

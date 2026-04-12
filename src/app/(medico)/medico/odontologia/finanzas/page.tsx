@@ -74,13 +74,13 @@ export default async function FinanzasOdontologiaPage() {
 
   // ── Calcular KPIs ────────────────────────────────────────────────────────
   const ahora = new Date()
-  const hoyStr = ahora.toISOString().split('T')[0]
+  const hoyStr = ahora.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 
   const diaSemana = ahora.getDay()
   const diasDesdeElLunes = diaSemana === 0 ? 6 : diaSemana - 1
   const inicioSemana = new Date(ahora)
   inicioSemana.setDate(ahora.getDate() - diasDesdeElLunes)
-  const inicioSemanaStr = inicioSemana.toISOString().split('T')[0]
+  const inicioSemanaStr = inicioSemana.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 
   const inicioMesStr = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-01`
 

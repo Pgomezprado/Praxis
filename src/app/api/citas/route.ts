@@ -40,8 +40,8 @@ export async function GET(req: Request) {
       const fin = new Date(semana)
       fin.setDate(fin.getDate() + 6)
       query = query
-        .gte('fecha', inicio.toISOString().split('T')[0])
-        .lte('fecha', fin.toISOString().split('T')[0])
+        .gte('fecha', inicio.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }))
+        .lte('fecha', fin.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }))
     }
 
     const { data, error } = await query
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || isNaN(Date.parse(fecha))) {
       return Response.json({ error: 'Formato de fecha inválido. Usa YYYY-MM-DD.' }, { status: 400 })
     }
-    const hoy = new Date().toISOString().split('T')[0]
+    const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
     if (fecha < hoy) {
       return Response.json({ error: 'No se pueden crear citas en fechas pasadas.' }, { status: 400 })
     }

@@ -77,7 +77,7 @@ export default async function ElegirHoraPage({
     d.setDate(hoy.getDate() + i)
     const diaKey = DIA_KEYS[d.getDay()]
     if (horario?.[diaKey]?.activo) {
-      fechasDisponibles.push(d.toISOString().split('T')[0])
+      fechasDisponibles.push(d.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }))
     }
   }
 

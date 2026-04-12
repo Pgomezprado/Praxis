@@ -28,8 +28,8 @@ export default async function AdminAgendaMesPage({
   const hastaDate = new Date(ultimoDia)
   hastaDate.setDate(ultimoDia.getDate() + 6)
 
-  const desde = desdeDate.toISOString().split('T')[0]
-  const hasta = hastaDate.toISOString().split('T')[0]
+  const desde = desdeDate.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
+  const hasta = hastaDate.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 
   const me = await getClinicsId()
   if (!me) return (

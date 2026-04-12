@@ -113,6 +113,15 @@ export async function POST(req: Request) {
         version_documento: 'v1.0',
         ip: ipOrigen,
       })
+
+      // Registrar aceptación del DPA (Ley 19.628 / GDPR — consentimiento de tratamiento de datos)
+      await admin.from('aceptaciones_contrato').insert({
+        usuario_id: user.id,
+        clinica_id: usuario.clinica_id,
+        tipo: 'dpa',
+        version_documento: 'v1.0',
+        ip: ipOrigen,
+      })
     }
 
     const u = usuario as { rol: string; es_doctor?: boolean } | null

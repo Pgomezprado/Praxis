@@ -124,7 +124,7 @@ async function calcularAlertas(): Promise<Alertas> {
       .eq('completada', false)
       .not('proxima_accion', 'is', null)
       .not('fecha_proxima_accion', 'is', null)
-      .lt('fecha_proxima_accion', hoy.toISOString().split('T')[0])
+      .lt('fecha_proxima_accion', hoy.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }))
       .order('fecha_proxima_accion', { ascending: true }),
   ])
 
@@ -450,7 +450,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         from: 'Praxis <notificaciones@praxisapp.cl>',
-        to: ['gomezpablo.mayor@gmail.com'],
+        to: ['contacto@praxisapp.cl'],
         subject,
         html: htmlContent,
       }),

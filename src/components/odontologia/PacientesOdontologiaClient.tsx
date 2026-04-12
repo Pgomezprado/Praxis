@@ -244,7 +244,7 @@ function ModalNuevoPaciente({ onCerrar }: ModalNuevoPacienteProps) {
               value={form.fecha_nac}
               onChange={v => setForm(prev => ({ ...prev, fecha_nac: v }))}
               placeholder="Seleccionar fecha de nacimiento"
-              max={new Date().toISOString().split('T')[0]}
+              max={new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })}
             />
           </div>
 

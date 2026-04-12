@@ -30,7 +30,7 @@ function getPeriodoKey(dateStr: string, granularity: Granularity): string {
   const dow = d.getDay() // 0=Dom, 1=Lun...6=Sab
   const diffToMonday = dow === 0 ? -6 : 1 - dow
   d.setDate(d.getDate() + diffToMonday)
-  return d.toISOString().split('T')[0] // "YYYY-MM-DD" del lunes
+  return d.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }) // "YYYY-MM-DD" del lunes
 }
 
 export async function GET(req: NextRequest) {
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
     const granularity = (url.searchParams.get('granularity') ?? 'mes') as Granularity
 
     const desde = getRangeStart(granularity)
-    const desdeStr = desde.toISOString().split('T')[0]
+    const desdeStr = desde.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 
     // ── Pacientes nuevos por período ──────────────────────────────────────────
     const { data: rawPacientes } = await supabase

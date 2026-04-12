@@ -23,7 +23,7 @@ interface HistorialCitasProps {
 }
 
 export function HistorialCitas({ citas }: HistorialCitasProps) {
-  const hoy = new Date().toISOString().split('T')[0]
+  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
   const proximas = citas.filter(c => c.fecha >= hoy && c.estado !== 'cancelada')
   const pasadas  = citas.filter(c => c.fecha < hoy || c.estado === 'cancelada')
 
