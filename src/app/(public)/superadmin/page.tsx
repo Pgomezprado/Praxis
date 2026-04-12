@@ -336,6 +336,30 @@ function TabDashboard({
   pagos: PagoData[]
   notasVencidas: NotaVencida[]
 }) {
+  const [enviandoEmail, setEnviandoEmail] = useState(false)
+  const [feedbackEmail, setFeedbackEmail] = useState<{ ok: boolean; msg: string } | null>(null)
+
+  async function handleEnviarEmail() {
+    setEnviandoEmail(true)
+    setFeedbackEmail(null)
+    try {
+      const res = await fetch('/api/superadmin/alertas-email', { method: 'POST' })
+      const data = await res.json() as { enviado?: boolean; alertas?: number; mensaje?: string; error?: string }
+      if (!res.ok) {
+        setFeedbackEmail({ ok: false, msg: data.error ?? 'Error al enviar' })
+      } else if (data.enviado) {
+        setFeedbackEmail({ ok: true, msg: `Email enviado — ${data.alertas} alerta${data.alertas !== 1 ? 's' : ''}` })
+      } else {
+        setFeedbackEmail({ ok: true, msg: data.mensaje ?? 'Sin alertas activas' })
+      }
+    } catch {
+      setFeedbackEmail({ ok: false, msg: 'Error de red' })
+    } finally {
+      setEnviandoEmail(false)
+      setTimeout(() => setFeedbackEmail(null), 6000)
+    }
+  }
+
   const hoy = new Date()
   const en7Dias = new Date(); en7Dias.setDate(hoy.getDate() + 7)
   const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
@@ -441,7 +465,24 @@ function TabDashboard({
       {/* Alertas de acción */}
       {(alertasVencen.length > 0 || alertasSinPago.length > 0 || alertasDemos.length > 0 || alertasInactividad.length > 0 || alertasOnboardingIncompleto.length > 0 || alertasSinPacientesMes.length > 0 || alertasSinLogin.length > 0 || notasVencidas.length > 0) && (
         <div>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Alertas de acción</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Alertas de acción</p>
+            <div className="flex items-center gap-2">
+              {feedbackEmail && (
+                <span className={`text-xs font-medium ${feedbackEmail.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {feedbackEmail.msg}
+                </span>
+              )}
+              <button
+                onClick={handleEnviarEmail}
+                disabled={enviandoEmail}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-300 hover:bg-slate-600 disabled:opacity-50 transition-colors border border-slate-600"
+              >
+                {enviandoEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+                Enviar resumen por email
+              </button>
+            </div>
+          </div>
           <div className="space-y-2">
             {alertasVencen.map(c => (
               <div key={c.id} className="flex items-center gap-3 bg-orange-500/10 border border-orange-500/30 rounded-xl px-4 py-3">

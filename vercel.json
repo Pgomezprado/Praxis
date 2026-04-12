@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/superadmin/alertas-email",
+      "schedule": "0 12 * * *"
+    }
+  ]
+}
