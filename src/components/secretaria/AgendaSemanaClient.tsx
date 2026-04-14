@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, List, CalendarRange, CalendarDays, Plus, CheckCircle2, Lock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, List, CalendarRange, CalendarDays, Plus, Lock } from 'lucide-react'
 import { ModalNuevaCita } from './ModalNuevaCita'
 import { ModalCambioHora } from './ModalCambioHora'
 import { DrawerDetalleCita } from './DrawerDetalleCita'
@@ -16,11 +16,7 @@ import type { BloqueoHorario } from '@/app/api/bloqueos/route'
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 function getToday(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 }
 
 function addDays(fecha: string, days: number): string {
@@ -168,6 +164,7 @@ const ESTADO_LABEL: Record<MockCita['estado'], string> = {
   en_consulta: 'En consulta',
   completada:  'Completada',
   cancelada:   'Cancelada',
+  no_show:     'No asistió',
 }
 
 const ESTADO_DOT: Record<MockCita['estado'], string> = {
@@ -176,6 +173,7 @@ const ESTADO_DOT: Record<MockCita['estado'], string> = {
   en_consulta: 'bg-emerald-500',
   completada:  'bg-slate-300',
   cancelada:   'bg-red-400',
+  no_show:     'bg-slate-400',
 }
 
 const ESTADO_TEXT: Record<MockCita['estado'], string> = {
@@ -184,6 +182,7 @@ const ESTADO_TEXT: Record<MockCita['estado'], string> = {
   en_consulta: 'text-emerald-700',
   completada:  'text-slate-500',
   cancelada:   'text-red-600',
+  no_show:     'text-slate-500',
 }
 
 const MEDICO_COLOR: Record<string, string> = {
@@ -209,8 +208,6 @@ interface Props {
   fichaBasePath?: string
 }
 
-type Toast = { folio: string; paciente: string }
-
 export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPath = '/agenda/hoy', semanaPath = '/agenda/semana', mesPath, hideMedicoFilter = false, esDoctor = false, fichaBasePath }: Props) {
   const router = useRouter()
   const today = getToday()
@@ -223,7 +220,6 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
   const [modalOpen, setModalOpen] = useState(false)
   const [fechaModalNueva, setFechaModalNueva] = useState(fecha)
   const [horaModalNueva, setHoraModalNueva] = useState<string | undefined>(undefined)
-  const [toast, setToast] = useState<Toast | null>(null)
   const [citaSeleccionada, setCitaSeleccionada] = useState<MockCita | null>(null)
   const [modalCambioHoraOpen, setModalCambioHoraOpen] = useState(false)
   const [citaCambioHora, setCitaCambioHora] = useState<MockCita | null>(null)
@@ -284,8 +280,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
 
   function handleCrearCita(cita: MockCita) {
     setCitasLocales((prev) => [...prev, cita])
-    setToast({ folio: cita.folio, paciente: cita.pacienteNombre })
-    setTimeout(() => setToast(null), 4000)
+    setCitaSeleccionada(cita)
   }
 
   function handleEstadoCambiado(id: string, nuevoEstado: MockCita['estado']) {
@@ -469,6 +464,15 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
         let horaInicioGrid = '08:00'
         let horaFinGrid = '18:00'
 
+        // Colectar horas de todas las citas de la semana para expandir el grid si hay citas fuera del horario
+        const horasCitasSemana: string[] = []
+        weekDays.forEach(dia => {
+          citasDia(dia).forEach(c => {
+            horasCitasSemana.push(c.horaInicio)
+            horasCitasSemana.push(c.horaFin)
+          })
+        })
+
         if (medicoActivo && horarioMedico) {
           const horasInicioActivas: string[] = []
           const horasFinActivas: string[] = []
@@ -487,6 +491,14 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
           // Sin médico: jornada laboral estándar chilena
           horaInicioGrid = '08:00'
           horaFinGrid = '20:00'
+        }
+
+        // Expandir el grid para incluir citas que estén fuera del rango del horario
+        if (horasCitasSemana.length > 0) {
+          const minCita = horasCitasSemana.sort()[0]
+          const maxCita = horasCitasSemana.sort().reverse()[0]
+          if (minCita < horaInicioGrid) horaInicioGrid = minCita
+          if (maxCita > horaFinGrid) horaFinGrid = maxCita
         }
 
         // Generar array de horas cada 30 min desde horaInicioGrid hasta horaFinGrid
@@ -614,8 +626,55 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
                         const grilla = grillaPorDia.get(dia)
                         const configDia = horarioMedico[getDiaKey(dia)]
 
-                        // Día sin horario activo
+                        // Día sin horario activo — mostrar igualmente si hay citas (ej: semanas pasadas)
                         if (!configDia?.activo) {
+                          const citasDiaActivo = citasDia(dia)
+                          const citaEnHora = citasDiaActivo.find(c => c.horaInicio === hora)
+                          const cubiertaPorCita = citasDiaActivo.some(c => {
+                            if (c.horaInicio === hora) return false
+                            const [hI, mI] = c.horaInicio.split(':').map(Number)
+                            const [hF, mF] = c.horaFin.split(':').map(Number)
+                            const [hH, mH] = hora.split(':').map(Number)
+                            const minHora = hH * 60 + mH
+                            return minHora > hI * 60 + mI && minHora < hF * 60 + mF
+                          })
+                          if (cubiertaPorCita) return null
+                          if (citaEnHora) {
+                            const cita = citaEnHora
+                            const span = calcSpan(cita.horaInicio, cita.horaFin)
+                            const isCancelled = cita.estado === 'cancelada'
+                            const isCompleted = cita.estado === 'completada'
+                            return (
+                              <div
+                                key={`${dia}-${hora}`}
+                                className={`border-l ${borderTop} bg-slate-50/60 pt-1 px-1 pb-1.5 overflow-hidden`}
+                                style={{ gridRow: `${gridRow} / span ${span}`, gridColumn: colIdx + 2 }}
+                              >
+                                <div
+                                  onClick={() => setCitaSeleccionada(cita)}
+                                  className={`h-full rounded-lg px-2 py-1 border border-l-4 overflow-hidden ${ESTADO_BORDER[cita.estado]} transition-all cursor-pointer ${
+                                    isCancelled
+                                      ? 'border-red-100 bg-red-50/50 opacity-60 hover:opacity-80'
+                                      : isCompleted
+                                      ? 'border-slate-100 bg-slate-50 opacity-60 hover:opacity-80'
+                                      : 'border-slate-100 bg-white hover:border-slate-300 hover:shadow-sm'
+                                  }`}
+                                >
+                                  <p className={`text-xs font-bold tabular-nums leading-tight ${isCancelled || isCompleted ? 'text-slate-400' : 'text-slate-700'}`}>
+                                    {cita.horaInicio}
+                                    <span className="font-normal text-slate-400"> –{cita.horaFin}</span>
+                                  </p>
+                                  <p className="text-xs font-semibold text-slate-800 truncate leading-tight mt-0.5">
+                                    {cita.pacienteNombre.split(' ').slice(0, 2).join(' ')}
+                                  </p>
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ESTADO_DOT[cita.estado]}`} />
+                                    <span className={`text-xs truncate ${ESTADO_TEXT[cita.estado]}`}>{ESTADO_LABEL[cita.estado]}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          }
                           return (
                             <div
                               key={`${dia}-${hora}`}
@@ -959,16 +1018,6 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
         onCambiado={handleCambioHoraDone}
       />
 
-      {/* Toast */}
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-          <div>
-            <p className="text-sm font-semibold">Cita creada · {toast.folio}</p>
-            <p className="text-xs text-slate-400">{toast.paciente}</p>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

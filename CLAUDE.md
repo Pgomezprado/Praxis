@@ -50,9 +50,12 @@ RECEPCIONISTA                    MÉDICO                         ADMIN
 |--------|:---:|:---:|:---:|
 | Agendar citas | Si | No | Si |
 | Confirmar/cancelar citas | Si | Si (las suyas) | Si |
-| Completar cita (marcar atendida) | No | Si | Si (si es_doctor) |
+| Completar cita (marcar atendida) | Si | Si | Si |
+| Iniciar consulta (en_consulta) | No | Si | Si (si es_doctor) |
 | **Cobrar consulta** | **Si** | **No** | **Si** |
-| Crear/editar paciente | Si | No | Si |
+| Crear paciente | Si | No | Si |
+| Editar datos de contacto del paciente | Si (whitelist) | No | Si |
+| Editar datos clínicos (alergias, condiciones) | No | Si | Si (si es_doctor) |
 | Escribir historia clínica | No | Si | Si (si es_doctor) |
 | Generar receta | No | Si | Si (si es_doctor) |
 | Eliminar cita | Si | No | Si |

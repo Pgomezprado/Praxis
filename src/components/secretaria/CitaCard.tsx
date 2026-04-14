@@ -31,6 +31,7 @@ const ESTADO_BADGE: Record<
   en_consulta: { label: 'En consulta', variant: 'activo' },
   completada: { label: 'Completada', variant: 'completado' },
   cancelada: { label: 'Cancelada', variant: 'urgente' },
+  no_show: { label: 'No asistió', variant: 'default' },
 }
 
 const TIPO_LABEL: Record<MockCita['tipo'], string> = {
@@ -64,7 +65,7 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
   }, [cita.id])
 
   const { label, variant } = ESTADO_BADGE[estadoLocal]
-  const isCancelada = estadoLocal === 'cancelada'
+  const isCancelada = estadoLocal === 'cancelada' || estadoLocal === 'no_show'
   const isEnConsulta = estadoLocal === 'en_consulta'
   const isCompletada = estadoLocal === 'completada'
 
@@ -228,15 +229,17 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
                 </button>
               )}
 
-              {/* Completada */}
-              <button
-                onClick={() => cambiarEstado('completada')}
-                title="Marcar completada"
-                className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="hidden md:inline">Completar</span>
-              </button>
+              {/* Completar — médico siempre, recepcionista/admin cuando está confirmada o en_consulta */}
+              {(esDoctor || estadoLocal === 'confirmada' || estadoLocal === 'en_consulta') && (
+                <button
+                  onClick={() => cambiarEstado('completada')}
+                  title={esDoctor ? 'Marcar completada' : 'Marcar como atendida'}
+                  className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="hidden md:inline">{esDoctor ? 'Completar' : 'Atendida'}</span>
+                </button>
+              )}
 
               {/* Cambio de hora */}
               <button

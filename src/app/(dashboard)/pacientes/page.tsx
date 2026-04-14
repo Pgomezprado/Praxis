@@ -11,11 +11,12 @@ export default async function PacientesPage() {
   const { data: { user } } = await supabase.auth.getUser()
   const { data: usuarioData } = await supabase
     .from('usuarios')
-    .select('clinica_id')
+    .select('clinica_id, rol')
     .eq('id', user!.id)
     .single()
 
-  const clinicaId = usuarioData?.clinica_id
+  const clinicaId = (usuarioData as { clinica_id: string; rol: string } | null)?.clinica_id
+  const rol = (usuarioData as { clinica_id: string; rol: string } | null)?.rol as 'admin_clinica' | 'doctor' | 'recepcionista' | undefined
 
   const { data: pacientesDb } = await supabase
     .from('pacientes')
@@ -64,7 +65,7 @@ export default async function PacientesPage() {
         </p>
       </div>
 
-      <PacientesAdminClient pacientesIniciales={pacientes} />
+      <PacientesAdminClient pacientesIniciales={pacientes} rol={rol} />
     </div>
   )
 }

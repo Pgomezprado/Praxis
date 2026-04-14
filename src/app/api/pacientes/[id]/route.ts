@@ -24,9 +24,11 @@ export async function PATCH(
       return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
     }
 
-    // Solo admin_clinica puede editar pacientes
-    if (usuarioActual.rol !== 'admin_clinica') {
-      return Response.json({ error: 'Solo el administrador puede editar pacientes' }, { status: 403 })
+    const esAdmin = usuarioActual.rol === 'admin_clinica'
+    const esRecepcionista = usuarioActual.rol === 'recepcionista'
+
+    if (!esAdmin && !esRecepcionista) {
+      return Response.json({ error: 'Sin permisos para editar pacientes' }, { status: 403 })
     }
 
     // Verificar que el paciente pertenece a la clínica del usuario autenticado
@@ -42,7 +44,17 @@ export async function PATCH(
     }
 
     const body = await req.json() as Record<string, unknown>
-    const { nombre, rut, fecha_nac, email, telefono, prevision, alergias, condiciones, direccion, seguro_complementario } = body
+    const { nombre, rut, fecha_nac, email, telefono, prevision, alergias, condiciones, direccion, seguro_complementario, contacto_emergencia_nombre, contacto_emergencia_telefono } = body
+
+    // Recepcionista: solo puede editar campos de contacto, no datos clínicos ni datos personales base
+    const CAMPOS_RECEPCIONISTA = new Set(['telefono', 'email', 'direccion', 'prevision', 'seguro_complementario', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono'])
+    if (esRecepcionista) {
+      const camposEnviados = Object.keys(body)
+      const campoClinico = camposEnviados.find(c => !CAMPOS_RECEPCIONISTA.has(c))
+      if (campoClinico) {
+        return Response.json({ error: 'La recepcionista no puede editar datos clínicos' }, { status: 403 })
+      }
+    }
 
     // Validar campos requeridos
     if (nombre !== undefined && typeof nombre === 'string' && !nombre.trim()) {
@@ -68,6 +80,8 @@ export async function PATCH(
     if (condiciones !== undefined) actualizacion.condiciones = condiciones
     if (direccion !== undefined) actualizacion.direccion = direccion ?? null
     if (seguro_complementario !== undefined) actualizacion.seguro_complementario = seguro_complementario ?? null
+    if (contacto_emergencia_nombre !== undefined) actualizacion.contacto_emergencia_nombre = contacto_emergencia_nombre ?? null
+    if (contacto_emergencia_telefono !== undefined) actualizacion.contacto_emergencia_telefono = contacto_emergencia_telefono ?? null
 
     if (Object.keys(actualizacion).length === 0) {
       return Response.json({ error: 'No hay campos para actualizar' }, { status: 400 })

@@ -18,7 +18,7 @@ export type MockCita = {
   horaFin: string
   motivo: string
   tipo: 'primera_consulta' | 'control' | 'urgencia'
-  estado: 'confirmada' | 'pendiente' | 'en_consulta' | 'completada' | 'cancelada'
+  estado: 'confirmada' | 'pendiente' | 'en_consulta' | 'completada' | 'cancelada' | 'no_show'
   creadaEn: string
   creadaPor: 'secretaria' | 'paciente'
 }

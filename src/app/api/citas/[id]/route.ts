@@ -19,11 +19,13 @@ export async function PATCH(
 
     const { data: me } = await supabase
       .from('usuarios')
-      .select('clinica_id')
+      .select('clinica_id, rol, es_doctor')
       .eq('id', user.id)
       .single()
 
     if (!me) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
+
+    const meTyped = me as { clinica_id: string; rol: string; es_doctor: boolean }
 
     let updatePayload: Record<string, string>
 
@@ -32,6 +34,24 @@ export async function PATCH(
       if (!estado || !ESTADOS_VALIDOS.includes(estado)) {
         return Response.json({ error: 'estado inválido' }, { status: 400 })
       }
+
+      // Validar permisos por rol para cambio de estado
+      const esDoctor = meTyped.rol === 'doctor' || (meTyped.rol === 'admin_clinica' && meTyped.es_doctor)
+      const esAdminSinDoctor = meTyped.rol === 'admin_clinica' && !meTyped.es_doctor
+      const esRecepcionista = meTyped.rol === 'recepcionista'
+
+      const ESTADOS_RECEPCION: EstadoCita[] = ['confirmada', 'cancelada', 'completada']
+
+      if (esDoctor) {
+        // Sin restricción adicional de estados
+      } else if (esAdminSinDoctor || esRecepcionista) {
+        if (!ESTADOS_RECEPCION.includes(estado)) {
+          return Response.json({ error: 'Sin permisos para establecer ese estado' }, { status: 403 })
+        }
+      } else {
+        return Response.json({ error: 'Sin permisos' }, { status: 403 })
+      }
+
       updatePayload = { estado }
     } else if ('fecha' in body && 'hora_inicio' in body && 'hora_fin' in body) {
       const { fecha, hora_inicio, hora_fin } = body as { fecha: string; hora_inicio: string; hora_fin: string }
@@ -47,7 +67,7 @@ export async function PATCH(
       .from('citas')
       .update(updatePayload)
       .eq('id', id)
-      .eq('clinica_id', me.clinica_id)
+      .eq('clinica_id', meTyped.clinica_id)
       .select()
       .single()
 

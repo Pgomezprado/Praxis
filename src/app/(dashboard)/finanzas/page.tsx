@@ -76,7 +76,7 @@ export default async function FinanzasPage() {
     .from('cobros')
     .select(`
       id, folio_cobro, concepto, monto_neto, estado, notas, created_at,
-      paciente:pacientes!cobros_paciente_id_fkey ( nombre ),
+      paciente:pacientes!cobros_paciente_id_fkey ( id, nombre, rut, email, telefono, prevision, direccion ),
       doctor:usuarios!cobros_doctor_id_fkey ( nombre ),
       pagos ( id, monto, medio_pago, referencia, fecha_pago )
     `)
@@ -91,7 +91,7 @@ export default async function FinanzasPage() {
     .from('cobros')
     .select(`
       id, folio_cobro, concepto, monto_neto, estado, created_at,
-      paciente:pacientes!cobros_paciente_id_fkey ( nombre ),
+      paciente:pacientes!cobros_paciente_id_fkey ( id, nombre, rut, email, telefono, prevision, direccion ),
       doctor:usuarios!cobros_doctor_id_fkey ( nombre )
     `)
     .eq('clinica_id', clinicaId)
@@ -109,7 +109,7 @@ export default async function FinanzasPage() {
   }
 
   type CobroConJoins = Cobro & {
-    paciente: { nombre: string } | null
+    paciente: { id: string; nombre: string; rut: string | null; email: string | null; telefono: string | null; prevision: string | null; direccion: string | null } | null
     doctor: { nombre: string } | null
     pagos?: PagoDetalle[]
   }

@@ -67,6 +67,7 @@ const ESTADO_CITA_BADGE: Record<MockCita['estado'], { label: string; cls: string
   en_consulta: { label: 'En consulta', cls: 'bg-emerald-100 text-emerald-800 border border-emerald-300', dot: 'bg-emerald-500 animate-pulse' },
   completada:  { label: 'Completada',  cls: 'bg-slate-700 text-white border border-slate-600' },
   cancelada:   { label: 'Cancelada',   cls: 'bg-red-100 text-red-800 border border-red-300' },
+  no_show:     { label: 'No asistió',  cls: 'bg-slate-100 text-slate-500 border border-slate-300' },
 }
 
 // ── componente ───────────────────────────────────────────────────────────────

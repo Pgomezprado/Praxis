@@ -30,9 +30,12 @@ type Props = {
   onClose: () => void
   onGuardar: (paciente: MockPacienteAdmin) => void
   pacienteEditar?: MockPacienteAdmin | null
+  /** Rol del usuario autenticado — restringe campos editables para recepcionista */
+  rol?: 'admin_clinica' | 'doctor' | 'recepcionista'
 }
 
-export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Props) {
+export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar, rol }: Props) {
+  const esRecepcionista = rol === 'recepcionista'
   const esEdicion = !!pacienteEditar
 
   const defaultForm: FormData = {
@@ -111,12 +114,13 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
     return edad
   }
 
-  const canGuardar =
-    form.nombre.trim() &&
-    form.rut.trim() &&
-    !rutError &&
-    form.email.trim() &&
-    form.prevision !== ''
+  const canGuardar = esRecepcionista
+    ? !rutError && form.prevision !== ''
+    : form.nombre.trim() &&
+      form.rut.trim() &&
+      !rutError &&
+      form.email.trim() &&
+      form.prevision !== ''
 
   async function handleGuardar() {
     if (!canGuardar) return
@@ -124,7 +128,14 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
     setErrorApi('')
 
     try {
-      const payload = {
+      // Recepcionista solo envía campos de contacto autorizados
+      const payload = esRecepcionista ? {
+        telefono: form.telefono.trim() || null,
+        email: form.email.trim() || null,
+        prevision: form.prevision || null,
+        direccion: form.direccion.trim() || null,
+        seguro_complementario: form.seguro_complementario.trim() || null,
+      } : {
         nombre: form.nombre.trim(),
         rut: form.rut,
         fecha_nac: form.fechaNacimiento || null,
@@ -247,47 +258,64 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Nombre completo <span className="text-red-500">*</span>
+                  Nombre completo {!esRecepcionista && <span className="text-red-500">*</span>}
                 </label>
                 <input
                   type="text"
                   data-sensitive
                   value={form.nombre}
                   onChange={e => set('nombre', e.target.value)}
+                  readOnly={esRecepcionista}
                   placeholder="María José Fernández"
-                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
+                  className={`w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 transition-colors ${
+                    esRecepcionista
+                      ? 'bg-slate-50 text-slate-500 cursor-not-allowed'
+                      : 'focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500'
+                  }`}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  RUT <span className="text-red-500">*</span>
+                  RUT {!esRecepcionista && <span className="text-red-500">*</span>}
                 </label>
                 <input
                   type="text"
                   data-sensitive
                   value={form.rut}
                   onChange={e => handleRutChange(e.target.value)}
+                  readOnly={esRecepcionista}
                   placeholder="12.345.678-9"
-                  className={`w-full px-3 py-2.5 text-sm rounded-xl border transition-colors focus:outline-none focus:ring-2 ${
-                    rutError
-                      ? 'border-red-400 focus:ring-red-500/30 focus:border-red-500'
-                      : 'border-slate-200 focus:ring-blue-500/30 focus:border-blue-500'
+                  className={`w-full px-3 py-2.5 text-sm rounded-xl border transition-colors ${
+                    esRecepcionista
+                      ? 'bg-slate-50 text-slate-500 cursor-not-allowed border-slate-200'
+                      : rutError
+                        ? 'border-red-400 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500'
+                        : 'border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500'
                   }`}
                 />
-                {rutError && <p className="text-xs text-red-500 mt-1">{rutError}</p>}
+                {rutError && !esRecepcionista && <p className="text-xs text-red-500 mt-1">{rutError}</p>}
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
                   Fecha de nacimiento
                 </label>
-                <DatePicker
-                  value={form.fechaNacimiento}
-                  onChange={v => set('fechaNacimiento', v)}
-                  placeholder="Seleccionar fecha de nacimiento"
-                  max={new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })}
-                />
+                {esRecepcionista ? (
+                  <input
+                    type="text"
+                    value={form.fechaNacimiento || 'No registrada'}
+                    readOnly
+                    className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 bg-slate-50 text-slate-500 cursor-not-allowed"
+                  />
+                ) : (
+                  <DatePicker
+                    value={form.fechaNacimiento}
+                    onChange={v => set('fechaNacimiento', v)}
+                    placeholder="Seleccionar fecha de nacimiento"
+                    max={new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })}
+                  />
+                )}
                 {form.fechaNacimiento && (
                   <p className="text-xs text-slate-400 mt-1">
                     {calcularEdad(form.fechaNacimiento)} años
@@ -384,7 +412,7 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
             </div>
           </section>
 
-          <section>
+          {!esRecepcionista && <section>
             <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-4">
               Antecedentes clínicos
             </h3>
@@ -459,7 +487,7 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar }: Pro
               </div>
 
             </div>
-          </section>
+          </section>}
 
           {/* Preview */}
           {form.nombre && (

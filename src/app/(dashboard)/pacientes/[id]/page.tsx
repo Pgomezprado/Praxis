@@ -30,8 +30,9 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
 
-  const { data: meData } = await supabase.from('usuarios').select('clinica_id').eq('id', user!.id).single()
-  const clinicaId = (meData as { clinica_id: string } | null)?.clinica_id
+  const { data: meData } = await supabase.from('usuarios').select('clinica_id, rol').eq('id', user!.id).single()
+  const clinicaId = (meData as { clinica_id: string; rol: string } | null)?.clinica_id
+  const rolUsuario = (meData as { clinica_id: string; rol: string } | null)?.rol as 'admin_clinica' | 'doctor' | 'recepcionista' | undefined
   if (!clinicaId) notFound()
 
   const { data: paciente } = await supabase
@@ -114,6 +115,7 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
         }}
         edad={edad}
         fechaDesde={formatFecha(paciente.created_at)}
+        rol={rolUsuario}
       />
 
       {/* Layout de 2 columnas — recepcionista no tiene acceso al formulario de consulta */}

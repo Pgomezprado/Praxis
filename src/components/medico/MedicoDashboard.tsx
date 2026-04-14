@@ -56,6 +56,7 @@ const ESTADO_CONFIG: Record<MockCita['estado'], { dot: string; label: string; te
   en_consulta: { dot: 'bg-emerald-500 animate-pulse', label: 'En consulta', text: 'text-emerald-700' },
   completada:  { dot: 'bg-slate-300',   label: 'Completada',  text: 'text-slate-500' },
   cancelada:   { dot: 'bg-red-400',     label: 'Cancelada',   text: 'text-red-600' },
+  no_show:     { dot: 'bg-slate-400',   label: 'No asistió',  text: 'text-slate-500' },
 }
 
 function getSaludo() {

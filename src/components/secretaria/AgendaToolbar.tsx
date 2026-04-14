@@ -1,5 +1,6 @@
 'use client'
 
+import { useRef } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { ChevronLeft, ChevronRight, List, CalendarRange, CalendarDays, Plus } from 'lucide-react'
 import type { MockCita } from '@/types/domain'
@@ -34,6 +35,7 @@ export function AgendaToolbar({ citas, medicos, onNuevaCita, listPath = '/agenda
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const dateInputRef = useRef<HTMLInputElement>(null)
 
   const today = getToday()
   const fecha = searchParams.get('fecha') ?? today
@@ -104,9 +106,36 @@ export function AgendaToolbar({ citas, medicos, onNuevaCita, listPath = '/agenda
             Hoy
           </button>
 
-          <span className="px-2 py-1.5 text-sm font-semibold text-slate-800 min-w-[130px] text-center capitalize">
+          {/* Fecha clickeable — abre el date picker nativo */}
+          <button
+            type="button"
+            onClick={() => {
+              if (dateInputRef.current) {
+                // showPicker() disponible en Chrome/Firefox; Safari iOS usa el fallback de opacity-0
+                try {
+                  dateInputRef.current.showPicker()
+                } catch {
+                  dateInputRef.current.click()
+                }
+              }
+            }}
+            className="relative px-2 py-1.5 text-sm font-semibold text-slate-800 min-w-[130px] text-center capitalize hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            aria-label="Seleccionar fecha"
+          >
             {formatFechaDisplay(fecha)}
-          </span>
+            {/* Input invisible superpuesto — fallback para Safari iOS */}
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={fecha}
+              onChange={(e) => {
+                if (e.target.value) navigate(e.target.value)
+              }}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              aria-hidden="true"
+              tabIndex={-1}
+            />
+          </button>
 
           <button
             onClick={() => navigate(addDays(fecha, 1))}

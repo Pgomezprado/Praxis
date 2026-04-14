@@ -36,9 +36,10 @@ type SortDir   = 'asc' | 'desc'
 
 type Props = {
   pacientesIniciales: MockPacienteAdmin[]
+  rol?: 'admin_clinica' | 'doctor' | 'recepcionista'
 }
 
-export function PacientesAdminClient({ pacientesIniciales }: Props) {
+export function PacientesAdminClient({ pacientesIniciales, rol }: Props) {
   const router = useRouter()
   const [pacientes, setPacientes] = useState<MockPacienteAdmin[]>(pacientesIniciales)
   const [busqueda, setBusqueda] = useState('')
@@ -394,6 +395,7 @@ export function PacientesAdminClient({ pacientesIniciales }: Props) {
         onClose={() => setDrawerOpen(false)}
         onGuardar={handleGuardarPaciente}
         pacienteEditar={pacienteEditar}
+        rol={rol}
       />
     </div>
   )

@@ -57,6 +57,7 @@ const ESTADO_STYLES: Record<MockCita['estado'], string> = {
   en_consulta:  'bg-violet-100 text-violet-700',
   completada:   'bg-emerald-100 text-emerald-700',
   cancelada:    'bg-slate-100 text-slate-500 line-through',
+  no_show:      'bg-slate-100 text-slate-500',
 }
 
 const ESTADO_LABELS: Record<MockCita['estado'], string> = {
@@ -65,6 +66,7 @@ const ESTADO_LABELS: Record<MockCita['estado'], string> = {
   en_consulta:  'En consulta',
   completada:   'Completada',
   cancelada:    'Cancelada',
+  no_show:      'No asistió',
 }
 
 // ─── Tarjeta de cita ────────────────────────────────────────────────────────

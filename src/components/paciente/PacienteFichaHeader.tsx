@@ -24,6 +24,7 @@ type Props = {
   }
   edad: number | null
   fechaDesde: string
+  rol?: 'admin_clinica' | 'doctor' | 'recepcionista'
 }
 
 function PrevisionBadge({ prevision }: { prevision: string }) {
@@ -41,7 +42,7 @@ function PrevisionBadge({ prevision }: { prevision: string }) {
   )
 }
 
-export function PacienteFichaHeader({ paciente, edad, fechaDesde }: Props) {
+export function PacienteFichaHeader({ paciente, edad, fechaDesde, rol }: Props) {
   const router = useRouter()
   const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -111,6 +112,7 @@ export function PacienteFichaHeader({ paciente, edad, fechaDesde }: Props) {
         onClose={() => setDrawerOpen(false)}
         onGuardar={handleGuardar}
         pacienteEditar={pacienteParaDrawer}
+        rol={rol}
       />
     </>
   )

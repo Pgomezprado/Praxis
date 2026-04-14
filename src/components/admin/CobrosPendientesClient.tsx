@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, XCircle, Loader2, DollarSign, AlertTriangle } from 'lucide-react'
+import { DrawerVerPaciente, type PacienteResumen } from './DrawerVerPaciente'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -13,7 +14,7 @@ type CobroPendiente = {
   monto_neto: number
   estado: string
   created_at: string
-  paciente: { nombre: string } | null
+  paciente: { id?: string; nombre: string; rut?: string | null; email?: string | null; telefono?: string | null; prevision?: string | null; direccion?: string | null } | null
   doctor: { nombre: string } | null
 }
 
@@ -40,6 +41,20 @@ export default function CobrosPendientesClient({
   const [medioPago, setMedioPago] = useState<Record<string, MedioPago>>({})
   const [referencia, setReferencia] = useState<Record<string, string>>({})
   const [errorFila, setErrorFila] = useState<Record<string, string>>({})
+  const [pacienteDrawer, setPacienteDrawer] = useState<PacienteResumen | null>(null)
+
+  function abrirPaciente(cobro: CobroPendiente) {
+    if (!cobro.paciente) return
+    setPacienteDrawer({
+      id: cobro.paciente.id ?? '',
+      nombre: cobro.paciente.nombre,
+      rut: cobro.paciente.rut ?? null,
+      email: cobro.paciente.email ?? null,
+      telefono: cobro.paciente.telefono ?? null,
+      prevision: cobro.paciente.prevision ?? null,
+      direccion: cobro.paciente.direccion ?? null,
+    })
+  }
 
   function getEstado(id: string): FilaEstado {
     return estados[id] ?? { modo: 'idle' }
@@ -124,6 +139,7 @@ export default function CobrosPendientesClient({
   }
 
   return (
+    <>
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
       {/* Encabezado de tabla (desktop) */}
       <div className="hidden sm:grid sm:grid-cols-[1fr_150px_130px_100px_200px] gap-4 px-5 py-3 bg-amber-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
@@ -148,9 +164,16 @@ export default function CobrosPendientesClient({
             <div className="flex flex-col sm:grid sm:grid-cols-[1fr_150px_130px_100px_200px] gap-2 sm:gap-4 items-start sm:items-center">
               {/* Paciente / Concepto */}
               <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-800">
-                  {cobro.paciente?.nombre ?? '—'}
-                </p>
+                {cobro.paciente ? (
+                  <button
+                    onClick={() => abrirPaciente(cobro)}
+                    className="text-sm font-medium text-blue-600 hover:underline text-left"
+                  >
+                    {cobro.paciente.nombre}
+                  </button>
+                ) : (
+                  <p className="text-sm font-medium text-slate-800">—</p>
+                )}
                 <p className="text-xs text-slate-400 truncate">{cobro.concepto}</p>
                 <p className="text-xs text-slate-300 font-mono mt-0.5">{cobro.folio_cobro}</p>
               </div>
@@ -356,5 +379,11 @@ export default function CobrosPendientesClient({
         )
       })}
     </div>
+
+      <DrawerVerPaciente
+        paciente={pacienteDrawer}
+        onClose={() => setPacienteDrawer(null)}
+      />
+    </>
   )
 }

@@ -3,8 +3,7 @@ import Link from 'next/link'
 import { Clock, CheckCircle2, Tag, ArrowRight, TrendingUp, Package } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import type { Cobro, Pago } from '@/types/database'
-import CobrosPendientesClient from '@/components/admin/CobrosPendientesClient'
-import CobrosHoyClient from '@/components/admin/CobrosHoyClient'
+import FinanzasTabsClient from '@/components/admin/FinanzasTabsClient'
 
 export const metadata = { title: 'Finanzas — Praxis Admin' }
 
@@ -27,7 +26,7 @@ export default async function AdminFinanzasPage() {
   const [ym_year, ym_month] = today.split('-')
   const inicioMesStr = `${ym_year}-${ym_month}-01`
 
-  // Cobros de hoy
+  // KPI: cobros de hoy
   const { data: cobrosHoyData } = await supabase
     .from('cobros')
     .select('id, monto_neto, estado')
@@ -41,7 +40,7 @@ export default async function AdminFinanzasPage() {
   const cobrosHoyPagados = cobrosHoy.filter(c => c.estado === 'pagado')
   const totalHoy = cobrosHoyPagados.reduce((acc, c) => acc + c.monto_neto, 0)
 
-  // Cobros pendientes (cualquier fecha)
+  // KPI: cobros pendientes (cualquier fecha)
   const { data: cobrosPendientesData } = await supabase
     .from('cobros')
     .select('id, monto_neto')
@@ -53,10 +52,10 @@ export default async function AdminFinanzasPage() {
   const cobrosPendientesCount = cobrosPendientes.length
   const totalPendiente = cobrosPendientes.reduce((acc, c) => acc + c.monto_neto, 0)
 
-  // Ingresos del mes: suma pagos activos cuya fecha_pago cae en el mes actual
+  // KPI: ingresos del mes
   const lastDayOfMonth = new Date(
     parseInt(ym_year),
-    parseInt(ym_month), // mes siguiente (0-indexed), día 0 = último día del mes actual
+    parseInt(ym_month),
     0
   ).getDate()
   const finMesStr = `${ym_year}-${ym_month}-${String(lastDayOfMonth).padStart(2, '0')}`
@@ -72,34 +71,23 @@ export default async function AdminFinanzasPage() {
   const pagosDelMes = (pagosDelMesData ?? []) as Pick<Pago, 'monto'>[]
   const ingresosMes = pagosDelMes.reduce((sum, p) => sum + p.monto, 0)
 
-  // Últimos cobros del día para lista — incluye pagos para mostrar detalle
-  const { data: ultimosCobrosData } = await supabase
+  // Inicio del mes para la consulta unificada
+  const inicioMesTs = `${inicioMesStr}T00:00:00`
+
+  // Todos los cobros del mes en curso + pendientes históricos (para las tabs)
+  const { data: todosLosCobrosData } = await supabase
     .from('cobros')
     .select(`
       id, folio_cobro, concepto, monto_neto, estado, notas, created_at,
-      paciente:pacientes!cobros_paciente_id_fkey ( nombre ),
+      paciente:pacientes!cobros_paciente_id_fkey ( id, nombre, rut, email, telefono, prevision, direccion ),
       doctor:usuarios!cobros_doctor_id_fkey ( nombre ),
       pagos ( id, monto, medio_pago, referencia, fecha_pago )
     `)
     .eq('clinica_id', clinicaId)
     .eq('activo', true)
-    .gte('created_at', today + 'T00:00:00')
+    .or(`created_at.gte.${inicioMesTs},estado.eq.pendiente`)
     .order('created_at', { ascending: false })
-    .limit(10)
-
-  // Cobros pendientes (cualquier fecha) para lista
-  const { data: cobrosPendientesListData } = await supabase
-    .from('cobros')
-    .select(`
-      id, folio_cobro, concepto, monto_neto, estado, created_at,
-      paciente:pacientes!cobros_paciente_id_fkey ( nombre ),
-      doctor:usuarios!cobros_doctor_id_fkey ( nombre )
-    `)
-    .eq('clinica_id', clinicaId)
-    .eq('activo', true)
-    .eq('estado', 'pendiente')
-    .order('created_at', { ascending: false })
-    .limit(20)
+    .limit(100)
 
   type PagoDetalle = {
     id: string
@@ -110,12 +98,12 @@ export default async function AdminFinanzasPage() {
   }
 
   type CobroConJoins = Cobro & {
-    paciente: { nombre: string } | null
+    paciente: { id: string; nombre: string; rut: string | null; email: string | null; telefono: string | null; prevision: string | null; direccion: string | null } | null
     doctor: { nombre: string } | null
     pagos?: PagoDetalle[]
   }
-  const ultimosCobros = (ultimosCobrosData ?? []) as unknown as CobroConJoins[]
-  const cobrosPendientesList = (cobrosPendientesListData ?? []) as unknown as CobroConJoins[]
+
+  const todosLosCobros = (todosLosCobrosData ?? []) as unknown as CobroConJoins[]
 
   const mesLabel = new Date(inicioMesStr + 'T12:00:00').toLocaleDateString('es-CL', {
     month: 'long',
@@ -179,33 +167,14 @@ export default async function AdminFinanzasPage() {
         </div>
       </div>
 
-      {/* Cobros de hoy */}
+      {/* Cobros con tabs — mes en curso + pendientes históricos */}
       <section>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-slate-800">Cobros de hoy</h2>
-          <span className="text-xs text-slate-400">
-            {new Date(today + 'T12:00:00').toLocaleDateString('es-CL', {
-              weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Santiago',
-            })}
-          </span>
+          <h2 className="text-lg font-semibold text-slate-800">Cobros</h2>
+          <span className="text-xs text-slate-400 capitalize">{mesLabel}</span>
         </div>
-
-        <CobrosHoyClient cobros={ultimosCobros} />
+        <FinanzasTabsClient cobros={todosLosCobros} />
       </section>
-
-      {/* Cobros pendientes */}
-      {cobrosPendientesList.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-800">
-              Cobros pendientes
-              <span className="ml-2 text-sm font-normal text-slate-400">({cobrosPendientesList.length})</span>
-            </h2>
-          </div>
-
-          <CobrosPendientesClient cobros={cobrosPendientesList} />
-        </section>
-      )}
 
       {/* Acceso rápido a aranceles y paquetes */}
       <section>
@@ -247,4 +216,3 @@ export default async function AdminFinanzasPage() {
     </div>
   )
 }
-

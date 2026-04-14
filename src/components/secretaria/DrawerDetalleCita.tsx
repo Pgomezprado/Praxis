@@ -27,6 +27,7 @@ const ESTADO_BADGE: Record<
   en_consulta: { label: 'En consulta',  variant: 'activo' },
   completada:  { label: 'Completada',   variant: 'completado' },
   cancelada:   { label: 'Cancelada',    variant: 'urgente' },
+  no_show:     { label: 'No asistió',   variant: 'urgente' },
 }
 
 function formatFecha(fecha: string): string {
@@ -118,8 +119,9 @@ export function DrawerDetalleCita({
   }
 
   const isCancelada  = estadoActual === 'cancelada'
+  const isNoShow     = estadoActual === 'no_show'
   const isCompletada = estadoActual === 'completada'
-  const puedeActuar  = !isCancelada && !isCompletada
+  const puedeActuar  = !isCancelada && !isCompletada && !isNoShow
   const { label, variant } = ESTADO_BADGE[estadoActual]
 
   if (!cita) return null
@@ -305,18 +307,20 @@ export function DrawerDetalleCita({
                   </button>
                 )}
 
-                {/* Completar consulta */}
-                <button
-                  onClick={() => cambiarEstado('completada', 'completar')}
-                  disabled={loading}
-                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors disabled:opacity-50"
-                >
-                  {accionActiva === 'completar'
-                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : <CheckCircle2 className="w-4 h-4" />
-                  }
-                  Completar consulta
-                </button>
+                {/* Completar — médico siempre, recepcionista/admin cuando confirmada o en_consulta */}
+                {(esDoctor || estadoActual === 'confirmada' || estadoActual === 'en_consulta') && (
+                  <button
+                    onClick={() => cambiarEstado('completada', 'completar')}
+                    disabled={loading}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors disabled:opacity-50"
+                  >
+                    {accionActiva === 'completar'
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <CheckCircle2 className="w-4 h-4" />
+                    }
+                    {esDoctor ? 'Completar consulta' : 'Marcar como atendida'}
+                  </button>
+                )}
 
                 {/* Separador */}
                 <div className="h-px bg-slate-100 my-1" />
@@ -425,10 +429,10 @@ export function DrawerDetalleCita({
             <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl">{error}</p>
           )}
 
-          {/* Cita anulada o completada — solo lectura */}
-          {(isCancelada || isCompletada) && (
+          {/* Cita anulada, no_show o completada — solo lectura */}
+          {(isCancelada || isCompletada || isNoShow) && (
             <p className="text-sm text-slate-400 text-center py-4">
-              {isCancelada ? 'Esta cita fue anulada.' : 'Esta cita ya fue completada.'}
+              {isCancelada ? 'Esta cita fue anulada.' : isNoShow ? 'El paciente no asistió.' : 'Esta cita ya fue completada.'}
             </p>
           )}
         </div>

@@ -6,4 +6,5 @@ export const ESTADO_BORDER: Record<MockCita['estado'], string> = {
   en_consulta: 'border-l-emerald-400',
   completada:  'border-l-slate-300',
   cancelada:   'border-l-red-300',
+  no_show:     'border-l-slate-400',
 }
