@@ -160,8 +160,8 @@ export async function DELETE(
     const cobros = cobrosAsociados as { id: string }[] | null
     if (cobros && cobros.length > 0) {
       return Response.json(
-        { error: 'No se puede eliminar una cita con cobros registrados. Anula el cobro primero.' },
-        { status: 400 }
+        { error: 'Esta cita tiene cobros asociados. Anula el cobro primero o marca la cita como "cancelada" en vez de eliminarla.' },
+        { status: 409 }
       )
     }
 
