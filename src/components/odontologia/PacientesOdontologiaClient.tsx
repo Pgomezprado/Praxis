@@ -31,6 +31,7 @@ const ESTADO_BADGE: Record<EstadoPresupuesto, { label: string; clases: string }>
   aceptado:  { label: 'Aceptado',   clases: 'bg-green-100 text-green-700' },
   rechazado: { label: 'Rechazado',  clases: 'bg-red-100 text-red-700' },
   vencido:   { label: 'Vencido',    clases: 'bg-orange-100 text-orange-700' },
+  anulado:   { label: 'Anulado',    clases: 'bg-slate-200 text-slate-500' },
 }
 
 const PLAN_BADGE: Record<string, { label: string; clases: string }> = {
@@ -90,9 +91,10 @@ const FORM_VACIO: FormNuevoPaciente = {
 
 interface ModalNuevoPacienteProps {
   onCerrar: () => void
+  onExito: (paciente: PacienteConPresupuesto) => void
 }
 
-function ModalNuevoPaciente({ onCerrar }: ModalNuevoPacienteProps) {
+function ModalNuevoPaciente({ onCerrar, onExito }: ModalNuevoPacienteProps) {
   const [form, setForm] = useState<FormNuevoPaciente>(FORM_VACIO)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -137,7 +139,14 @@ function ModalNuevoPaciente({ onCerrar }: ModalNuevoPacienteProps) {
         return
       }
 
-      window.location.reload()
+      const body = await res.json() as { paciente: { id: string; nombre: string; rut: string; email: string | null; telefono: string | null; fecha_nac: string | null; created_at: string } }
+      const nuevoPaciente: PacienteConPresupuesto = {
+        ...body.paciente,
+        ultimoPresupuesto: null,
+        planActivo: null,
+      }
+      onExito(nuevoPaciente)
+      onCerrar()
     } catch {
       setError('Error de conexión. Inténtalo nuevamente.')
     } finally {
@@ -286,9 +295,17 @@ function ModalNuevoPaciente({ onCerrar }: ModalNuevoPacienteProps) {
   )
 }
 
-export function PacientesOdontologiaClient({ pacientes }: PacientesOdontologiaClientProps) {
+export function PacientesOdontologiaClient({ pacientes: pacientesIniciales }: PacientesOdontologiaClientProps) {
+  const [pacientes, setPacientes] = useState<PacienteConPresupuesto[]>(pacientesIniciales)
   const [busqueda, setBusqueda] = useState('')
   const [modalAbierto, setModalAbierto] = useState(false)
+  const [exito, setExito] = useState<string | null>(null)
+
+  function handleNuevoPaciente(paciente: PacienteConPresupuesto) {
+    setPacientes(prev => [paciente, ...prev])
+    setExito(`Paciente ${paciente.nombre} creado correctamente.`)
+    setTimeout(() => setExito(null), 4000)
+  }
 
   const filtrados = useMemo(() => {
     const term = busqueda.trim().toLowerCase()
@@ -304,7 +321,17 @@ export function PacientesOdontologiaClient({ pacientes }: PacientesOdontologiaCl
     <div className="min-h-screen bg-slate-50 p-4 md:p-8">
       {/* Modal */}
       {modalAbierto && (
-        <ModalNuevoPaciente onCerrar={() => setModalAbierto(false)} />
+        <ModalNuevoPaciente
+          onCerrar={() => setModalAbierto(false)}
+          onExito={handleNuevoPaciente}
+        />
+      )}
+
+      {/* Toast de éxito */}
+      {exito && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-5 py-3 bg-emerald-600 text-white text-sm font-medium rounded-xl shadow-lg">
+          {exito}
+        </div>
       )}
 
       {/* Header */}

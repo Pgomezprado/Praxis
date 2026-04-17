@@ -14,6 +14,7 @@ interface AgendaHoyClientProps {
   medicos: { id: string; nombre: string; especialidad: string; duracion_consulta: number }[]
   fecha: string
   medicoId: string
+  diaPath?: string
   listPath?: string
   semanaPath?: string
   mesPath?: string
@@ -31,6 +32,7 @@ export function AgendaHoyClient({
   medicos,
   fecha,
   medicoId,
+  diaPath,
   listPath,
   semanaPath,
   mesPath,
@@ -69,9 +71,17 @@ export function AgendaHoyClient({
     setModalCambioHoraOpen(true)
   }
 
-  function handleCambioHoraDone(id: string, nuevaFecha: string, horaInicio: string, horaFin: string) {
+  function handleCambioHoraDone(id: string, nuevaFecha: string, horaInicio: string, horaFin: string, nuevoMedicoId?: string) {
     setCitasLocales((prev) =>
-      prev.map((c) => c.id === id ? { ...c, fecha: nuevaFecha, horaInicio, horaFin } : c)
+      prev.map((c) => {
+        if (c.id !== id) return c
+        const updated = { ...c, fecha: nuevaFecha, horaInicio, horaFin }
+        if (nuevoMedicoId) {
+          updated.medicoId = nuevoMedicoId
+          updated.medicoNombre = medicos.find(m => m.id === nuevoMedicoId)?.nombre ?? c.medicoNombre
+        }
+        return updated
+      })
     )
   }
 
@@ -84,6 +94,7 @@ export function AgendaHoyClient({
         citas={todasCitas}
         medicos={medicos}
         onNuevaCita={() => { setHoraPreseleccionada(undefined); setModalOpen(true) }}
+        diaPath={diaPath}
         listPath={listPath}
         semanaPath={semanaPath}
         mesPath={mesPath}
@@ -92,7 +103,7 @@ export function AgendaHoyClient({
 
       <div className="max-w-[720px] mx-auto px-4 py-6">
         <ListaDia
-          citas={citasLocales}
+          citas={citasLocales.filter((c) => c.estado !== 'cancelada')}
           showMedico={!medicoId}
           esDoctor={esDoctor}
           citasCobradas={cobradosSet}

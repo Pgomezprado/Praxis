@@ -7,6 +7,7 @@ import { HistorialConsultas } from '@/components/paciente/HistorialConsultas'
 import { HistorialCitas } from '@/components/paciente/HistorialCitas'
 import { PaquetesPaciente } from '@/components/paciente/PaquetesPaciente'
 import { PacienteFichaHeader } from '@/components/paciente/PacienteFichaHeader'
+import { CuentaCorrientePaciente } from '@/components/paciente/CuentaCorrientePaciente'
 import type { Consulta, PaquetePaciente } from '@/types/database'
 import type { CitaPaciente } from '@/components/paciente/HistorialCitas'
 
@@ -45,7 +46,7 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
 
   if (!paciente) notFound()
 
-  const [{ data: consultas }, { data: citasDb }, { data: paquetesDb }] = await Promise.all([
+  const [{ data: consultas }, { data: citasDb }, { data: paquetesDb }, { data: cobrosDb }] = await Promise.all([
     supabase
       .from('consultas')
       .select('*, doctor:usuarios(nombre, especialidad)')
@@ -74,6 +75,14 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
       .eq('clinica_id', clinicaId)
       .eq('activo', true)
       .order('created_at', { ascending: false }),
+    supabase
+      .from('cobros')
+      .select('id, folio_cobro, concepto, monto_neto, estado, created_at, doctor:usuarios!cobros_doctor_id_fkey(nombre), pagos(id, monto, medio_pago, fecha_pago)')
+      .eq('paciente_id', id)
+      .eq('clinica_id', clinicaId)
+      .eq('activo', true)
+      .order('created_at', { ascending: false })
+      .limit(30),
   ])
 
   // Registrar acceso en audit_log (Decreto 41 MINSAL)
@@ -93,6 +102,27 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
     ...p,
     sesiones_restantes: p.sesiones_total - p.sesiones_usadas,
   }))
+
+  // Mapear cobros para cuenta corriente
+  type CobroPacienteDetalle = {
+    id: string
+    folio_cobro: string
+    concepto: string
+    monto_neto: number
+    estado: string
+    created_at: string
+    doctor: { nombre: string } | null
+    pagos: { id: string; monto: number; medio_pago: 'efectivo' | 'tarjeta' | 'transferencia'; fecha_pago: string }[]
+  }
+  const cobros = (cobrosDb ?? []).map(c => {
+    const doctorRaw = c.doctor as { nombre: string } | { nombre: string }[] | null
+    const doctor = Array.isArray(doctorRaw) ? (doctorRaw[0] ?? null) : doctorRaw
+    return {
+      ...c,
+      doctor,
+      pagos: (c.pagos ?? []) as CobroPacienteDetalle['pagos'],
+    }
+  }) as CobroPacienteDetalle[]
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -171,6 +201,9 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
               doctor: Array.isArray(c.doctor) ? (c.doctor[0] ?? null) : c.doctor,
             })) as CitaPaciente[]} />
           </div>
+
+          {/* Cuenta corriente del paciente */}
+          <CuentaCorrientePaciente cobros={cobros} />
 
           {/* Historial de consultas */}
           <div>

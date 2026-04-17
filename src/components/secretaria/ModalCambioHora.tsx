@@ -1,18 +1,35 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { X, Clock, CalendarDays, Loader2 } from 'lucide-react'
+import { X, Clock, CalendarDays, Loader2, Stethoscope } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { generarSlots } from '@/lib/agendamiento'
 import type { MockCita, HorarioSemanal } from '@/types/domain'
+
+const DURACIONES_MIN = [15, 30, 45, 60, 75, 90]
+
+/** Calcula la duración en minutos entre dos strings HH:MM */
+function calcularDuracionActual(horaInicio: string, horaFin: string): number {
+  const [h1, m1] = horaInicio.split(':').map(Number)
+  const [h2, m2] = horaFin.split(':').map(Number)
+  const diff = (h2 * 60 + m2) - (h1 * 60 + m1)
+  // Si el diff no coincide con ninguna opción conocida, devolver la más cercana
+  const opciones = DURACIONES_MIN
+  const valido = opciones.includes(diff)
+  if (valido) return diff
+  // Aproximar al más cercano de las opciones
+  return opciones.reduce((prev, curr) =>
+    Math.abs(curr - diff) < Math.abs(prev - diff) ? curr : prev
+  , opciones[0])
+}
 
 interface ModalCambioHoraProps {
   open: boolean
   onClose: () => void
   cita: MockCita | null
   medicos: { id: string; nombre: string; especialidad: string; duracion_consulta: number }[]
-  onCambiado: (id: string, nuevaFecha: string, horaInicio: string, horaFin: string) => void
+  onCambiado: (id: string, nuevaFecha: string, horaInicio: string, horaFin: string, nuevoMedicoId?: string) => void
 }
 
 function getToday() {
@@ -33,52 +50,57 @@ function calcularHoraFin(horaInicio: string, minutos: number): string {
 }
 
 export function ModalCambioHora({ open, onClose, cita, medicos, onCambiado }: ModalCambioHoraProps) {
+  const [medicoId, setMedicoId] = useState('')
   const [fecha, setFecha] = useState('')
   const [slot, setSlot] = useState('')
+  const [duracion, setDuracion] = useState(30)
   const [loading, setLoading] = useState(false)
   const [errorSlots, setErrorSlots] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [horarioMedico, setHorarioMedico] = useState<HorarioSemanal | null>(null)
   const [slotsOcupados, setSlotsOcupados] = useState<string[]>([])
 
-  // Resetear al abrir
+  // Resetear al abrir — inicializar duración con la de la cita actual
   useEffect(() => {
     if (open && cita) {
+      setMedicoId(cita.medicoId)
       setFecha(cita.fecha)
       setSlot('')
       setError(null)
       setErrorSlots(false)
+      // Calcular duración real de la cita existente
+      const duracionCita = (cita.horaInicio && cita.horaFin)
+        ? calcularDuracionActual(cita.horaInicio, cita.horaFin)
+        : (medicos.find(m => m.id === cita.medicoId)?.duracion_consulta ?? 30)
+      setDuracion(duracionCita)
     }
-  }, [open, cita])
+  }, [open, cita]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Cargar horario del médico
+  // Cargar horario del médico seleccionado
   useEffect(() => {
-    if (!cita?.medicoId) return
+    if (!medicoId) return
     fetch('/api/horarios')
       .then(r => r.json())
-      .then(data => setHorarioMedico((data.horarios?.[cita.medicoId] as HorarioSemanal) ?? null))
+      .then(data => setHorarioMedico((data.horarios?.[medicoId] as HorarioSemanal) ?? null))
       .catch(() => {})
-  }, [cita?.medicoId])
+  }, [medicoId])
 
-  // Cargar slots ocupados al cambiar fecha
+  // Cargar slots ocupados al cambiar fecha o médico
   useEffect(() => {
-    if (!cita?.medicoId || !fecha) { setSlotsOcupados([]); return }
+    if (!medicoId || !fecha) { setSlotsOcupados([]); return }
     setSlot('')
     setErrorSlots(false)
-    fetch(`/api/citas?fecha=${fecha}&doctor_id=${cita.medicoId}`)
+    fetch(`/api/citas?fecha=${fecha}&doctor_id=${medicoId}`)
       .then(r => r.json())
       .then(data => {
         setSlotsOcupados(
           (data.citas ?? [])
-            .filter((c: { estado: string; id: string }) => c.estado !== 'cancelada' && c.id !== cita.id)
+            .filter((c: { estado: string; id: string }) => c.estado !== 'cancelada' && c.id !== cita?.id)
             .map((c: { hora_inicio: string }) => c.hora_inicio)
         )
       })
       .catch(() => setErrorSlots(true))
-  }, [cita?.medicoId, cita?.id, fecha])
-
-  const medico = medicos.find(m => m.id === cita?.medicoId)
-  const duracion = medico?.duracion_consulta ?? 30
+  }, [medicoId, cita?.id, fecha])
 
   const slotsDisponibles = cita && fecha
     ? (() => {
@@ -95,22 +117,28 @@ export function ModalCambioHora({ open, onClose, cita, medicos, onCambiado }: Mo
     : []
 
   async function handleGuardar() {
-    if (!cita || !fecha || !slot) return
+    if (!cita || !fecha || !slot || !medicoId) return
     setLoading(true)
     setError(null)
     const horaFin = calcularHoraFin(slot, duracion)
+    const cambioMedico = medicoId !== cita.medicoId
     try {
       const res = await fetch(`/api/citas/${cita.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fecha, hora_inicio: slot, hora_fin: horaFin }),
+        body: JSON.stringify({
+          fecha,
+          hora_inicio: slot,
+          hora_fin: horaFin,
+          ...(cambioMedico && { doctor_id: medicoId }),
+        }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         setError(data.error ?? 'No se pudo actualizar la cita.')
         return
       }
-      onCambiado(cita.id, fecha, slot, horaFin)
+      onCambiado(cita.id, fecha, slot, horaFin, cambioMedico ? medicoId : undefined)
       onClose()
     } catch {
       setError('Error de conexión. Intenta nuevamente.')
@@ -157,6 +185,28 @@ export function ModalCambioHora({ open, onClose, cita, medicos, onCambiado }: Mo
             </div>
           </div>
 
+          {/* Profesional */}
+          <section>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 bg-slate-100 rounded-lg flex items-center justify-center">
+                <Stethoscope className="w-3.5 h-3.5 text-slate-500" />
+              </div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Profesional</p>
+            </div>
+            <select
+              value={medicoId}
+              onChange={(e) => { setMedicoId(e.target.value); setSlot('') }}
+              aria-label="Cambiar profesional"
+              className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+            >
+              {medicos.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.nombre} — {m.especialidad}
+                </option>
+              ))}
+            </select>
+          </section>
+
           {/* Nueva fecha y hora */}
           <section>
             <div className="flex items-center gap-2 mb-3">
@@ -173,6 +223,28 @@ export function ModalCambioHora({ open, onClose, cita, medicos, onCambiado }: Mo
                 onChange={setFecha}
                 placeholder="Seleccionar fecha"
               />
+
+              {/* Selector de duración */}
+              <div>
+                <p className="text-xs font-medium text-slate-500 mb-2">Duración de la cita</p>
+                <div className="grid grid-cols-6 gap-1.5">
+                  {DURACIONES_MIN.map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      aria-label={`Duración ${d} minutos`}
+                      onClick={() => { setDuracion(d); setSlot('') }}
+                      className={`py-2 rounded-xl text-xs font-medium transition-all ${
+                        duracion === d
+                          ? 'bg-amber-500 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-700 hover:bg-amber-100 hover:text-amber-700'
+                      }`}
+                    >
+                      {d} min
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {fecha && (
                 <div>

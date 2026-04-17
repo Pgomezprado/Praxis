@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Clock, CheckCircle2, Tag, ArrowRight, TrendingUp, Package } from 'lucide-react'
+import { Clock, CheckCircle2, Tag, ArrowRight, TrendingUp, Package, Calculator } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import type { Cobro, Pago } from '@/types/database'
 import FinanzasTabsClient from '@/components/admin/FinanzasTabsClient'
@@ -176,10 +176,10 @@ export default async function AdminFinanzasPage() {
         <FinanzasTabsClient cobros={todosLosCobros} />
       </section>
 
-      {/* Acceso rápido a aranceles y paquetes */}
+      {/* Acceso rápido a aranceles, paquetes y honorarios */}
       <section>
         <h2 className="text-lg font-semibold text-slate-800 mb-4">Accesos rápidos</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Link
             href="/admin/finanzas/aranceles"
             className="flex items-center justify-between px-5 py-4 bg-white border border-slate-200 rounded-xl hover:border-blue-200 hover:shadow-sm transition-all group"
@@ -207,6 +207,22 @@ export default async function AdminFinanzasPage() {
               <div>
                 <p className="text-sm font-semibold text-slate-800">Paquetes de sesiones</p>
                 <p className="text-xs text-slate-500">Precios por volumen con cuotas</p>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
+          </Link>
+
+          <Link
+            href="/admin/finanzas/honorarios"
+            className="flex items-center justify-between px-5 py-4 bg-white border border-slate-200 rounded-xl hover:border-blue-200 hover:shadow-sm transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                <Calculator className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-slate-800">Honorarios</p>
+                <p className="text-xs text-slate-500">Pago a profesionales por periodo</p>
               </div>
             </div>
             <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-500 transition-colors" />

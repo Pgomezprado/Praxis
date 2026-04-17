@@ -2,16 +2,16 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { ChevronLeft, ChevronRight, List, CalendarRange, CalendarDays, Plus, Lock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar, CalendarRange, CalendarDays, Plus, Lock } from 'lucide-react'
 import { ModalNuevaCita } from './ModalNuevaCita'
 import { ModalCambioHora } from './ModalCambioHora'
 import { DrawerDetalleCita } from './DrawerDetalleCita'
 import { DrawerBloqueo } from './DrawerBloqueo'
 import { SlotItem } from './SlotsDisponibles'
-import { generarSlots } from '@/lib/agendamiento'
-import type { MockCita, HorarioSemanal, ConfigDia } from '@/types/domain'
-import { ESTADO_BORDER } from '@/lib/agenda-colors'
+import type { MockCita, HorarioSemanal } from '@/types/domain'
+import { MEDICO_COLORS, type MedicoColorKey } from '@/lib/agenda-colors'
 import type { BloqueoHorario } from '@/app/api/bloqueos/route'
+import { type BloqueGrilla, getDiaKey, calcSpan, generarGrillaDia } from '@/lib/agenda-helpers'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -72,89 +72,6 @@ function shortMedicoName(nombre: string): string {
   return `${parts[0]} ${parts[parts.length - 1]}`
 }
 
-function getDiaKey(fecha: string): keyof HorarioSemanal {
-  const dias: (keyof HorarioSemanal)[] = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado']
-  const [y, m, d] = fecha.split('-').map(Number)
-  return dias[new Date(y, m - 1, d).getDay()]
-}
-
-// Genera todos los bloques de 30 minutos del día basado en el horario del médico.
-// Retorna un arreglo con tipo de cada bloque: 'cita' | 'bloqueo' | 'colacion' | 'libre'
-type BloqueGrilla =
-  | { tipo: 'cita'; hora: string; cita: MockCita }
-  | { tipo: 'bloqueo'; hora: string; bloqueo: BloqueoHorario }
-  | { tipo: 'colacion'; hora: string }
-  | { tipo: 'libre'; hora: string }
-
-function generarGrillaDia(
-  fecha: string,
-  configDia: ConfigDia,
-  citas: MockCita[],
-  bloqueos: BloqueoHorario[],
-): BloqueGrilla[] {
-  if (!configDia.activo) return []
-
-  // Generar todos los slots de 30 min (siempre 30 min para la grilla visual)
-  const todosSlots = generarSlots(fecha, configDia.horaInicio, configDia.horaFin, [], 30)
-
-  // Calcular horas de colación
-  const horasColacion = new Set<string>()
-  if (configDia.tieneColacion && configDia.colacionInicio && configDia.colacionFin) {
-    const slotsColacion = generarSlots(fecha, configDia.colacionInicio, configDia.colacionFin, [], 30)
-    slotsColacion.forEach(s => horasColacion.add(s.hora))
-  }
-
-  // Indexar citas por horaInicio
-  const citasPorHora = new Map<string, MockCita>()
-  citas.forEach(c => citasPorHora.set(c.horaInicio, c))
-
-  // Calcular qué horas están "cubiertas" por una cita de más de 30 min
-  const horasCubiertasPorCita = new Set<string>()
-  citas.forEach(c => {
-    // La hora de inicio ya la vamos a renderizar como cita, pero los slots intermedios
-    // (cuando una cita dura más de 30 min) hay que ocultarlos
-    const slotsOcupados = generarSlots(fecha, c.horaInicio, c.horaFin, [], 30)
-    // El primer slot es la cita misma; los siguientes son slots intermedios
-    slotsOcupados.slice(1).forEach(s => horasCubiertasPorCita.add(s.hora))
-  })
-
-  // Indexar bloqueos por hora_inicio (solo el primero si hay varios al mismo tiempo)
-  const bloqueosPorHora = new Map<string, BloqueoHorario>()
-  bloqueos.forEach(b => {
-    const h = b.hora_inicio.slice(0, 5)
-    if (!bloqueosPorHora.has(h)) bloqueosPorHora.set(h, b)
-  })
-
-  // Calcular horas cubiertas por bloqueos de más de 30 min
-  const horasCubiertasPorBloqueo = new Set<string>()
-  bloqueos.forEach(b => {
-    const ini = b.hora_inicio.slice(0, 5)
-    const fin = b.hora_fin.slice(0, 5)
-    const slotsBloqueo = generarSlots(fecha, ini, fin, [], 30)
-    slotsBloqueo.slice(1).forEach(s => horasCubiertasPorBloqueo.add(s.hora))
-  })
-
-  const grilla: BloqueGrilla[] = []
-
-  for (const slot of todosSlots) {
-    const h = slot.hora
-
-    // Slot cubierto por el cuerpo de una cita o bloqueo → omitir
-    if (horasCubiertasPorCita.has(h) || horasCubiertasPorBloqueo.has(h)) continue
-
-    if (citasPorHora.has(h)) {
-      grilla.push({ tipo: 'cita', hora: h, cita: citasPorHora.get(h)! })
-    } else if (bloqueosPorHora.has(h)) {
-      grilla.push({ tipo: 'bloqueo', hora: h, bloqueo: bloqueosPorHora.get(h)! })
-    } else if (horasColacion.has(h)) {
-      grilla.push({ tipo: 'colacion', hora: h })
-    } else {
-      grilla.push({ tipo: 'libre', hora: h })
-    }
-  }
-
-  return grilla
-}
 
 // ── config ────────────────────────────────────────────────────────────────────
 
@@ -185,30 +102,24 @@ const ESTADO_TEXT: Record<MockCita['estado'], string> = {
   no_show:     'text-slate-500',
 }
 
-const MEDICO_COLOR: Record<string, string> = {
-  m1: 'bg-violet-100 text-violet-700',
-  m2: 'bg-blue-100 text-blue-700',
-  m3: 'bg-amber-100 text-amber-700',
-  m4: 'bg-emerald-100 text-emerald-700',
-  m5: 'bg-slate-100 text-slate-600',
-}
-
 // ── component ─────────────────────────────────────────────────────────────────
 
 interface Props {
   allCitas: MockCita[]
-  medicos: { id: string; nombre: string; especialidad: string; duracion_consulta: number }[]
+  medicos: { id: string; nombre: string; especialidad: string; duracion_consulta: number; color?: string }[]
   fecha: string
   medicoId: string
+  diaPath?: string
   listPath?: string
   semanaPath?: string
   mesPath?: string
   hideMedicoFilter?: boolean
   esDoctor?: boolean
   fichaBasePath?: string
+  cobroBasePath?: string
 }
 
-export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPath = '/agenda/hoy', semanaPath = '/agenda/semana', mesPath, hideMedicoFilter = false, esDoctor = false, fichaBasePath }: Props) {
+export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath, listPath = '/agenda/hoy', semanaPath = '/agenda/semana', mesPath, hideMedicoFilter = false, esDoctor = false, fichaBasePath, cobroBasePath }: Props) {
   const router = useRouter()
   const today = getToday()
   const monday = getMonday(fecha)
@@ -293,8 +204,16 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
     setModalCambioHoraOpen(true)
   }
 
-  function handleCambioHoraDone(id: string, nuevaFecha: string, horaInicio: string, horaFin: string) {
-    setCitasLocales((prev) => prev.map((c) => c.id === id ? { ...c, fecha: nuevaFecha, horaInicio, horaFin } : c))
+  function handleCambioHoraDone(id: string, nuevaFecha: string, horaInicio: string, horaFin: string, nuevoMedicoId?: string) {
+    setCitasLocales((prev) => prev.map((c) => {
+      if (c.id !== id) return c
+      const updated = { ...c, fecha: nuevaFecha, horaInicio, horaFin }
+      if (nuevoMedicoId) {
+        updated.medicoId = nuevoMedicoId
+        updated.medicoNombre = medicos.find(m => m.id === nuevoMedicoId)?.nombre ?? c.medicoNombre
+      }
+      return updated
+    }))
   }
 
   function abrirNuevaCitaEnDia(dia: string, hora?: string) {
@@ -323,6 +242,9 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
     }
     setBloqueoSeleccionado(null)
   }
+
+  // Mapa de medicoId → color para las tarjetas de cita
+  const medicoColorMap = new Map(medicos.map(m => [m.id, m.color ?? 'blue']))
 
   // Duración del médico filtrado (fallback 30 min)
   const duracionMedico = medicos.find(m => m.id === filtroMedico)?.duracion_consulta ?? 30
@@ -395,15 +317,15 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
 
           {/* View toggle */}
           <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden ml-auto">
-            <button
-              onClick={() =>
-                router.push(buildUrl(listPath, fecha, filtroMedico))
-              }
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors"
-            >
-              <List className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Lista</span>
-            </button>
+            {diaPath && (
+              <button
+                onClick={() => router.push(buildUrl(diaPath, fecha, filtroMedico))}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Día</span>
+              </button>
+            )}
             <button className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-blue-600 text-white border-x border-blue-700">
               <CalendarRange className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Semana</span>
@@ -527,13 +449,6 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
           })
         }
 
-        // Calcular el span de filas de un bloque (cita o bloqueo) en slots de 30 min
-        function calcSpan(horaInicio: string, horaFin: string): number {
-          const [hI, mI] = horaInicio.split(':').map(Number)
-          const [hF, mF] = horaFin.split(':').map(Number)
-          return Math.max(1, Math.round((hF * 60 + mF - hI * 60 - mI) / 30))
-        }
-
         // Número de filas de contenido
         const numRows = horasGrid.length
 
@@ -644,6 +559,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
                             const span = calcSpan(cita.horaInicio, cita.horaFin)
                             const isCancelled = cita.estado === 'cancelada'
                             const isCompleted = cita.estado === 'completada'
+                            const mc = MEDICO_COLORS[(medicoColorMap.get(cita.medicoId) as MedicoColorKey) ?? 'blue'] ?? MEDICO_COLORS.blue
                             return (
                               <div
                                 key={`${dia}-${hora}`}
@@ -652,12 +568,12 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
                               >
                                 <div
                                   onClick={() => setCitaSeleccionada(cita)}
-                                  className={`h-full rounded-lg px-2 py-1 border border-l-4 overflow-hidden ${ESTADO_BORDER[cita.estado]} transition-all cursor-pointer ${
+                                  className={`h-full rounded-lg px-2 py-1 border overflow-hidden transition-all cursor-pointer ${
                                     isCancelled
                                       ? 'border-red-100 bg-red-50/50 opacity-60 hover:opacity-80'
                                       : isCompleted
                                       ? 'border-slate-100 bg-slate-50 opacity-60 hover:opacity-80'
-                                      : 'border-slate-100 bg-white hover:border-slate-300 hover:shadow-sm'
+                                      : `${mc.border} ${mc.fill} ${mc.hover} hover:shadow-sm`
                                   }`}
                                 >
                                   <p className={`text-xs font-bold tabular-nums leading-tight ${isCancelled || isCompleted ? 'text-slate-400' : 'text-slate-700'}`}>
@@ -749,7 +665,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
                           const cita = bloque.cita
                           const isCancelled = cita.estado === 'cancelada'
                           const isCompleted = cita.estado === 'completada'
-                          const medColor = MEDICO_COLOR[cita.medicoId] ?? 'bg-slate-100 text-slate-600'
+                          const mc = MEDICO_COLORS[(medicoColorMap.get(cita.medicoId) as MedicoColorKey) ?? 'blue'] ?? MEDICO_COLORS.blue
                           return (
                             <div
                               key={`${dia}-${hora}`}
@@ -758,14 +674,12 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
                             >
                               <div
                                 onClick={() => setCitaSeleccionada(cita)}
-                                className={`h-full rounded-lg px-2 py-1 border border-l-4 overflow-hidden ${ESTADO_BORDER[cita.estado]} transition-all cursor-pointer ${
+                                className={`h-full rounded-lg px-2 py-1 border overflow-hidden transition-all cursor-pointer ${
                                   isCancelled
                                     ? 'border-red-100 bg-red-50/50 opacity-60 hover:opacity-80'
                                     : isCompleted
                                     ? 'border-slate-100 bg-slate-50 opacity-60 hover:opacity-80'
-                                    : isToday
-                                    ? 'border-blue-100 bg-white hover:border-blue-300 hover:shadow-sm'
-                                    : 'border-slate-100 bg-white hover:border-slate-300 hover:shadow-sm'
+                                    : `${mc.border} ${mc.fill} ${mc.hover} hover:shadow-sm`
                                 }`}
                               >
                                 <p className={`text-xs font-bold tabular-nums leading-tight ${isCancelled || isCompleted ? 'text-slate-400' : 'text-slate-700'}`}>
@@ -780,7 +694,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
                                   <span className={`text-xs truncate ${ESTADO_TEXT[cita.estado]}`}>{ESTADO_LABEL[cita.estado]}</span>
                                 </div>
                                 {span >= 2 && (
-                                  <span className={`inline-block mt-0.5 text-xs px-1 py-0.5 rounded font-medium max-w-full truncate ${medColor}`}>
+                                  <span className={`inline-block mt-0.5 text-xs px-1 py-0.5 rounded font-medium max-w-full truncate ${mc.dot} text-white`}>
                                     {shortMedicoName(cita.medicoNombre)}
                                   </span>
                                 )}
@@ -879,7 +793,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
                         const span = calcSpan(cita.horaInicio, cita.horaFin)
                         const isCancelled = cita.estado === 'cancelada'
                         const isCompleted = cita.estado === 'completada'
-                        const medColor = MEDICO_COLOR[cita.medicoId] ?? 'bg-slate-100 text-slate-600'
+                        const mc = MEDICO_COLORS[(medicoColorMap.get(cita.medicoId) as MedicoColorKey) ?? 'blue'] ?? MEDICO_COLORS.blue
                         return (
                           <div
                             key={`${dia}-${hora}`}
@@ -888,14 +802,12 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
                           >
                             <div
                               onClick={() => setCitaSeleccionada(cita)}
-                              className={`h-full rounded-lg px-2 py-1 border border-l-4 overflow-hidden ${ESTADO_BORDER[cita.estado]} transition-all cursor-pointer ${
+                              className={`h-full rounded-lg px-2 py-1 border overflow-hidden transition-all cursor-pointer ${
                                 isCancelled
                                   ? 'border-red-100 bg-red-50/50 opacity-60 hover:opacity-80'
                                   : isCompleted
                                   ? 'border-slate-100 bg-slate-50 opacity-60 hover:opacity-80'
-                                  : isToday
-                                  ? 'border-blue-100 bg-white hover:border-blue-300 hover:shadow-sm'
-                                  : 'border-slate-100 bg-white hover:border-slate-300 hover:shadow-sm'
+                                  : `${mc.border} ${mc.fill} ${mc.hover} hover:shadow-sm`
                               }`}
                             >
                               <p className={`text-xs font-bold tabular-nums leading-tight ${isCancelled || isCompleted ? 'text-slate-400' : 'text-slate-700'}`}>
@@ -910,7 +822,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
                                 <span className={`text-xs truncate ${ESTADO_TEXT[cita.estado]}`}>{ESTADO_LABEL[cita.estado]}</span>
                               </div>
                               {span >= 2 && (
-                                <span className={`inline-block mt-0.5 text-xs px-1 py-0.5 rounded font-medium max-w-full truncate ${medColor}`}>
+                                <span className={`inline-block mt-0.5 text-xs px-1 py-0.5 rounded font-medium max-w-full truncate ${mc.dot} text-white`}>
                                   {shortMedicoName(cita.medicoNombre)}
                                 </span>
                               )}
@@ -974,6 +886,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, listPat
         cita={citaSeleccionada}
         esDoctor={esDoctor}
         fichaHref={citaSeleccionada && fichaBasePath ? `${fichaBasePath}/${citaSeleccionada.pacienteId}` : undefined}
+        cobroBasePath={cobroBasePath}
         onClose={() => setCitaSeleccionada(null)}
         onEstadoCambiado={(id, estado) => {
           handleEstadoCambiado(id, estado)

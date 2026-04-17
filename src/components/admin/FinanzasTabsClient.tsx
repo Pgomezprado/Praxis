@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { Search } from 'lucide-react'
 import CobrosHoyClient from './CobrosHoyClient'
 import CobrosPendientesClient from './CobrosPendientesClient'
 
@@ -37,21 +38,43 @@ type Props = {
   cobros: CobroUnificado[]
 }
 
+function normalizar(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+}
+
 export default function FinanzasTabsClient({ cobros }: Props) {
   const [tab, setTab] = useState<Tab>('todos')
+  const [query, setQuery] = useState('')
 
-  const filtrados = cobros.filter(c => {
+  const porTab = cobros.filter(c => {
     if (tab === 'todos') return true
     if (tab === 'pendientes') return c.estado === 'pendiente'
     if (tab === 'cobrados') return c.estado === 'pagado'
     return true
   })
 
+  const queryNorm = normalizar(query.trim())
+
+  const filtrados = queryNorm
+    ? porTab.filter(c => {
+        const campos = [
+          c.paciente?.nombre ?? '',
+          c.doctor?.nombre ?? '',
+          c.concepto ?? '',
+          c.folio_cobro ?? '',
+        ]
+        return campos.some(campo => normalizar(campo).includes(queryNorm))
+      })
+    : porTab
+
   const pendientes = filtrados.filter(c => c.estado === 'pendiente')
   const cobradosYAnulados = filtrados.filter(c => c.estado !== 'pendiente')
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Tabs */}
       <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
         {TABS.map(t => (
@@ -74,9 +97,27 @@ export default function FinanzasTabsClient({ cobros }: Props) {
         ))}
       </div>
 
+      {/* Buscador */}
+      <div className="relative w-full sm:max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        <input
+          type="text"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Buscar paciente, profesional o concepto…"
+          className="w-full pl-9 pr-3 py-2 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition"
+        />
+      </div>
+
       {filtrados.length === 0 && (
         <div className="bg-white border border-slate-200 rounded-xl shadow-sm px-5 py-10 text-center">
-          <p className="text-sm text-slate-400">Sin cobros en esta vista</p>
+          {queryNorm ? (
+            <p className="text-sm text-slate-400">
+              Sin resultados para &ldquo;{query.trim()}&rdquo;
+            </p>
+          ) : (
+            <p className="text-sm text-slate-400">Sin cobros en esta vista</p>
+          )}
         </div>
       )}
 

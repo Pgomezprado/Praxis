@@ -230,12 +230,19 @@ export function AgendaEquipoClient({ medicos, citas, fecha }: AgendaEquipoClient
     id: string,
     nuevaFecha: string,
     horaInicio: string,
-    horaFin: string
+    horaFin: string,
+    nuevoMedicoId?: string
   ) {
     setCitasLocales((prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, fecha: nuevaFecha, horaInicio, horaFin } : c
-      )
+      prev.map((c) => {
+        if (c.id !== id) return c
+        const updated = { ...c, fecha: nuevaFecha, horaInicio, horaFin }
+        if (nuevoMedicoId) {
+          updated.medicoId = nuevoMedicoId
+          updated.medicoNombre = medicos.find(m => m.id === nuevoMedicoId)?.nombre ?? c.medicoNombre
+        }
+        return updated
+      })
     )
   }
 
@@ -414,6 +421,7 @@ export function AgendaEquipoClient({ medicos, citas, fecha }: AgendaEquipoClient
             ? `/admin/pacientes/${citaSeleccionada.pacienteId}`
             : undefined
         }
+        cobroBasePath="/admin/cobro"
         onClose={() => setCitaSeleccionada(null)}
         onEstadoCambiado={handleEstadoCambiado}
         onCambioHora={(id) => {

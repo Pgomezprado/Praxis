@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, CreditCard, Banknote, Building2, Loader2, CheckCircle2, Package, AlertCircle } from 'lucide-react'
+import { ArrowLeft, CreditCard, Banknote, Building2, Loader2, CheckCircle2, Package, AlertCircle, Clock } from 'lucide-react'
 import type { MockCita } from '@/types/domain'
 import type { Arancel, PaquetePaciente } from '@/types/database'
 
@@ -10,6 +10,7 @@ interface CobroClientProps {
   cita: MockCita
   aranceles: Arancel[]
   paqueteActivo: PaquetePaciente | null
+  returnPath?: string
 }
 
 const TIPO_LABEL: Record<MockCita['tipo'], string> = {
@@ -18,7 +19,7 @@ const TIPO_LABEL: Record<MockCita['tipo'], string> = {
   urgencia: 'Urgencia',
 }
 
-export function CobroClient({ cita, aranceles, paqueteActivo }: CobroClientProps) {
+export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/agenda/hoy' }: CobroClientProps) {
   const router = useRouter()
 
   // Pre-seleccionar arancel que coincide con el tipo de cita
@@ -30,6 +31,7 @@ export function CobroClient({ cita, aranceles, paqueteActivo }: CobroClientProps
   const [medioPago, setMedioPago] = useState<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo')
   const [referencia, setReferencia] = useState('')
   const [usarPaquete, setUsarPaquete] = useState(false)
+  const [modalidadCobro, setModalidadCobro] = useState<'pagar_ahora' | 'cuenta_por_cobrar'>('pagar_ahora')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -61,7 +63,7 @@ export function CobroClient({ cita, aranceles, paqueteActivo }: CobroClientProps
           const json = await res.json()
           throw new Error(json.error ?? 'Error al consumir sesión del paquete')
         }
-        router.replace(`/agenda/hoy?cobrado=${cita.id}`)
+        router.replace(`${returnPath}?cobrado=${cita.id}`)
         return
       }
 
@@ -69,27 +71,47 @@ export function CobroClient({ cita, aranceles, paqueteActivo }: CobroClientProps
       if (!concepto.trim()) { setError('El concepto es obligatorio'); setLoading(false); return }
       if (isNaN(montoNum) || montoNum <= 0) { setError('Ingresa un monto válido mayor a 0'); setLoading(false); return }
 
-      // Endpoint unificado: crea cobro y pago en una sola operación atómica
-      const resRegistrar = await fetch('/api/finanzas/cobros/registrar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cita_id: cita.id,
-          paciente_id: cita.pacienteId,
-          doctor_id: cita.medicoId,
-          arancel_id: arancelSeleccionado || null,
-          concepto: concepto.trim(),
-          monto_neto: montoNum,
-          medio_pago: medioPago,
-          referencia: referencia.trim() || null,
-        }),
-      })
-      if (!resRegistrar.ok) {
-        const json = await resRegistrar.json()
-        throw new Error(json.error ?? 'Error al registrar el cobro')
+      if (modalidadCobro === 'cuenta_por_cobrar') {
+        // Solo crear cobro como pendiente — sin pago
+        const res = await fetch('/api/finanzas/cobros', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cita_id: cita.id,
+            paciente_id: cita.pacienteId,
+            doctor_id: cita.medicoId,
+            arancel_id: arancelSeleccionado || null,
+            concepto: concepto.trim(),
+            monto_neto: montoNum,
+          }),
+        })
+        if (!res.ok) {
+          const json = await res.json()
+          throw new Error(json.error ?? 'Error al registrar la cuenta por cobrar')
+        }
+      } else {
+        // Cobro + pago atómico
+        const res = await fetch('/api/finanzas/cobros/registrar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cita_id: cita.id,
+            paciente_id: cita.pacienteId,
+            doctor_id: cita.medicoId,
+            arancel_id: arancelSeleccionado || null,
+            concepto: concepto.trim(),
+            monto_neto: montoNum,
+            medio_pago: medioPago,
+            referencia: referencia.trim() || null,
+          }),
+        })
+        if (!res.ok) {
+          const json = await res.json()
+          throw new Error(json.error ?? 'Error al registrar el cobro')
+        }
       }
 
-      router.replace(`/agenda/hoy?cobrado=${cita.id}`)
+      router.replace(`${returnPath}?cobrado=${cita.id}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error inesperado')
       setLoading(false)
@@ -131,7 +153,7 @@ export function CobroClient({ cita, aranceles, paqueteActivo }: CobroClientProps
       </div>
 
       {/* Formulario */}
-      <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-5">
+      <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-2xl p-5 pb-6 shadow-sm space-y-5">
 
         {/* Banner paquete disponible */}
         {paqueteActivo && (
@@ -251,56 +273,103 @@ export function CobroClient({ cita, aranceles, paqueteActivo }: CobroClientProps
               )}
             </div>
 
-            {/* Medio de pago */}
+            {/* Modalidad de cobro */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Medio de pago <span className="text-red-500">*</span>
+                Modalidad de cobro <span className="text-red-500">*</span>
               </label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => setMedioPago('efectivo')}
+                  onClick={() => setModalidadCobro('pagar_ahora')}
                   disabled={loading}
                   className={`flex items-center justify-center gap-2 py-3.5 rounded-xl border text-sm font-medium transition-colors ${
-                    medioPago === 'efectivo'
+                    modalidadCobro === 'pagar_ahora'
                       ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
                       : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
-                  <Banknote className="w-4 h-4" />
-                  Efectivo
+                  <CheckCircle2 className="w-4 h-4" />
+                  Pagar ahora
                 </button>
                 <button
                   type="button"
-                  onClick={() => setMedioPago('tarjeta')}
+                  onClick={() => setModalidadCobro('cuenta_por_cobrar')}
                   disabled={loading}
                   className={`flex items-center justify-center gap-2 py-3.5 rounded-xl border text-sm font-medium transition-colors ${
-                    medioPago === 'tarjeta'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                    modalidadCobro === 'cuenta_por_cobrar'
+                      ? 'border-amber-500 bg-amber-50 text-amber-700 ring-1 ring-amber-500'
                       : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
-                  <CreditCard className="w-4 h-4" />
-                  Tarjeta
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMedioPago('transferencia')}
-                  disabled={loading}
-                  className={`flex items-center justify-center gap-2 py-3.5 rounded-xl border text-sm font-medium transition-colors ${
-                    medioPago === 'transferencia'
-                      ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
-                      : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  <Building2 className="w-4 h-4" />
-                  Transfer.
+                  <Clock className="w-4 h-4" />
+                  Cuenta por cobrar
                 </button>
               </div>
             </div>
 
-            {/* Voucher / referencia */}
-            {(medioPago === 'tarjeta' || medioPago === 'transferencia') && (
+            {/* Aviso cuenta por cobrar */}
+            {modalidadCobro === 'cuenta_por_cobrar' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-700">
+                  Se registrará como deuda pendiente del paciente. Podrás cobrarla después desde <strong>Finanzas</strong> o verla en la <strong>ficha del paciente</strong>.
+                </p>
+              </div>
+            )}
+
+            {/* Medio de pago — solo si paga ahora */}
+            {modalidadCobro === 'pagar_ahora' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Medio de pago <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setMedioPago('efectivo')}
+                    disabled={loading}
+                    className={`flex items-center justify-center gap-2 py-3.5 rounded-xl border text-sm font-medium transition-colors ${
+                      medioPago === 'efectivo'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                        : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Banknote className="w-4 h-4" />
+                    Efectivo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMedioPago('tarjeta')}
+                    disabled={loading}
+                    className={`flex items-center justify-center gap-2 py-3.5 rounded-xl border text-sm font-medium transition-colors ${
+                      medioPago === 'tarjeta'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                        : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    Tarjeta
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMedioPago('transferencia')}
+                    disabled={loading}
+                    className={`flex items-center justify-center gap-2 py-3.5 rounded-xl border text-sm font-medium transition-colors ${
+                      medioPago === 'transferencia'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                        : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4" />
+                    Transfer.
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Voucher / referencia — solo si paga ahora con tarjeta o transferencia */}
+            {modalidadCobro === 'pagar_ahora' && (medioPago === 'tarjeta' || medioPago === 'transferencia') && (
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
                   {medioPago === 'tarjeta' ? 'N° voucher (opcional)' : 'N° operación (opcional)'}
@@ -318,13 +387,26 @@ export function CobroClient({ cita, aranceles, paqueteActivo }: CobroClientProps
 
             {/* Resumen pre-submit */}
             {montoValido && (
-              <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3">
-                <p className="text-sm text-blue-900">
+              <div className={`rounded-xl px-4 py-3 border ${
+                modalidadCobro === 'cuenta_por_cobrar'
+                  ? 'bg-amber-50 border-amber-100'
+                  : 'bg-blue-50 border-blue-100'
+              }`}>
+                <p className={`text-sm ${modalidadCobro === 'cuenta_por_cobrar' ? 'text-amber-900' : 'text-blue-900'}`}>
                   <span className="font-bold text-base">${montoNum.toLocaleString('es-CL')}</span>
-                  <span className="text-blue-400 mx-2">·</span>
-                  <span className="font-medium">{medioPago === 'efectivo' ? 'Efectivo' : medioPago === 'tarjeta' ? 'Tarjeta' : 'Transferencia'}</span>
-                  <span className="text-blue-400 mx-2">·</span>
-                  <span className="text-blue-700">{cita.pacienteNombre}</span>
+                  {modalidadCobro === 'pagar_ahora' ? (
+                    <>
+                      <span className="text-blue-400 mx-2">·</span>
+                      <span className="font-medium">{medioPago === 'efectivo' ? 'Efectivo' : medioPago === 'tarjeta' ? 'Tarjeta' : 'Transferencia'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-amber-400 mx-2">·</span>
+                      <span className="font-medium">Queda pendiente</span>
+                    </>
+                  )}
+                  <span className={`mx-2 ${modalidadCobro === 'cuenta_por_cobrar' ? 'text-amber-400' : 'text-blue-400'}`}>·</span>
+                  <span className={modalidadCobro === 'cuenta_por_cobrar' ? 'text-amber-700' : 'text-blue-700'}>{cita.pacienteNombre}</span>
                 </p>
               </div>
             )}
@@ -338,23 +420,35 @@ export function CobroClient({ cita, aranceles, paqueteActivo }: CobroClientProps
           </div>
         )}
 
-        {/* Botón submit */}
-        <button
-          type="submit"
-          disabled={loading}
-          className={`w-full flex items-center justify-center gap-2 py-4 rounded-xl text-white text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
-            usarPaquete ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-blue-600 hover:bg-blue-700'
-          }`}
-        >
-          {loading ? (
-            <><Loader2 className="w-4 h-4 animate-spin" />Registrando…</>
-          ) : usarPaquete ? (
-            <><Package className="w-4 h-4" />Confirmar sesión del paquete</>
-          ) : (
-            <><CheckCircle2 className="w-4 h-4" />Registrar pago</>
-          )}
-        </button>
       </form>
+
+      {/* Botón submit — fuera del card para que siempre sea visible */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault()
+          const form = document.querySelector('form')
+          if (form) form.requestSubmit()
+        }}
+        disabled={loading}
+        className={`w-full mt-4 flex items-center justify-center gap-2 py-4 rounded-xl text-white text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+          usarPaquete
+            ? 'bg-indigo-600 hover:bg-indigo-700'
+            : modalidadCobro === 'cuenta_por_cobrar'
+              ? 'bg-amber-600 hover:bg-amber-700'
+              : 'bg-blue-600 hover:bg-blue-700'
+        }`}
+      >
+        {loading ? (
+          <><Loader2 className="w-4 h-4 animate-spin" />Registrando…</>
+        ) : usarPaquete ? (
+          <><Package className="w-4 h-4" />Confirmar sesión del paquete</>
+        ) : modalidadCobro === 'cuenta_por_cobrar' ? (
+          <><Clock className="w-4 h-4" />Registrar cuenta por cobrar</>
+        ) : (
+          <><CheckCircle2 className="w-4 h-4" />Registrar pago</>
+        )}
+      </button>
     </div>
   )
 }

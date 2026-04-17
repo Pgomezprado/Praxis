@@ -26,8 +26,9 @@ export async function PATCH(
 
     const esAdmin = usuarioActual.rol === 'admin_clinica'
     const esRecepcionista = usuarioActual.rol === 'recepcionista'
+    const esDoctor = usuarioActual.rol === 'doctor'
 
-    if (!esAdmin && !esRecepcionista) {
+    if (!esAdmin && !esRecepcionista && !esDoctor) {
       return Response.json({ error: 'Sin permisos para editar pacientes' }, { status: 403 })
     }
 
@@ -46,13 +47,13 @@ export async function PATCH(
     const body = await req.json() as Record<string, unknown>
     const { nombre, rut, fecha_nac, email, telefono, prevision, alergias, condiciones, direccion, seguro_complementario, contacto_emergencia_nombre, contacto_emergencia_telefono } = body
 
-    // Recepcionista: solo puede editar campos de contacto, no datos clínicos ni datos personales base
-    const CAMPOS_RECEPCIONISTA = new Set(['telefono', 'email', 'direccion', 'prevision', 'seguro_complementario', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono'])
-    if (esRecepcionista) {
+    // Recepcionista y doctor: solo pueden editar campos de contacto, no datos clínicos ni datos personales base
+    const CAMPOS_CONTACTO = new Set(['telefono', 'email', 'direccion', 'prevision', 'seguro_complementario', 'contacto_emergencia_nombre', 'contacto_emergencia_telefono'])
+    if (esRecepcionista || esDoctor) {
       const camposEnviados = Object.keys(body)
-      const campoClinico = camposEnviados.find(c => !CAMPOS_RECEPCIONISTA.has(c))
-      if (campoClinico) {
-        return Response.json({ error: 'La recepcionista no puede editar datos clínicos' }, { status: 403 })
+      const campoRestringido = camposEnviados.find(c => !CAMPOS_CONTACTO.has(c))
+      if (campoRestringido) {
+        return Response.json({ error: 'Solo se pueden editar datos de contacto del paciente' }, { status: 403 })
       }
     }
 

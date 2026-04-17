@@ -2,8 +2,8 @@ import { redirect } from 'next/navigation'
 import { Clock, CheckCircle2, TrendingUp } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import type { Cobro, Pago } from '@/types/database'
-import CobrosPendientesClient from '@/components/admin/CobrosPendientesClient'
-import CobrosHoyClient from '@/components/admin/CobrosHoyClient'
+import FinanzasRecepcionClient from '@/components/secretaria/FinanzasRecepcionClient'
+import type { CobroConJoins } from '@/components/secretaria/FinanzasRecepcionClient'
 
 export const metadata = { title: 'Finanzas — Praxis' }
 
@@ -100,19 +100,6 @@ export default async function FinanzasPage() {
     .order('created_at', { ascending: false })
     .limit(20)
 
-  type PagoDetalle = {
-    id: string
-    monto: number
-    medio_pago: 'efectivo' | 'tarjeta' | 'transferencia'
-    referencia: string | null
-    fecha_pago: string
-  }
-
-  type CobroConJoins = Cobro & {
-    paciente: { id: string; nombre: string; rut: string | null; email: string | null; telefono: string | null; prevision: string | null; direccion: string | null } | null
-    doctor: { nombre: string } | null
-    pagos?: PagoDetalle[]
-  }
   const ultimosCobros = (ultimosCobrosData ?? []) as unknown as CobroConJoins[]
   const cobrosPendientesList = (cobrosPendientesListData ?? []) as unknown as CobroConJoins[]
 
@@ -169,33 +156,12 @@ export default async function FinanzasPage() {
         </div>
       </div>
 
-      {/* Cobros de hoy */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-slate-800">Cobros de hoy</h2>
-          <span className="text-xs text-slate-400">
-            {new Date(today + 'T12:00:00').toLocaleDateString('es-CL', {
-              weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Santiago',
-            })}
-          </span>
-        </div>
-
-        <CobrosHoyClient cobros={ultimosCobros} />
-      </section>
-
-      {/* Cobros pendientes */}
-      {cobrosPendientesList.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-800">
-              Cobros pendientes
-              <span className="ml-2 text-sm font-normal text-slate-400">({cobrosPendientesList.length})</span>
-            </h2>
-          </div>
-
-          <CobrosPendientesClient cobros={cobrosPendientesList} />
-        </section>
-      )}
+      {/* Buscador + listas (cobros de hoy y pendientes) */}
+      <FinanzasRecepcionClient
+        cobrosHoy={ultimosCobros}
+        cobrosPendientes={cobrosPendientesList}
+        today={today}
+      />
     </div>
   )
 }

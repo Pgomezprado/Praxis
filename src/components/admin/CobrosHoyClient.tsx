@@ -245,6 +245,9 @@ export default function CobrosHoyClient({ cobros: cobrosIniciales }: { cobros: C
                     {pago.referencia && (
                       <span className="text-slate-400 font-mono">#{pago.referencia}</span>
                     )}
+                    <span className="text-slate-400">
+                      {new Date(pago.fecha_pago + 'T12:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
+                    </span>
                   </div>
                 ))}
                 {notasActuales && (

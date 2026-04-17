@@ -1,11 +1,205 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, ChevronRight, FileText, CheckCircle2, Loader2, Search, Sparkles, ShieldCheck, X, Trash2, History } from 'lucide-react'
+import { Plus, ChevronRight, FileText, CheckCircle2, Loader2, Search, Sparkles, ShieldCheck, X, Trash2, History, Circle } from 'lucide-react'
 import { OdontogramaSVG } from './OdontogramaSVG'
 import { ModalEstadoDiente } from './ModalEstadoDiente'
-import type { EstadoDiente, EstadoDienteValor, FichaOdontologica, PlanTratamiento, PlanTratamientoItem, ArancelDental } from '@/types/database'
+import type { EstadoDiente, EstadoDienteValor, EstadoSuperficie, FichaOdontologica, PlanTratamiento, PlanTratamientoItem, ArancelDental, SuperficiesDiente } from '@/types/database'
 import { NOMBRES_DIENTES_FDI, ETIQUETAS_ESTADO } from './nombresDientesFDI'
+
+// ── Etiquetas de cara en español ──────────────────────────────────────────────
+
+const ETIQUETAS_CARA: Record<keyof SuperficiesDiente, string> = {
+  vestibular: 'Vestibular',
+  palatino:   'Palatino / Lingual',
+  mesial:     'Mesial',
+  distal:     'Distal',
+  oclusal:    'Oclusal / Incisal',
+}
+
+// ── PopoverTratamiento ────────────────────────────────────────────────────────
+// Componente flotante que aparece al hacer clic en una cara del odontograma.
+// Se posiciona cerca del elemento clickeado y muestra el catálogo filtrable.
+
+interface PopoverTratamientoProps {
+  pieza: number
+  cara: keyof SuperficiesDiente
+  estadoActual: EstadoSuperficie | undefined
+  rect: DOMRect
+  catalogo: ArancelDental[]
+  cargandoCatalogo: boolean
+  onSeleccionar: (item: ArancelDental) => void
+  onMarcarCaries: () => void
+  onLimpiar: () => void
+  onCerrar: () => void
+}
+
+function PopoverTratamiento({
+  pieza,
+  cara,
+  estadoActual,
+  rect,
+  catalogo,
+  cargandoCatalogo,
+  onSeleccionar,
+  onMarcarCaries,
+  onLimpiar,
+  onCerrar,
+}: PopoverTratamientoProps) {
+  const [busqueda, setBusqueda] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Enfocar el buscador al abrir
+  useEffect(() => {
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }, [])
+
+  // Calcular posición: cerca del elemento, ajustada para no salirse de pantalla
+  const ANCHO_POPOVER = 288 // w-72
+  const ALTO_ESTIMADO = 360
+
+  const viewportW = typeof window !== 'undefined' ? window.innerWidth : 1200
+  const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800
+
+  // Centro del elemento clickeado
+  const centroX = rect.left + rect.width / 2
+  const centroY = rect.top + rect.height / 2
+
+  // Intentar posicionar a la derecha del elemento; si no cabe, a la izquierda
+  let left = centroX + rect.width / 2 + 8
+  if (left + ANCHO_POPOVER > viewportW - 8) {
+    left = centroX - rect.width / 2 - 8 - ANCHO_POPOVER
+  }
+  // Si tampoco cabe a la izquierda, centrar horizontalmente
+  if (left < 8) {
+    left = Math.max(8, (viewportW - ANCHO_POPOVER) / 2)
+  }
+
+  // Intentar posicionar con el top alineado al elemento; ajustar si sale por abajo
+  let top = centroY - 40
+  if (top + ALTO_ESTIMADO > viewportH - 8) {
+    top = viewportH - ALTO_ESTIMADO - 8
+  }
+  if (top < 8) top = 8
+
+  const normalizar = (s: string) =>
+    s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+
+  const filtrados = busqueda.trim().length >= 2
+    ? catalogo.filter(i => normalizar(i.nombre).includes(normalizar(busqueda)))
+    : catalogo.slice(0, 8)
+
+  const nombrePieza = NOMBRES_DIENTES_FDI[pieza]
+    ? NOMBRES_DIENTES_FDI[pieza]
+        .replace('Primer ', '1° ')
+        .replace('Segundo ', '2° ')
+        .replace('Tercer ', '3° ')
+        .replace('superior', 'sup.')
+        .replace('inferior', 'inf.')
+        .replace('derecho', 'der.')
+        .replace('izquierdo', 'izq.')
+    : `Pieza ${pieza}`
+
+  return (
+    <>
+      {/* Overlay para cerrar al hacer clic fuera */}
+      <div
+        className="fixed inset-0 z-40"
+        onClick={onCerrar}
+        aria-hidden="true"
+      />
+
+      {/* Popover */}
+      <div
+        className="fixed z-50 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden"
+        style={{ width: ANCHO_POPOVER, top, left }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Cabecera */}
+        <div className="flex items-start justify-between px-3 pt-3 pb-2 border-b border-slate-100">
+          <div>
+            <p className="text-xs font-bold text-slate-900 leading-tight">
+              Pieza {pieza} — {ETIQUETAS_CARA[cara]}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">{nombrePieza}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onCerrar}
+            className="flex-shrink-0 p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Buscador */}
+        <div className="px-3 pt-2 pb-1">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+            <input
+              ref={inputRef}
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              placeholder="Buscar tratamiento..."
+              className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors"
+            />
+          </div>
+        </div>
+
+        {/* Lista de tratamientos */}
+        <div className="overflow-y-auto max-h-48">
+          {cargandoCatalogo ? (
+            <div className="flex items-center justify-center py-6 gap-2">
+              <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+              <span className="text-xs text-slate-400">Cargando catálogo...</span>
+            </div>
+          ) : filtrados.length === 0 ? (
+            <p className="text-xs text-slate-400 text-center py-5">
+              Sin resultados para &ldquo;{busqueda}&rdquo;
+            </p>
+          ) : (
+            filtrados.map(item => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => onSeleccionar(item)}
+                className="w-full text-left px-3 py-2 flex items-center justify-between gap-2 hover:bg-blue-50 transition-colors group"
+              >
+                <span className="text-sm text-slate-800 truncate group-hover:text-blue-900">{item.nombre}</span>
+                <span className="text-xs text-slate-500 flex-shrink-0 font-medium tabular-nums">
+                  {new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(item.precio_particular)}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+
+        {/* Pie — marcar caries o limpiar */}
+        <div className="px-3 pb-3 pt-2 border-t border-slate-100 space-y-1.5">
+          {(!estadoActual || estadoActual === 'sana' || estadoActual === 'sin_registro') ? (
+            <button
+              type="button"
+              onClick={onMarcarCaries}
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 rounded-xl border border-red-200 transition-colors"
+            >
+              <Circle className="w-3 h-3 fill-red-500 text-red-500" />
+              Solo marcar como caries
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onLimpiar}
+              className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 rounded-xl border border-slate-200 transition-colors"
+            >
+              <Circle className="w-3 h-3 text-slate-400" />
+              Limpiar (marcar como sana)
+            </button>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
 
 // ── Props ──────────────────────────────────────────────────────────────────────
 
@@ -156,7 +350,15 @@ interface FormNuevoPlanProps {
 }
 
 function FormNuevoPlan({ onCrear, onCancelar, piezaSugerida, onPiezaConsumida }: FormNuevoPlanProps) {
-  const [nombre, setNombre] = useState('')
+  const [nombre, setNombre] = useState(() => {
+    const hoy = new Date().toLocaleDateString('es-CL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      timeZone: 'America/Santiago',
+    })
+    return `Plan — ${hoy}`
+  })
   const [items, setItems] = useState<ItemFormData[]>([itemVacio()])
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
@@ -188,7 +390,8 @@ function FormNuevoPlan({ onCrear, onCancelar, piezaSugerida, onPiezaConsumida }:
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!nombre.trim()) { setError('El nombre del plan es requerido'); return }
+    const nombreFinal = nombre.trim() || new Date().toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Santiago' })
+    if (!nombreFinal) { setError('El nombre del plan es requerido'); return }
     if (items.length === 0) { setError('Agrega al menos un procedimiento'); return }
 
     const itemsValidos: { nombre_procedimiento: string; precio_unitario: number; numero_pieza?: number; arancel_id?: string }[] = []
@@ -207,7 +410,7 @@ function FormNuevoPlan({ onCrear, onCancelar, piezaSugerida, onPiezaConsumida }:
     setGuardando(true)
     setError('')
     try {
-      await onCrear(nombre.trim(), itemsValidos)
+      await onCrear(nombreFinal, itemsValidos)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al crear el plan')
     } finally {
@@ -528,7 +731,7 @@ function ResumenHallazgos({ fichaId, estados, generandoPlan, onGenerarPlan }: Re
             {generandoPlan ? (
               <><Loader2 className="w-3 h-3 animate-spin" />Generando...</>
             ) : (
-              <><Sparkles className="w-3 h-3" />Generar plan ({hallazgosSeleccionados.length})</>
+              <><Sparkles className="w-3 h-3" />Crear plan desde hallazgos ({hallazgosSeleccionados.length})</>
             )}
           </button>
         )}
@@ -826,6 +1029,16 @@ export function TabOdontologia({ pacienteId, pacienteNombre, soloLectura = false
   // Comunicación diente→formulario de plan
   const [piezaDesdeOdontograma, setPiezaDesdeOdontograma] = useState<number | null>(null)
 
+  // Popover de tratamientos al hacer clic en una cara del odontograma
+  const [caraSeleccionada, setCaraSeleccionada] = useState<{
+    pieza: number
+    cara: keyof SuperficiesDiente
+    rect: DOMRect
+  } | null>(null)
+  const [catalogoPopover, setCatalogoPopover] = useState<ArancelDental[]>([])
+  const [cargandoCatalogoPopover, setCargandoCatalogoPopover] = useState(false)
+  const catalogoPopoverCargado = useRef(false)
+
   // UI de planes
   const [mostrarFormPlan, setMostrarFormPlan] = useState(false)
   const [planExpandido, setPlanExpandido] = useState<string | null>(null)
@@ -837,6 +1050,7 @@ export function TabOdontologia({ pacienteId, pacienteNombre, soloLectura = false
   const [completandoItem, setCompletandoItem] = useState<string | null>(null)
   const [eliminandoPlan, setEliminandoPlan] = useState<string | null>(null)
   const [confirmandoEliminar, setConfirmandoEliminar] = useState<string | null>(null)
+  const [toastMultiple, setToastMultiple] = useState<{ ok: number; fail: number } | null>(null)
 
   // Modal de consentimiento informado
   const [modalConsentimiento, setModalConsentimiento] = useState<{
@@ -935,8 +1149,203 @@ export function TabOdontologia({ pacienteId, pacienteNombre, soloLectura = false
     setDienteSeleccionado(null)
   }
 
+  async function handleSuperficieClick(
+    numeroPieza: number,
+    cara: keyof SuperficiesDiente,
+    nuevoEstado: EstadoSuperficie
+  ) {
+    if (!ficha) return
+
+    // Actualización optimista inmediata
+    setEstados((prev) => {
+      const estadoActual = prev[numeroPieza] ?? { estado: 'sano' as EstadoDienteValor, superficies: {} }
+      const superficiesActualizadas: SuperficiesDiente = {
+        ...(estadoActual.superficies ?? {}),
+        [cara]: nuevoEstado,
+      }
+      return {
+        ...prev,
+        [numeroPieza]: { ...estadoActual, superficies: superficiesActualizadas },
+      }
+    })
+
+    // Estado previo para revertir si falla
+    const estadoPrevio = estados[numeroPieza]
+
+    try {
+      const estadoActualizado = estados[numeroPieza] ?? { estado: 'sano' as EstadoDienteValor }
+      const superficiesActualizadas: SuperficiesDiente = {
+        ...(estadoActualizado.superficies ?? {}),
+        [cara]: nuevoEstado,
+      }
+
+      const res = await fetch(`/api/odontologia/odontograma/${ficha.id}/estado`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          numero_pieza: numeroPieza,
+          estado: estadoActualizado.estado ?? 'sano',
+          material: estadoActualizado.material ?? undefined,
+          notas: estadoActualizado.notas ?? undefined,
+          superficies_detalle: superficiesActualizadas,
+        }),
+      })
+
+      if (!res.ok) {
+        // Revertir si la API falla
+        setEstados((prev) => ({
+          ...prev,
+          [numeroPieza]: estadoPrevio ?? { estado: 'sano' as EstadoDienteValor, superficies: {} },
+        }))
+      }
+    } catch {
+      // Revertir ante error de red
+      setEstados((prev) => ({
+        ...prev,
+        [numeroPieza]: estadoPrevio ?? { estado: 'sano' as EstadoDienteValor, superficies: {} },
+      }))
+    }
+  }
+
+  // ── Handlers del popover de tratamientos por cara ─────────────────────────
+
+  function handleCaraSelect(numeroPieza: number, cara: keyof SuperficiesDiente, rect: DOMRect) {
+    if (soloLectura || modoMultiple) return
+    setCaraSeleccionada({ pieza: numeroPieza, cara, rect })
+
+    // Cargar el catálogo la primera vez (lazy)
+    if (!catalogoPopoverCargado.current) {
+      setCargandoCatalogoPopover(true)
+      fetch('/api/odontologia/catalogo')
+        .then(r => r.json())
+        .then((json: { categorias?: { items: ArancelDental[] }[] }) => {
+          const todos = (json.categorias ?? []).flatMap(c => c.items)
+          setCatalogoPopover(todos)
+          catalogoPopoverCargado.current = true
+        })
+        .catch(() => { /* silencioso — popover seguirá funcionando sin catálogo */ })
+        .finally(() => setCargandoCatalogoPopover(false))
+    }
+  }
+
+  async function handleTratamientoDesdePopover(item: ArancelDental) {
+    if (!caraSeleccionada || !ficha) return
+    const { pieza, cara } = caraSeleccionada
+
+    // 1. Cerrar el popover de inmediato (UX rápido)
+    setCaraSeleccionada(null)
+
+    // 2. Marcar la cara como 'caries' en el odontograma (optimista)
+    const estadoActual = estados[pieza] ?? { estado: 'sano' as EstadoDienteValor, superficies: {} }
+    const superficiesActualizadas: SuperficiesDiente = {
+      ...(estadoActual.superficies ?? {}),
+      [cara]: 'caries' as EstadoSuperficie,
+    }
+    setEstados(prev => ({
+      ...prev,
+      [pieza]: { ...estadoActual, superficies: superficiesActualizadas },
+    }))
+
+    // 3. Persistir estado de la superficie en la API
+    try {
+      await fetch(`/api/odontologia/odontograma/${ficha.id}/estado`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          numero_pieza: pieza,
+          estado: estadoActual.estado ?? 'sano',
+          material: estadoActual.material ?? undefined,
+          notas: estadoActual.notas ?? undefined,
+          superficies_detalle: superficiesActualizadas,
+        }),
+      })
+    } catch { /* silencioso — el estado se revierte en el siguiente reload */ }
+
+    // 4. Buscar o crear plan activo (borrador o en_curso)
+    let planId: string | null = null
+    const planActivo = planes.find(p => p.estado === 'borrador' || p.estado === 'en_curso')
+
+    if (planActivo) {
+      planId = planActivo.id
+    } else {
+      // Crear plan automático
+      const fecha = new Date().toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'America/Santiago' })
+      try {
+        const resPlan = await fetch(`/api/odontologia/planes/${pacienteId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre: `Plan — ${fecha}`, ficha_odontologica_id: ficha.id }),
+        })
+        if (resPlan.ok) {
+          const { plan } = await resPlan.json() as { plan: PlanTratamiento }
+          setPlanes(prev => [{ ...plan, items: [] }, ...prev])
+          planId = plan.id
+        }
+      } catch { /* si falla la creación del plan, omitir agregar ítem */ }
+    }
+
+    // 5. Agregar ítem al plan
+    if (planId) {
+      try {
+        const resItem = await fetch(`/api/odontologia/planes/plan/${planId}/items`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre_procedimiento: item.nombre,
+            precio_unitario: item.precio_particular,
+            numero_pieza: pieza,
+            arancel_id: item.id,
+          }),
+        })
+        if (resItem.ok) {
+          const { item: itemCreado } = await resItem.json() as { item: PlanTratamientoItem }
+          setPlanes(prev => prev.map(p => {
+            if (p.id !== planId) return p
+            const itemsActualizados = [...(p.items ?? []), itemCreado]
+            const nuevoTotal = itemsActualizados.filter(i => i.activo).reduce((s, i) => s + i.precio_total, 0)
+            return { ...p, items: itemsActualizados, total_estimado: nuevoTotal }
+          }))
+          // Expandir el plan para que el doctor vea el ítem recién agregado
+          setPlanExpandido(planId)
+        }
+      } catch { /* silencioso */ }
+    }
+  }
+
+  async function handleSoloMarcarCaries() {
+    if (!caraSeleccionada || !ficha) return
+    const { pieza, cara } = caraSeleccionada
+    setCaraSeleccionada(null)
+
+    const estadoActual = estados[pieza] ?? { estado: 'sano' as EstadoDienteValor, superficies: {} }
+    const superficiesActualizadas: SuperficiesDiente = {
+      ...(estadoActual.superficies ?? {}),
+      [cara]: 'caries' as EstadoSuperficie,
+    }
+    setEstados(prev => ({
+      ...prev,
+      [pieza]: { ...estadoActual, superficies: superficiesActualizadas },
+    }))
+
+    try {
+      await fetch(`/api/odontologia/odontograma/${ficha.id}/estado`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          numero_pieza: pieza,
+          estado: estadoActual.estado ?? 'sano',
+          material: estadoActual.material ?? undefined,
+          notas: estadoActual.notas ?? undefined,
+          superficies_detalle: superficiesActualizadas,
+        }),
+      })
+    } catch { /* silencioso */ }
+  }
+
   async function handleAplicarEstadoMultiple(_pieza: number, estado: EstadoDiente) {
     if (!ficha || dientesMultiple.size === 0) return
+    let ok = 0
+    let fail = 0
     for (const pieza of dientesMultiple) {
       try {
         const res = await fetch(`/api/odontologia/odontograma/${ficha.id}/estado`, {
@@ -952,13 +1361,18 @@ export function TabOdontologia({ pacienteId, pacienteNombre, soloLectura = false
         })
         if (res.ok) {
           setEstados(prev => ({ ...prev, [pieza]: estado }))
+          ok++
+        } else {
+          fail++
         }
-      } catch { /* continuar con los demás */ }
+      } catch { fail++ }
     }
     setDientesMultiple(new Set())
     setModoMultiple(false)
     setModalMultiple(false)
     setDienteSeleccionado(null)
+    setToastMultiple({ ok, fail })
+    setTimeout(() => setToastMultiple(null), 4000)
   }
 
   async function handleCrearPlan(
@@ -1249,6 +1663,18 @@ export function TabOdontologia({ pacienteId, pacienteNombre, soloLectura = false
 
   return (
     <div className="space-y-6">
+      {/* Toast de feedback para selección múltiple */}
+      {toastMultiple && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${
+          toastMultiple.fail > 0 ? 'bg-amber-50 border border-amber-200 text-amber-800' : 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+        }`}>
+          {toastMultiple.fail > 0
+            ? `${toastMultiple.ok} dientes actualizados, ${toastMultiple.fail} con error`
+            : `${toastMultiple.ok} dientes actualizados`
+          }
+        </div>
+      )}
+
       {/* Layout: odontograma + planes */}
       <div className={`grid grid-cols-1 ${soloLectura ? '' : 'lg:grid-cols-[1fr_340px]'} gap-6`}>
 
@@ -1295,6 +1721,7 @@ export function TabOdontologia({ pacienteId, pacienteNombre, soloLectura = false
             <OdontogramaSVG
               estados={estados}
               onDienteClick={handleDienteClick}
+              onCaraSelect={!soloLectura ? handleCaraSelect : undefined}
               readonly={soloLectura}
               modoMultiple={modoMultiple}
               dientesSeleccionados={dientesMultiple}
@@ -1506,7 +1933,7 @@ export function TabOdontologia({ pacienteId, pacienteNombre, soloLectura = false
         >
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100">
-              <h3 className="text-lg font-bold text-slate-900">Confirmar plan de tratamiento</h3>
+              <h3 className="text-lg font-bold text-slate-900">Crear plan desde hallazgos</h3>
               <p className="text-sm text-slate-500 mt-0.5">Se crearán {previewPlan.length} procedimientos</p>
             </div>
             <div className="px-5 py-4 max-h-[50vh] overflow-y-auto space-y-2">
@@ -1591,6 +2018,67 @@ export function TabOdontologia({ pacienteId, pacienteNombre, soloLectura = false
           nombreProcedimiento={modalConsentimiento.nombreProcedimiento}
           onConfirmar={handleRegistrarConsentimiento}
           onCancelar={() => setModalConsentimiento(null)}
+        />
+      )}
+
+      {/* Popover de tratamientos al hacer clic en una cara del odontograma */}
+      {caraSeleccionada && (
+        <PopoverTratamiento
+          pieza={caraSeleccionada.pieza}
+          cara={caraSeleccionada.cara}
+          estadoActual={estados[caraSeleccionada.pieza]?.superficies?.[caraSeleccionada.cara]}
+          rect={caraSeleccionada.rect}
+          catalogo={catalogoPopover}
+          cargandoCatalogo={cargandoCatalogoPopover}
+          onSeleccionar={handleTratamientoDesdePopover}
+          onMarcarCaries={handleSoloMarcarCaries}
+          onLimpiar={async () => {
+            if (!ficha || !caraSeleccionada) return
+            const { pieza, cara } = caraSeleccionada
+
+            // 1. Eliminar items del plan vinculados a esta pieza que NO tengan presupuesto
+            for (const plan of planes) {
+              // Si el plan ya tiene presupuesto generado, no tocar sus items (son historial)
+              if (presupuestoUrl[plan.id]) continue
+              const itemsPieza = (plan.items ?? []).filter(
+                it => it.numero_pieza === pieza && it.activo && it.estado !== 'completado'
+              )
+              for (const item of itemsPieza) {
+                // Eliminar del state local
+                setPlanes(prev => prev.map(p => {
+                  if (p.id !== plan.id) return p
+                  return { ...p, items: (p.items ?? []).filter(i => i.id !== item.id) }
+                }))
+                // Eliminar en API (soft delete)
+                fetch(`/api/odontologia/planes/items/${item.id}`, { method: 'DELETE' }).catch(() => {})
+              }
+            }
+
+            // 2. Limpiar cara a sana (optimistic)
+            setEstados(prev => {
+              const estadoActual = prev[pieza] ?? { estado: 'sano' as const }
+              const superficiesActuales = estadoActual.superficies ?? {}
+              return {
+                ...prev,
+                [pieza]: { ...estadoActual, superficies: { ...superficiesActuales, [cara]: 'sana' as EstadoSuperficie } },
+              }
+            })
+            setCaraSeleccionada(null)
+
+            // 3. Persistir estado del odontograma
+            try {
+              await fetch(`/api/odontologia/odontograma/${ficha.id}/estado`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  numero_pieza: pieza,
+                  estado: estados[pieza]?.estado ?? 'sano',
+                  superficies_detalle: { ...(estados[pieza]?.superficies ?? {}), [cara]: 'sana' },
+                }),
+              })
+            } catch { /* silencioso — ya se actualizó localmente */ }
+          }}
+          onCerrar={() => setCaraSeleccionada(null)}
         />
       )}
     </div>

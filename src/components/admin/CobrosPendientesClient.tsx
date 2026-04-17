@@ -2,10 +2,18 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, XCircle, Loader2, DollarSign, AlertTriangle } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, DollarSign, AlertTriangle, Banknote, CreditCard, Building2 } from 'lucide-react'
 import { DrawerVerPaciente, type PacienteResumen } from './DrawerVerPaciente'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
+
+type PagoDetalle = {
+  id: string
+  monto: number
+  medio_pago: 'efectivo' | 'tarjeta' | 'transferencia'
+  referencia: string | null
+  fecha_pago: string
+}
 
 type CobroPendiente = {
   id: string
@@ -16,6 +24,7 @@ type CobroPendiente = {
   created_at: string
   paciente: { id?: string; nombre: string; rut?: string | null; email?: string | null; telefono?: string | null; prevision?: string | null; direccion?: string | null } | null
   doctor: { nombre: string } | null
+  pagos?: PagoDetalle[]
 }
 
 type MedioPago = 'efectivo' | 'tarjeta' | 'transferencia'
@@ -40,6 +49,7 @@ export default function CobrosPendientesClient({
   const [montoCobrar, setMontoCobrar] = useState<Record<string, string>>({})
   const [medioPago, setMedioPago] = useState<Record<string, MedioPago>>({})
   const [referencia, setReferencia] = useState<Record<string, string>>({})
+  const [fechaPago, setFechaPago] = useState<Record<string, string>>({})
   const [errorFila, setErrorFila] = useState<Record<string, string>>({})
   const [pacienteDrawer, setPacienteDrawer] = useState<PacienteResumen | null>(null)
 
@@ -69,11 +79,17 @@ export default function CobrosPendientesClient({
     setErrorFila(prev => ({ ...prev, [id]: '' }))
   }
 
+  function getSaldoPendiente(cobro: CobroPendiente): number {
+    const totalAbonado = (cobro.pagos ?? []).reduce((s, p) => s + p.monto, 0)
+    return Math.max(0, cobro.monto_neto - totalAbonado)
+  }
+
   function iniciarCobrar(cobro: CobroPendiente) {
     setEstadoFila(cobro.id, { modo: 'cobrar' })
-    setMontoCobrar(prev => ({ ...prev, [cobro.id]: String(cobro.monto_neto) }))
+    setMontoCobrar(prev => ({ ...prev, [cobro.id]: String(getSaldoPendiente(cobro)) }))
     setMedioPago(prev => ({ ...prev, [cobro.id]: 'efectivo' }))
     setReferencia(prev => ({ ...prev, [cobro.id]: '' }))
+    setFechaPago(prev => ({ ...prev, [cobro.id]: new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }) }))
     setErrorFila(prev => ({ ...prev, [cobro.id]: '' }))
   }
 
@@ -89,6 +105,7 @@ export default function CobrosPendientesClient({
 
     try {
       const refVal = referencia[cobro.id]?.trim() || undefined
+      const fechaVal = fechaPago[cobro.id] || undefined
       const res = await fetch(`/api/finanzas/cobros/${cobro.id}/pagos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -96,6 +113,7 @@ export default function CobrosPendientesClient({
           monto,
           medio_pago: medioPago[cobro.id] ?? 'efectivo',
           ...(refVal ? { referencia: refVal } : {}),
+          ...(fechaVal ? { fecha_pago: fechaVal } : {}),
         }),
       })
 
@@ -146,7 +164,7 @@ export default function CobrosPendientesClient({
         <span>Paciente / Concepto</span>
         <span>Profesional</span>
         <span className="text-right">Monto</span>
-        <span className="text-center">Fecha</span>
+        <span className="text-center">Fecha cobro</span>
         <span className="text-right">Acciones</span>
       </div>
 
@@ -154,6 +172,9 @@ export default function CobrosPendientesClient({
         const estado = getEstado(cobro.id)
         const error = errorFila[cobro.id]
         const esCargando = estado.modo === 'cargando'
+        const totalAbonado = (cobro.pagos ?? []).reduce((s, p) => s + p.monto, 0)
+        const saldo = Math.max(0, cobro.monto_neto - totalAbonado)
+        const tieneAbonos = totalAbonado > 0
 
         return (
           <div
@@ -185,11 +206,22 @@ export default function CobrosPendientesClient({
                 </p>
               </div>
 
-              {/* Monto */}
+              {/* Monto / Saldo */}
               <div className="text-right">
-                <span className="text-sm font-semibold text-slate-900">
-                  ${cobro.monto_neto.toLocaleString('es-CL')}
-                </span>
+                {tieneAbonos ? (
+                  <>
+                    <span className="text-sm font-semibold text-amber-700">
+                      ${saldo.toLocaleString('es-CL')}
+                    </span>
+                    <p className="text-xs text-slate-400">
+                      de ${cobro.monto_neto.toLocaleString('es-CL')}
+                    </p>
+                  </>
+                ) : (
+                  <span className="text-sm font-semibold text-slate-900">
+                    ${cobro.monto_neto.toLocaleString('es-CL')}
+                  </span>
+                )}
               </div>
 
               {/* Fecha */}
@@ -242,12 +274,29 @@ export default function CobrosPendientesClient({
               </div>
             </div>
 
+            {/* Detalle de abonos previos */}
+            {tieneAbonos && estado.modo === 'idle' && (
+              <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1.5">
+                {(cobro.pagos ?? []).map(pago => (
+                  <div key={pago.id} className="flex items-center gap-1.5 text-xs text-slate-500">
+                    {pago.medio_pago === 'efectivo' && <Banknote className="w-3.5 h-3.5 text-emerald-600" />}
+                    {pago.medio_pago === 'tarjeta' && <CreditCard className="w-3.5 h-3.5 text-blue-600" />}
+                    {pago.medio_pago === 'transferencia' && <Building2 className="w-3.5 h-3.5 text-indigo-600" />}
+                    <span>Abono ${pago.monto.toLocaleString('es-CL')}</span>
+                    <span className="text-slate-400">
+                      {new Date(pago.fecha_pago + 'T12:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Panel inline: Cobrar */}
             {estado.modo === 'cobrar' && (
               <div className="mt-3 ml-0 sm:ml-auto sm:max-w-sm p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-3">
                 <p className="text-xs font-semibold text-emerald-800 flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  Registrar pago
+                  {tieneAbonos ? `Registrar abono (saldo: $${saldo.toLocaleString('es-CL')})` : 'Registrar pago'}
                 </p>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -304,6 +353,21 @@ export default function CobrosPendientesClient({
                     />
                   </div>
                 )}
+
+                {/* Fecha de pago */}
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">
+                    Fecha de pago
+                  </label>
+                  <input
+                    type="date"
+                    value={fechaPago[cobro.id] ?? ''}
+                    onChange={e =>
+                      setFechaPago(prev => ({ ...prev, [cobro.id]: e.target.value }))
+                    }
+                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-white"
+                  />
+                </div>
 
                 {error && (
                   <p className="text-xs text-red-600 flex items-center gap-1">

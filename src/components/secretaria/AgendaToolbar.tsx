@@ -2,13 +2,14 @@
 
 import { useRef } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
-import { ChevronLeft, ChevronRight, List, CalendarRange, CalendarDays, Plus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Calendar, CalendarRange, CalendarDays, Plus } from 'lucide-react'
 import type { MockCita } from '@/types/domain'
 
 interface AgendaToolbarProps {
   citas: MockCita[]
   medicos: { id: string; nombre: string; especialidad: string }[]
   onNuevaCita?: () => void
+  diaPath?: string
   listPath?: string
   semanaPath?: string
   mesPath?: string
@@ -31,7 +32,7 @@ function getToday(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 }
 
-export function AgendaToolbar({ citas, medicos, onNuevaCita, listPath = '/agenda/hoy', semanaPath = '/agenda/semana', mesPath, hideMedicoFilter = false }: AgendaToolbarProps) {
+export function AgendaToolbar({ citas, medicos, onNuevaCita, diaPath, listPath = '/agenda/hoy', semanaPath = '/agenda/semana', mesPath, hideMedicoFilter = false }: AgendaToolbarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -40,7 +41,9 @@ export function AgendaToolbar({ citas, medicos, onNuevaCita, listPath = '/agenda
   const today = getToday()
   const fecha = searchParams.get('fecha') ?? today
   const medicoId = searchParams.get('medico') ?? ''
-  const isListaView = pathname === listPath || !pathname.startsWith(semanaPath)
+  const isDiaView = diaPath ? pathname.includes('/dia') : false
+  const isSemanaView = pathname.includes('/semana')
+  const isListaView = !isDiaView && !isSemanaView
 
   function buildUrl(base: string, newFecha: string, newMedico: string): string {
     const params = new URLSearchParams()
@@ -148,27 +151,27 @@ export function AgendaToolbar({ citas, medicos, onNuevaCita, listPath = '/agenda
 
         {/* Toggle vista */}
         <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden ml-auto">
-          <button
-            onClick={() =>
-              router.push(buildUrl(listPath, fecha, medicoId))
-            }
-            aria-label="Vista de lista"
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
-              isListaView
-                ? 'bg-blue-600 text-white'
-                : 'text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            <List className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Lista</span>
-          </button>
+          {diaPath && (
+            <button
+              onClick={() => router.push(buildUrl(diaPath, fecha, medicoId))}
+              aria-label="Vista de día"
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
+                isDiaView || isListaView
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-500 hover:bg-slate-50'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Día</span>
+            </button>
+          )}
           <button
             onClick={() =>
               router.push(buildUrl(semanaPath, fecha, medicoId))
             }
             aria-label="Vista de semana"
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors border-x border-slate-200 ${
-              !isListaView
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors border-l border-slate-200 ${
+              isSemanaView
                 ? 'bg-blue-600 text-white border-blue-700'
                 : 'text-slate-500 hover:bg-slate-50'
             }`}
@@ -180,7 +183,7 @@ export function AgendaToolbar({ citas, medicos, onNuevaCita, listPath = '/agenda
             <button
               onClick={() => router.push(buildUrl(mesPath, fecha, medicoId))}
               aria-label="Vista de mes"
-              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors border-l border-slate-200"
             >
               <CalendarDays className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Mes</span>

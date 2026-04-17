@@ -36,6 +36,20 @@ export default async function MedicoAgendaSemanaPage({
     </div>
   )
 
+  // Determinar si la clínica usa odontología para apuntar el link de ficha al módulo correcto
+  const { data: clinica } = await supabase
+    .from('clinicas')
+    .select('tipo_especialidad')
+    .eq('id', me.clinica_id)
+    .single()
+  const clinicaTyped = clinica as { tipo_especialidad: string | null } | null
+  const tieneOdontologia =
+    clinicaTyped?.tipo_especialidad === 'odontologia' ||
+    clinicaTyped?.tipo_especialidad === 'mixta'
+  const fichaBasePath = tieneOdontologia
+    ? '/medico/odontologia/pacientes'
+    : '/medico/pacientes'
+
   const [fy, fm, fd] = fecha.split('-').map(Number)
   const base = new Date(fy, fm - 1, fd)  // Medianoche local, no UTC
   const diaSemana = base.getDay() === 0 ? 6 : base.getDay() - 1
@@ -62,10 +76,12 @@ export default async function MedicoAgendaSemanaPage({
           medicos={medicos}
           fecha={fecha}
           medicoId={me.id}
+          diaPath="/medico/agenda/dia"
           listPath="/medico/agenda"
           semanaPath="/medico/agenda/semana"
           hideMedicoFilter
           esDoctor
+          fichaBasePath={fichaBasePath}
         />
       </Suspense>
     </div>

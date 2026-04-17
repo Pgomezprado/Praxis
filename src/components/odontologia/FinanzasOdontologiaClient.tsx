@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import {
   DollarSign,
   CalendarDays,
@@ -693,9 +694,18 @@ export function FinanzasOdontologiaClient({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">
-                        {cobro.paciente?.nombre ?? '—'}
-                      </p>
+                      {cobro.paciente?.id ? (
+                        <Link
+                          href={`/medico/odontologia/pacientes/${cobro.paciente.id}`}
+                          className="text-sm font-semibold text-blue-700 hover:underline truncate block"
+                        >
+                          {cobro.paciente.nombre}
+                        </Link>
+                      ) : (
+                        <p className="text-sm font-semibold text-slate-900 truncate">
+                          {cobro.paciente?.nombre ?? '—'}
+                        </p>
+                      )}
                       <p className="text-xs text-slate-500 truncate mt-0.5">{cobro.concepto}</p>
                     </div>
                     <BadgeEstado estado={cobro.estado} />
@@ -758,9 +768,18 @@ export function FinanzasOdontologiaClient({
                     <div className="flex items-center gap-3">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium text-slate-900 truncate">
-                            {cobro.paciente?.nombre ?? '—'}
-                          </p>
+                          {cobro.paciente?.id ? (
+                            <Link
+                              href={`/medico/odontologia/pacientes/${cobro.paciente.id}`}
+                              className="text-sm font-medium text-blue-700 hover:underline truncate"
+                            >
+                              {cobro.paciente.nombre}
+                            </Link>
+                          ) : (
+                            <p className="text-sm font-medium text-slate-900 truncate">
+                              {cobro.paciente?.nombre ?? '—'}
+                            </p>
+                          )}
                           <BadgeEstado estado={cobro.estado} />
                         </div>
                         <p className="text-xs text-slate-400 truncate mt-0.5">{cobro.concepto}</p>

@@ -162,6 +162,10 @@ export async function POST(req: Request) {
     revalidatePath('/medico/agenda/semana', 'page')
     revalidatePath('/agenda/hoy', 'page')
     revalidatePath('/agenda/semana', 'page')
+    revalidatePath('/admin/agenda', 'page')
+    revalidatePath('/admin/agenda/semana', 'page')
+    revalidatePath('/admin/agenda/mes', 'page')
+    revalidatePath('/admin/agenda/equipo', 'page')
 
     return Response.json({ cita: data }, { status: 201 })
   } catch (error) {

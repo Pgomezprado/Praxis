@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { isValidUUID } from '@/lib/utils/validators'
+import { revalidatePath } from 'next/cache'
 
 const ESTADOS_VALIDOS = ['confirmada', 'pendiente', 'en_consulta', 'completada', 'cancelada'] as const
 type EstadoCita = typeof ESTADOS_VALIDOS[number]
@@ -54,11 +55,30 @@ export async function PATCH(
 
       updatePayload = { estado }
     } else if ('fecha' in body && 'hora_inicio' in body && 'hora_fin' in body) {
-      const { fecha, hora_inicio, hora_fin } = body as { fecha: string; hora_inicio: string; hora_fin: string }
+      const { fecha, hora_inicio, hora_fin, doctor_id } = body as {
+        fecha: string; hora_inicio: string; hora_fin: string; doctor_id?: string
+      }
       if (!fecha || !hora_inicio || !hora_fin) {
         return Response.json({ error: 'fecha, hora_inicio y hora_fin son requeridos' }, { status: 400 })
       }
       updatePayload = { fecha, hora_inicio, hora_fin }
+
+      // Cambio de profesional (opcional)
+      if (doctor_id) {
+        if (!isValidUUID(doctor_id)) {
+          return Response.json({ error: 'doctor_id inválido' }, { status: 400 })
+        }
+        const { data: medico } = await supabase
+          .from('usuarios')
+          .select('id')
+          .eq('id', doctor_id)
+          .eq('clinica_id', meTyped.clinica_id)
+          .single()
+        if (!medico) {
+          return Response.json({ error: 'Médico no encontrado en esta clínica' }, { status: 404 })
+        }
+        updatePayload.doctor_id = doctor_id
+      }
     } else {
       return Response.json({ error: 'datos inválidos' }, { status: 400 })
     }
@@ -74,6 +94,16 @@ export async function PATCH(
     if (error || !cita) {
       return Response.json({ error: 'Cita no encontrada o sin permisos' }, { status: 404 })
     }
+
+    // Invalidar cache de todas las vistas de agenda
+    revalidatePath('/agenda/hoy', 'page')
+    revalidatePath('/agenda/semana', 'page')
+    revalidatePath('/medico/agenda', 'page')
+    revalidatePath('/medico/agenda/semana', 'page')
+    revalidatePath('/admin/agenda', 'page')
+    revalidatePath('/admin/agenda/semana', 'page')
+    revalidatePath('/admin/agenda/mes', 'page')
+    revalidatePath('/admin/agenda/equipo', 'page')
 
     return Response.json({ cita })
   } catch (error) {

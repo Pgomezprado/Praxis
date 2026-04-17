@@ -8,5 +8,5 @@ export const metadata: Metadata = {
 }
 
 export default function AgendaPage() {
-  redirect('/agenda/hoy')
+  redirect('/agenda/dia')
 }

@@ -104,7 +104,10 @@ export async function GET() {
     let ingresosMes = 0
     let pendienteCobro = 0
 
-    for (const cobro of cobros) {
+    // Solo considerar cobros no anulados para KPIs de ingresos y pendiente
+    const cobrosNoAnulados = cobros.filter((c) => c.estado !== 'anulado')
+
+    for (const cobro of cobrosNoAnulados) {
       const pagosActivos = (cobro.pagos ?? []).filter((p) => p.activo)
       const sumaPagada = pagosActivos.reduce((acc, p) => acc + p.monto, 0)
 
@@ -131,8 +134,9 @@ export async function GET() {
     }
 
     // ── Separar pendientes y recientes ─────────────────────────────────────
+    // Los cobros anulados no aparecen en "Por cobrar" ni en "Últimos cobros"
     const pendientes = cobros.filter((c) => c.estado === 'pendiente')
-    const recientes = cobros.slice(0, 20)
+    const recientes = cobros.filter((c) => c.estado !== 'anulado').slice(0, 20)
 
     const respuesta: RespuestaFinanzasOdonto = { kpis, pendientes, recientes }
     return Response.json(respuesta)

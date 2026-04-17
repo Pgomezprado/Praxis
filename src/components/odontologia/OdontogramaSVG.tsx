@@ -9,10 +9,22 @@ import { FILA_SUPERIOR, FILA_INFERIOR, ETIQUETAS_ESTADO } from './nombresDientes
 interface OdontogramaSVGProps {
   estados: Record<number, EstadoDiente>
   onDienteClick: (numeroPieza: number) => void
+  /** Modo clásico: cicla estado al hacer clic en cara (sin popover) */
+  onSuperficieClick?: (numeroPieza: number, cara: keyof SuperficiesDiente, nuevoEstado: EstadoSuperficie) => void
+  /** Modo popover: emite pieza + cara + posición al hacer clic en cara */
+  onCaraSelect?: (numeroPieza: number, cara: keyof SuperficiesDiente, rect: DOMRect) => void
   readonly?: boolean
   selectedTooth?: number | null
   modoMultiple?: boolean
   dientesSeleccionados?: Set<number>
+}
+
+// ── Ciclo de estado por cara ───────────────────────────────────────────────────
+
+function ciclarEstadoSuperficie(actual: EstadoSuperficie | undefined): EstadoSuperficie {
+  if (!actual || actual === 'sana' || actual === 'sin_registro') return 'caries'
+  if (actual === 'caries') return 'obturada'
+  return 'sana'
 }
 
 // ── Colores por estado de superficie ──────────────────────────────────────────
@@ -70,24 +82,24 @@ function getTipoDiente(fdi: number): TipoDiente {
     if (pieza === 2) return 'incisivo_lateral_inf'
     if (pieza === 3) return 'canino_inf'
     if (pieza === 4 || pieza === 5) return 'premolar_inf'
-    return 'molar_inf' // 6, 7, 8
+    return 'molar_inf'
   } else {
     if (pieza === 1) return 'incisivo_central_sup'
     if (pieza === 2) return 'incisivo_lateral_sup'
     if (pieza === 3) return 'canino_sup'
     if (pieza === 4 || pieza === 5) return 'premolar_sup'
-    return 'molar_sup' // 6, 7, 8
+    return 'molar_sup'
   }
 }
 
 // ── Silueta anatómica SVG por tipo de diente ─────────────────────────────────
 //
-// ViewBox de la silueta: 28 × 52
-// Superiores: corona ARRIBA (y pequeño), raíz ABAJO (y grande)
-// Inferiores: raíz ARRIBA (y pequeño), corona ABAJO (y grande) — forma invertida
+// ViewBox: 28 × 40 (reducida para hacer el layout más compacto que la original 28×52)
+// Las coordenadas de los paths están escaladas verticalmente desde la versión 28×52
+// usando factor ≈ 0.77. Se mantiene la anatomía pero en tamaño más compacto.
 //
-// Cada silueta devuelve el path de la corona y el path de la raíz por separado,
-// para poder colorear solo la corona según estado.
+// Superiores: corona ARRIBA (y pequeño), raíz ABAJO (y grande)
+// Inferiores: raíz ARRIBA (y pequeño), corona ABAJO (y grande)
 
 interface SiluetaPaths {
   corona: string
@@ -96,71 +108,58 @@ interface SiluetaPaths {
 
 function getSiluetaPaths(tipo: TipoDiente): SiluetaPaths {
   switch (tipo) {
-    // ── SUPERIORES — corona arriba (y pequeño), raíz abajo (y grande) ────
-    // Constricción cervical en y≈20; apex en y≈50
+    // ── SUPERIORES — corona arriba, raíz abajo ────────────────────────────────
     case 'incisivo_central_sup':
       return {
-        // Corona rectangular-redondeada, más ancha que alta
-        corona: 'M4,20 C3,12 5,3 14,2 C23,3 25,12 24,20 C21,22 7,22 4,20 Z',
-        // Raíz cónica, única, termina en ápex
-        raiz:   'M4,20 C7,22 21,22 24,20 C24,32 21,43 14,50 C7,43 4,32 4,20 Z',
+        corona: 'M4,16 C3,9 5,2 14,2 C23,2 25,9 24,16 C21,17 7,17 4,16 Z',
+        raiz:   'M4,16 C7,17 21,17 24,16 C24,25 21,33 14,39 C7,33 4,25 4,16 Z',
       }
     case 'incisivo_lateral_sup':
       return {
-        // Más pequeño que el central, ligeramente más estrecho
-        corona: 'M5,20 C4,12 6,3 14,3 C22,3 24,12 23,20 C21,22 7,22 5,20 Z',
-        raiz:   'M5,20 C7,22 21,22 23,20 C23,32 20,43 14,50 C8,43 5,32 5,20 Z',
+        corona: 'M5,16 C4,9 6,2 14,2 C22,2 24,9 23,16 C21,17 7,17 5,16 Z',
+        raiz:   'M5,16 C7,17 21,17 23,16 C23,25 20,33 14,39 C8,33 5,25 5,16 Z',
       }
     case 'canino_sup':
       return {
-        // Cúspide puntiaguda prominente en el centro; raíz muy larga
-        corona: 'M4,22 C3,14 8,4 14,1 C20,4 25,14 24,22 C21,24 7,24 4,22 Z',
-        raiz:   'M4,22 C7,24 21,24 24,22 C24,34 21,45 14,51 C7,45 4,34 4,22 Z',
+        corona: 'M4,17 C3,11 8,3 14,1 C20,3 25,11 24,17 C21,19 7,19 4,17 Z',
+        raiz:   'M4,17 C7,19 21,19 24,17 C24,26 21,34 14,39 C7,34 4,26 4,17 Z',
       }
     case 'premolar_sup':
       return {
-        // Dos cúspides (bucal más alta, palatina más baja); raíz bifurcada
-        corona: 'M2,21 C2,13 5,5 10,3 C12,1 13,5 14,6 C15,5 16,1 18,3 C23,5 26,13 26,21 C23,23 5,23 2,21 Z',
-        raiz:   'M2,21 C5,23 23,23 26,21 C26,31 24,39 20,46 C18,42 16,40 14,40 C12,40 10,42 8,46 C4,39 2,31 2,21 Z',
+        corona: 'M2,16 C2,10 5,4 10,2 C12,1 13,4 14,5 C15,4 16,1 18,2 C23,4 26,10 26,16 C23,18 5,18 2,16 Z',
+        raiz:   'M2,16 C5,18 23,18 26,16 C26,24 24,30 20,36 C18,32 16,31 14,31 C12,31 10,32 8,36 C4,30 2,24 2,16 Z',
       }
     case 'molar_sup':
       return {
-        // Corona muy ancha con múltiples cúspides; tres raíces (base amplia)
-        corona: 'M1,20 C1,12 3,5 8,3 C10,2 12,4 14,5 C16,4 18,2 20,3 C25,5 27,12 27,20 C24,22 4,22 1,20 Z',
-        raiz:   'M1,20 C4,22 24,22 27,20 C27,30 25,40 21,47 C19,43 17,40 14,40 C11,40 9,43 7,47 C3,40 1,30 1,20 Z',
+        corona: 'M1,15 C1,9 3,4 8,2 C10,2 12,3 14,4 C16,3 18,2 20,2 C25,4 27,9 27,15 C24,17 4,17 1,15 Z',
+        raiz:   'M1,15 C4,17 24,17 27,15 C27,23 25,31 21,36 C19,33 17,31 14,31 C11,31 9,33 7,36 C3,31 1,23 1,15 Z',
       }
 
-    // ── INFERIORES — raíz arriba (y pequeño), corona abajo (y grande) ────
-    // Constricción cervical en y≈29; ápex en y≈51
+    // ── INFERIORES — raíz arriba, corona abajo ────────────────────────────────
     case 'incisivo_central_inf':
       return {
-        // Corona más estrecha que el superior; raíz única, larga
-        corona: 'M5,30 C8,28 20,28 23,30 C24,40 22,50 14,51 C6,50 4,40 5,30 Z',
-        raiz:   'M5,30 C8,28 20,28 23,30 C23,20 21,9 14,2 C7,9 5,20 5,30 Z',
+        corona: 'M5,23 C8,21 20,21 23,23 C24,31 22,38 14,39 C6,38 4,31 5,23 Z',
+        raiz:   'M5,23 C8,21 20,21 23,23 C23,16 21,7 14,1 C7,7 5,16 5,23 Z',
       }
     case 'incisivo_lateral_inf':
       return {
-        // Levemente más ancho que el central inferior
-        corona: 'M5,30 C7,28 21,28 23,30 C24,40 21,50 14,51 C7,50 4,40 5,30 Z',
-        raiz:   'M5,30 C7,28 21,28 23,30 C23,20 21,8 14,2 C7,8 5,20 5,30 Z',
+        corona: 'M5,23 C7,21 21,21 23,23 C24,31 21,38 14,39 C7,38 4,31 5,23 Z',
+        raiz:   'M5,23 C7,21 21,21 23,23 C23,16 21,6 14,1 C7,6 5,16 5,23 Z',
       }
     case 'canino_inf':
       return {
-        // Cúspide hacia arriba en la corona; raíz larga y delgada
-        corona: 'M4,29 C7,27 21,27 24,29 C25,39 22,50 14,51 C6,50 3,39 4,29 Z',
-        raiz:   'M4,29 C7,27 21,27 24,29 C24,18 21,8 14,1 C7,8 4,18 4,29 Z',
+        corona: 'M4,22 C7,20 21,20 24,22 C25,30 22,38 14,39 C6,38 3,30 4,22 Z',
+        raiz:   'M4,22 C7,20 21,20 24,22 C24,14 21,6 14,1 C7,6 4,14 4,22 Z',
       }
     case 'premolar_inf':
       return {
-        // Una cúspide principal (bucal), raíz ligeramente bifurcada
-        corona: 'M3,29 C5,27 23,27 25,29 C26,40 23,50 14,51 C5,50 2,40 3,29 Z',
-        raiz:   'M3,29 C5,27 23,27 25,29 C25,19 22,10 18,5 C16,3 14,4 14,4 C14,4 12,3 10,5 C6,10 3,19 3,29 Z',
+        corona: 'M3,22 C5,20 23,20 25,22 C26,31 23,38 14,39 C5,38 2,31 3,22 Z',
+        raiz:   'M3,22 C5,20 23,20 25,22 C25,15 22,8 18,4 C16,2 14,3 14,3 C14,3 12,2 10,4 C6,8 3,15 3,22 Z',
       }
     case 'molar_inf':
       return {
-        // Corona más ancha; dos raíces mesial y distal bien definidas
-        corona: 'M2,28 C4,26 24,26 26,28 C27,39 24,50 14,51 C4,50 1,39 2,28 Z',
-        raiz:   'M2,28 C4,26 24,26 26,28 C26,18 23,9 19,4 C17,2 15,3 14,3 C13,3 11,2 9,4 C5,9 2,18 2,28 Z',
+        corona: 'M2,21 C4,20 24,20 26,21 C27,30 24,38 14,39 C4,38 1,30 2,21 Z',
+        raiz:   'M2,21 C4,20 24,20 26,21 C26,14 23,7 19,3 C17,1 15,2 14,2 C13,2 11,1 9,3 C5,7 2,14 2,21 Z',
       }
   }
 }
@@ -171,10 +170,14 @@ function SiluetaDiente({
   fdi,
   estado,
   isSelected,
+  onClick,
+  readonly,
 }: {
   fdi: number
   estado: EstadoDiente | undefined
   isSelected: boolean
+  onClick: () => void
+  readonly: boolean
 }) {
   const tipo = getTipoDiente(fdi)
   const estadoValor = (estado?.estado ?? 'sano') as EstadoDienteValor
@@ -189,26 +192,24 @@ function SiluetaDiente({
   const esConducto   = estadoValor === 'tratamiento_conducto'
   const esInferior   = tipo.endsWith('_inf')
 
-  // Stroke del diente: azul si está seleccionado
   const strokeColor = isSelected ? '#3b82f6' : colores.stroke
   const strokeWidth = isSelected ? 2 : 1.5
   const strokeDash  = esExtraccion ? '4 2.5' : undefined
 
-  // ID único para clipPath de efectos especiales
   const clipId = `sil-clip-${fdi}`
-
-  // Para implante: el patrón hatch va en la raíz
-  // Para corona: relleno dorado en la corona
-  // Para conducto: línea roja en la raíz
-  // Para fractura: línea diagonal en la corona
 
   return (
     <svg
       width="28"
-      height="52"
-      viewBox="0 0 28 52"
+      height="40"
+      viewBox="0 0 28 40"
       aria-hidden="true"
-      className="flex-shrink-0"
+      className={[
+        'flex-shrink-0',
+        !readonly ? 'cursor-pointer' : 'cursor-default',
+      ].join(' ')}
+      onClick={!readonly ? onClick : undefined}
+      style={{ display: 'block' }}
     >
       <defs>
         <clipPath id={`${clipId}-corona`}>
@@ -219,7 +220,17 @@ function SiluetaDiente({
         </clipPath>
       </defs>
 
-      {/* ── Raíz — siempre en blanco-gris neutro ── */}
+      {/* Hover overlay — invisible rect que captura el hover sobre toda la silueta */}
+      {!readonly && (
+        <rect
+          x="0" y="0" width="28" height="40"
+          fill="transparent"
+          className="hover:fill-blue-50 hover:fill-opacity-30 transition-colors"
+          style={{ pointerEvents: 'all' }}
+        />
+      )}
+
+      {/* Raíz */}
       <path
         d={paths.raiz}
         fill={esAusente ? 'none' : '#e8edf2'}
@@ -227,9 +238,10 @@ function SiluetaDiente({
         strokeWidth={strokeWidth}
         strokeDasharray={strokeDash}
         strokeLinejoin="round"
+        style={{ pointerEvents: 'none' }}
       />
 
-      {/* ── Corona — recibe el color del estado ── */}
+      {/* Corona */}
       <path
         d={paths.corona}
         fill={esAusente ? 'none' : colores.fill}
@@ -237,95 +249,94 @@ function SiluetaDiente({
         strokeWidth={strokeWidth}
         strokeDasharray={strokeDash}
         strokeLinejoin="round"
+        style={{ pointerEvents: 'none' }}
       />
-
-      {/* ── Efectos especiales por estado ── */}
 
       {/* Implante: líneas horizontales en la raíz (hatch tipo tornillo) */}
       {esImplante && (
-        <g clipPath={`url(#${clipId}-raiz)`}>
+        <g clipPath={`url(#${clipId}-raiz)`} style={{ pointerEvents: 'none' }}>
           {esInferior ? (
-            // Raíz arriba
             <>
-              <line x1="5" y1="8"  x2="23" y2="8"  stroke="#7c3aed" strokeWidth="1.2" strokeLinecap="round" />
-              <line x1="5" y1="13" x2="23" y2="13" stroke="#7c3aed" strokeWidth="1.2" strokeLinecap="round" />
-              <line x1="5" y1="18" x2="23" y2="18" stroke="#7c3aed" strokeWidth="1.2" strokeLinecap="round" />
+              <line x1="5" y1="6"  x2="23" y2="6"  stroke="#7c3aed" strokeWidth="1.2" strokeLinecap="round" />
+              <line x1="5" y1="10" x2="23" y2="10" stroke="#7c3aed" strokeWidth="1.2" strokeLinecap="round" />
+              <line x1="5" y1="14" x2="23" y2="14" stroke="#7c3aed" strokeWidth="1.2" strokeLinecap="round" />
             </>
           ) : (
-            // Raíz abajo
             <>
-              <line x1="5" y1="34" x2="23" y2="34" stroke="#7c3aed" strokeWidth="1.2" strokeLinecap="round" />
-              <line x1="5" y1="40" x2="23" y2="40" stroke="#7c3aed" strokeWidth="1.2" strokeLinecap="round" />
-              <line x1="5" y1="46" x2="23" y2="46" stroke="#7c3aed" strokeWidth="1.2" strokeLinecap="round" />
+              <line x1="5" y1="26" x2="23" y2="26" stroke="#7c3aed" strokeWidth="1.2" strokeLinecap="round" />
+              <line x1="5" y1="31" x2="23" y2="31" stroke="#7c3aed" strokeWidth="1.2" strokeLinecap="round" />
+              <line x1="5" y1="36" x2="23" y2="36" stroke="#7c3aed" strokeWidth="1.2" strokeLinecap="round" />
             </>
           )}
         </g>
       )}
 
-      {/* Corona prostética: relleno dorado semitransparente en la corona */}
+      {/* Corona prostética: relleno dorado semitransparente */}
       {esCorona && (
         <path
           d={paths.corona}
           fill="#fbbf24"
           fillOpacity="0.55"
           stroke="none"
+          style={{ pointerEvents: 'none' }}
         />
       )}
 
       {/* Tratamiento de conducto: línea roja en la raíz */}
       {esConducto && (
-        <g clipPath={`url(#${clipId}-raiz)`}>
+        <g clipPath={`url(#${clipId}-raiz)`} style={{ pointerEvents: 'none' }}>
           {esInferior ? (
-            <line x1="14" y1="2" x2="14" y2="28" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" />
+            <line x1="14" y1="1" x2="14" y2="22" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" />
           ) : (
-            <line x1="14" y1="24" x2="14" y2="50" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" />
+            <line x1="14" y1="18" x2="14" y2="39" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" />
           )}
         </g>
       )}
 
       {/* Fractura: línea diagonal en la corona */}
       {esFractura && (
-        <g clipPath={`url(#${clipId}-corona)`}>
+        <g clipPath={`url(#${clipId}-corona)`} style={{ pointerEvents: 'none' }}>
           {esInferior ? (
-            <line x1="5" y1="28" x2="23" y2="48" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2" />
+            <line x1="5" y1="21" x2="23" y2="37" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2" />
           ) : (
-            <line x1="5" y1="4"  x2="23" y2="22" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2" />
+            <line x1="5" y1="3"  x2="23" y2="17" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeDasharray="3 2" />
           )}
         </g>
       )}
 
       {/* Extracción indicada: X roja sobre la corona */}
       {esExtraccion && (
-        <g clipPath={`url(#${clipId}-corona)`}>
+        <g clipPath={`url(#${clipId}-corona)`} style={{ pointerEvents: 'none' }}>
           {esInferior ? (
             <>
-              <line x1="7"  y1="30" x2="21" y2="46" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
-              <line x1="21" y1="30" x2="7"  y2="46" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
+              <line x1="7"  y1="23" x2="21" y2="36" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
+              <line x1="21" y1="23" x2="7"  y2="36" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
             </>
           ) : (
             <>
-              <line x1="7"  y1="5"  x2="21" y2="22" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
-              <line x1="21" y1="5"  x2="7"  y2="22" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
+              <line x1="7"  y1="4"  x2="21" y2="17" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
+              <line x1="21" y1="4"  x2="7"  y2="17" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" />
             </>
           )}
         </g>
       )}
 
-      {/* Ausente: X gris sobre toda la silueta */}
+      {/* Ausente: silueta punteada gris */}
       {esAusente && (
         <>
-          <path d={paths.corona} fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="4 2.5" strokeLinejoin="round" />
-          <path d={paths.raiz}   fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="4 2.5" strokeLinejoin="round" />
+          <path d={paths.corona} fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="4 2.5" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
+          <path d={paths.raiz}   fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeDasharray="4 2.5" strokeLinejoin="round" style={{ pointerEvents: 'none' }} />
         </>
       )}
     </svg>
   )
 }
 
-// ── Círculo de 5 caras clickeables ───────────────────────────────────────────
+// ── Círculo de 5 caras individualmente clickeables ────────────────────────────
 //
 // ViewBox: 36×36. Círculo centrado en (18,18), radio 17.
-// Zonas: 4 triángulos clipeados + círculo oclusal central.
+// Cada cara (triángulo o círculo central) tiene su propio onClick que cicla el estado.
+// Las líneas divisorias se renderizan encima de las caras para no capturar eventos.
 
 function CirculoSuperficies({
   fdi,
@@ -334,6 +345,9 @@ function CirculoSuperficies({
   estadoValor,
   colores,
   isSelected,
+  readonly,
+  onCaraClick,
+  onCaraSelect,
 }: {
   fdi: number
   superficies: SuperficiesDiente
@@ -341,6 +355,9 @@ function CirculoSuperficies({
   estadoValor: EstadoDienteValor
   colores: { fill: string; stroke: string; text: string }
   isSelected: boolean
+  readonly: boolean
+  onCaraClick?: (cara: keyof SuperficiesDiente, nuevoEstado: EstadoSuperficie) => void
+  onCaraSelect?: (cara: keyof SuperficiesDiente, rect: DOMRect) => void
 }) {
   const esExtraccion = estadoValor === 'extraccion_indicada'
   const esImplante   = estadoValor === 'implante'
@@ -362,10 +379,30 @@ function CirculoSuperficies({
   const strokeWidth = isSelected ? 2.5 : esCorona || esImplante ? 2.5 : 1.5
   const clipId = `circ-clip-${fdi}`
 
+  function handleCara(cara: keyof SuperficiesDiente, e: React.MouseEvent) {
+    e.stopPropagation() // no propagar al wrapper padre (modal)
+    if (readonly || !tieneSuperf) return
+    // Modo popover: emite posición para mostrar el popover de tratamientos
+    if (onCaraSelect) {
+      const rect = (e.currentTarget as SVGElement).getBoundingClientRect()
+      onCaraSelect(cara, rect)
+      return
+    }
+    // Modo clásico: cicla estado directamente
+    if (!onCaraClick) return
+    const nuevoEstado = ciclarEstadoSuperficie(superficies[cara])
+    onCaraClick(cara, nuevoEstado)
+  }
+
+  const caraStyle = (cara: keyof SuperficiesDiente): React.CSSProperties => ({
+    cursor: !readonly && tieneSuperf ? 'pointer' : 'default',
+    outline: 'none',
+  })
+
   return (
     <svg
-      width="36"
-      height="36"
+      width="44"
+      height="44"
       viewBox="0 0 36 36"
       aria-hidden="true"
       className="flex-shrink-0"
@@ -395,37 +432,71 @@ function CirculoSuperficies({
 
           {tieneSuperf ? (
             <>
-              {/* Zonas clipeadas al círculo */}
+              {/* ── Caras clickeables clipeadas al círculo ── */}
               <g clipPath={`url(#${clipId})`}>
                 {/* Vestibular — triángulo superior */}
-                <polygon points="18,18 0,0 36,0"   fill={colorSuperficie(superficies.vestibular)} />
+                <polygon
+                  points="18,18 0,0 36,0"
+                  fill={colorSuperficie(superficies.vestibular)}
+                  onClick={(e) => handleCara('vestibular', e)}
+                  style={caraStyle('vestibular')}
+                  className={!readonly && tieneSuperf ? 'hover:opacity-80 transition-opacity' : ''}
+                />
                 {/* Distal — triángulo derecho */}
-                <polygon points="18,18 36,0 36,36"  fill={colorSuperficie(superficies.distal)} />
+                <polygon
+                  points="18,18 36,0 36,36"
+                  fill={colorSuperficie(superficies.distal)}
+                  onClick={(e) => handleCara('distal', e)}
+                  style={caraStyle('distal')}
+                  className={!readonly && tieneSuperf ? 'hover:opacity-80 transition-opacity' : ''}
+                />
                 {/* Palatino/lingual — triángulo inferior */}
-                <polygon points="18,18 36,36 0,36"  fill={colorSuperficie(superficies.palatino)} />
+                <polygon
+                  points="18,18 36,36 0,36"
+                  fill={colorSuperficie(superficies.palatino)}
+                  onClick={(e) => handleCara('palatino', e)}
+                  style={caraStyle('palatino')}
+                  className={!readonly && tieneSuperf ? 'hover:opacity-80 transition-opacity' : ''}
+                />
                 {/* Mesial — triángulo izquierdo */}
-                <polygon points="18,18 0,36 0,0"    fill={colorSuperficie(superficies.mesial)} />
+                <polygon
+                  points="18,18 0,36 0,0"
+                  fill={colorSuperficie(superficies.mesial)}
+                  onClick={(e) => handleCara('mesial', e)}
+                  style={caraStyle('mesial')}
+                  className={!readonly && tieneSuperf ? 'hover:opacity-80 transition-opacity' : ''}
+                />
               </g>
 
-              {/* Oclusal central */}
+              {/* Oclusal central — encima de los triángulos */}
               <circle
-                cx="18" cy="18" r="7"
+                cx="18" cy="18" r="9"
                 fill={colorSuperficie(superficies.oclusal)}
                 stroke="#64748b"
                 strokeWidth="0.8"
+                onClick={(e) => handleCara('oclusal', e)}
+                style={caraStyle('oclusal')}
+                className={!readonly && tieneSuperf ? 'hover:opacity-80 transition-opacity' : ''}
               />
 
-              {/* Borde exterior encima de todo */}
+              {/* Borde exterior — encima de todo, no captura clicks */}
               <circle
                 cx="18" cy="18" r="17"
                 fill="none"
                 stroke={strokeCirculo}
                 strokeWidth={strokeWidth}
                 strokeDasharray={esExtraccion ? '4 2.5' : undefined}
+                style={{ pointerEvents: 'none' }}
               />
-              {/* Solo 2 diagonales → exactamente 5 caras */}
-              <line x1="5.6" y1="5.6"  x2="30.4" y2="30.4" stroke="#64748b" strokeWidth="0.7" />
-              <line x1="30.4" y1="5.6" x2="5.6"  y2="30.4" stroke="#64748b" strokeWidth="0.7" />
+              {/* Líneas divisorias — solo entre borde exterior y círculo central (r=9), no cruzan la cara oclusal */}
+              {/* Diagonal ↘: esquina superior-izq → borde del oclusal */}
+              <line x1="5.6" y1="5.6" x2="11.64" y2="11.64" stroke="#64748b" strokeWidth="0.7" style={{ pointerEvents: 'none' }} />
+              {/* Diagonal ↘: borde del oclusal → esquina inferior-der */}
+              <line x1="24.36" y1="24.36" x2="30.4" y2="30.4" stroke="#64748b" strokeWidth="0.7" style={{ pointerEvents: 'none' }} />
+              {/* Diagonal ↙: esquina superior-der → borde del oclusal */}
+              <line x1="30.4" y1="5.6" x2="24.36" y2="11.64" stroke="#64748b" strokeWidth="0.7" style={{ pointerEvents: 'none' }} />
+              {/* Diagonal ↙: borde del oclusal → esquina inferior-izq */}
+              <line x1="11.64" y1="24.36" x2="5.6" y2="30.4" stroke="#64748b" strokeWidth="0.7" style={{ pointerEvents: 'none' }} />
             </>
           ) : (
             <>
@@ -461,18 +532,26 @@ function CirculoSuperficies({
 }
 
 // ── Componente de un diente — silueta + círculo 5 caras + número FDI ─────────
+//
+// La silueta es un área clickeable separada que abre el modal de estado completo.
+// Las caras del círculo son clickeables individualmente y ciclan su propio estado.
+// El wrapper div ya no es un <button> único — cada área tiene su propio handler.
 
 function Diente({
   numero,
   estado,
-  onClick,
+  onSiluetaClick,
+  onCaraClick,
+  onCaraSelect,
   readonly,
   isSelected,
   esSuperior,
 }: {
   numero: number
   estado: EstadoDiente | undefined
-  onClick: () => void
+  onSiluetaClick: () => void
+  onCaraClick?: (cara: keyof SuperficiesDiente, nuevoEstado: EstadoSuperficie) => void
+  onCaraSelect?: (cara: keyof SuperficiesDiente, rect: DOMRect) => void
   readonly: boolean
   isSelected: boolean
   esSuperior: boolean
@@ -483,30 +562,28 @@ function Diente({
   const tieneSuperf = ESTADOS_CON_SUPERFICIES.has(estadoValor)
 
   const labelEstado = estado ? (ETIQUETAS_ESTADO[estadoValor] ?? estadoValor) : 'sano'
-
-  // Número FDI: color según estado
   const colorNumero = isSelected ? '#2563eb' : colores.text
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={readonly}
-      title={`${numero} — ${labelEstado}`}
+    <div
       className={[
         'flex flex-col items-center gap-0.5 px-0.5 py-1 rounded-lg',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400',
-        !readonly ? 'hover:bg-slate-100 active:bg-slate-200 cursor-pointer' : 'cursor-default',
-        isSelected ? 'bg-blue-50 ring-1 ring-blue-300' : '',
         'transition-colors duration-100',
+        isSelected ? 'bg-blue-50 ring-1 ring-blue-300' : '',
       ].join(' ')}
+      title={`${numero} — ${labelEstado}`}
       aria-label={`Diente ${numero}, ${labelEstado}`}
-      aria-pressed={isSelected}
     >
       {esSuperior ? (
-        // SUPERIOR: silueta ARRIBA → círculo ABAJO → número FDI
+        // SUPERIOR: silueta (click→modal) → círculo (click por cara) → número
         <>
-          <SiluetaDiente fdi={numero} estado={estado} isSelected={isSelected} />
+          <SiluetaDiente
+            fdi={numero}
+            estado={estado}
+            isSelected={isSelected}
+            onClick={onSiluetaClick}
+            readonly={readonly}
+          />
           <CirculoSuperficies
             fdi={numero}
             superficies={superficies}
@@ -514,6 +591,9 @@ function Diente({
             estadoValor={estadoValor}
             colores={colores}
             isSelected={isSelected}
+            readonly={readonly}
+            onCaraClick={onCaraClick}
+            onCaraSelect={onCaraSelect}
           />
           <span
             style={{ color: colorNumero, fontSize: '11px', fontWeight: 600, lineHeight: 1 }}
@@ -523,7 +603,7 @@ function Diente({
           </span>
         </>
       ) : (
-        // INFERIOR: número FDI → círculo ARRIBA → silueta ABAJO
+        // INFERIOR: número → círculo (click por cara) → silueta (click→modal)
         <>
           <span
             style={{ color: colorNumero, fontSize: '11px', fontWeight: 600, lineHeight: 1 }}
@@ -538,11 +618,20 @@ function Diente({
             estadoValor={estadoValor}
             colores={colores}
             isSelected={isSelected}
+            readonly={readonly}
+            onCaraClick={onCaraClick}
+            onCaraSelect={onCaraSelect}
           />
-          <SiluetaDiente fdi={numero} estado={estado} isSelected={isSelected} />
+          <SiluetaDiente
+            fdi={numero}
+            estado={estado}
+            isSelected={isSelected}
+            onClick={onSiluetaClick}
+            readonly={readonly}
+          />
         </>
       )}
-    </button>
+    </div>
   )
 }
 
@@ -591,6 +680,10 @@ function Leyenda() {
               </div>
             ))}
           </div>
+          {/* Instrucción de uso */}
+          <p className="text-[10px] text-slate-400 text-center">
+            Clic en cara del círculo: asigna tratamiento · Clic en la silueta: abre estado completo
+          </p>
           {/* Estados generales */}
           <div className="flex flex-wrap gap-x-3 gap-y-1.5 justify-center">
             {itemsEstado.map(({ estado, label }) => {
@@ -621,16 +714,48 @@ function Leyenda() {
 export function OdontogramaSVG({
   estados,
   onDienteClick,
+  onSuperficieClick,
+  onCaraSelect,
   readonly = false,
   selectedTooth = null,
   modoMultiple = false,
   dientesSeleccionados,
 }: OdontogramaSVGProps) {
+
+  function renderDiente(num: number, esSuperior: boolean) {
+    const isSelected = selectedTooth === num || (modoMultiple && (dientesSeleccionados?.has(num) ?? false))
+    const estadoDiente = estados[num]
+    const estadoValor = (estadoDiente?.estado ?? 'sano') as EstadoDienteValor
+    const tieneSuperf = ESTADOS_CON_SUPERFICIES.has(estadoValor)
+
+    return (
+      <Diente
+        key={num}
+        numero={num}
+        estado={estadoDiente}
+        onSiluetaClick={() => onDienteClick(num)}
+        onCaraClick={
+          !readonly && tieneSuperf && onSuperficieClick && !onCaraSelect
+            ? (cara, nuevoEstado) => onSuperficieClick(num, cara, nuevoEstado)
+            : undefined
+        }
+        onCaraSelect={
+          !readonly && tieneSuperf && onCaraSelect
+            ? (cara, rect) => onCaraSelect(num, cara, rect)
+            : undefined
+        }
+        readonly={readonly}
+        isSelected={isSelected}
+        esSuperior={esSuperior}
+      />
+    )
+  }
+
   return (
     <div className="w-full overflow-x-auto">
       <div className="min-w-[560px]">
 
-        {/* Fila superior — maxilar (silueta arriba, número abajo) */}
+        {/* Fila superior — maxilar */}
         <div className="mb-1">
           <p className="text-[10px] text-slate-400 text-center mb-1 font-medium uppercase tracking-wider">
             Superior — Maxilar
@@ -638,33 +763,13 @@ export function OdontogramaSVG({
           <div className="flex justify-center gap-px">
             {/* Cuadrante 1: 18→11 (derecho del paciente, izquierda visual) */}
             <div className="flex gap-px">
-              {FILA_SUPERIOR.slice(0, 8).map((num) => (
-                <Diente
-                  key={num}
-                  numero={num}
-                  estado={estados[num]}
-                  onClick={() => onDienteClick(num)}
-                  readonly={readonly}
-                  isSelected={selectedTooth === num || (modoMultiple && (dientesSeleccionados?.has(num) ?? false))}
-                  esSuperior={true}
-                />
-              ))}
+              {FILA_SUPERIOR.slice(0, 8).map((num) => renderDiente(num, true))}
             </div>
             {/* Línea media vertical */}
             <div className="w-px bg-slate-300 mx-1 self-stretch" aria-hidden="true" />
             {/* Cuadrante 2: 21→28 (izquierdo del paciente, derecha visual) */}
             <div className="flex gap-px">
-              {FILA_SUPERIOR.slice(8).map((num) => (
-                <Diente
-                  key={num}
-                  numero={num}
-                  estado={estados[num]}
-                  onClick={() => onDienteClick(num)}
-                  readonly={readonly}
-                  isSelected={selectedTooth === num || (modoMultiple && (dientesSeleccionados?.has(num) ?? false))}
-                  esSuperior={true}
-                />
-              ))}
+              {FILA_SUPERIOR.slice(8).map((num) => renderDiente(num, true))}
             </div>
           </div>
         </div>
@@ -678,38 +783,18 @@ export function OdontogramaSVG({
           <div className="h-px bg-slate-200 flex-1" />
         </div>
 
-        {/* Fila inferior — mandíbula (número arriba, silueta abajo) */}
+        {/* Fila inferior — mandíbula */}
         <div className="mt-1">
           <div className="flex justify-center gap-px">
             {/* Cuadrante 4: 48→41 (derecho del paciente, izquierda visual) */}
             <div className="flex gap-px">
-              {FILA_INFERIOR.slice(0, 8).map((num) => (
-                <Diente
-                  key={num}
-                  numero={num}
-                  estado={estados[num]}
-                  onClick={() => onDienteClick(num)}
-                  readonly={readonly}
-                  isSelected={selectedTooth === num || (modoMultiple && (dientesSeleccionados?.has(num) ?? false))}
-                  esSuperior={false}
-                />
-              ))}
+              {FILA_INFERIOR.slice(0, 8).map((num) => renderDiente(num, false))}
             </div>
             {/* Línea media vertical */}
             <div className="w-px bg-slate-300 mx-1 self-stretch" aria-hidden="true" />
             {/* Cuadrante 3: 31→38 (izquierdo del paciente, derecha visual) */}
             <div className="flex gap-px">
-              {FILA_INFERIOR.slice(8).map((num) => (
-                <Diente
-                  key={num}
-                  numero={num}
-                  estado={estados[num]}
-                  onClick={() => onDienteClick(num)}
-                  readonly={readonly}
-                  isSelected={selectedTooth === num || (modoMultiple && (dientesSeleccionados?.has(num) ?? false))}
-                  esSuperior={false}
-                />
-              ))}
+              {FILA_INFERIOR.slice(8).map((num) => renderDiente(num, false))}
             </div>
           </div>
           <p className="text-[10px] text-slate-400 text-center mt-1 font-medium uppercase tracking-wider">

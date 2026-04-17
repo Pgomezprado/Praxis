@@ -3,7 +3,7 @@ import { mapCitaDb } from '@/lib/utils/mapCita'
 import type { MockCita, HorarioSemanal } from '@/types/domain'
 import type { BloqueoHorario } from '@/app/api/bloqueos/route'
 
-export type MedicoAgenda = { id: string; nombre: string; especialidad: string; duracion_consulta: number }
+export type MedicoAgenda = { id: string; nombre: string; especialidad: string; duracion_consulta: number; color: string }
 
 export async function getClinicsId() {
   const supabase = await createClient()
@@ -108,11 +108,29 @@ export async function getBloqueosByRango(
   return (data ?? []) as BloqueoHorario[]
 }
 
+/** Obtiene los horarios semanales de TODOS los médicos de la clínica */
+export async function getHorariosAllMedicos(
+  clinicaId: string,
+): Promise<Record<string, HorarioSemanal>> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('horarios')
+    .select('doctor_id, horario')
+    .eq('clinica_id', clinicaId)
+
+  const map: Record<string, HorarioSemanal> = {}
+  for (const row of (data ?? [])) {
+    const r = row as { doctor_id: string; horario: HorarioSemanal | null }
+    if (r.horario) map[r.doctor_id] = r.horario
+  }
+  return map
+}
+
 export async function getMedicos(clinicaId: string): Promise<MedicoAgenda[]> {
   const supabase = await createClient()
   const { data } = await supabase
     .from('usuarios')
-    .select('id, nombre, especialidad, duracion_consulta')
+    .select('id, nombre, especialidad, duracion_consulta, color_agenda')
     .eq('clinica_id', clinicaId)
     .or('rol.eq.doctor,es_doctor.eq.true')
     .eq('activo', true)
@@ -123,5 +141,6 @@ export async function getMedicos(clinicaId: string): Promise<MedicoAgenda[]> {
     nombre: d.nombre,
     especialidad: d.especialidad ?? '',
     duracion_consulta: Number.isFinite((d as { duracion_consulta: number | null }).duracion_consulta) ? (d as { duracion_consulta: number | null }).duracion_consulta! : 30,
+    color: (d as any).color_agenda ?? 'blue',
   }))
 }

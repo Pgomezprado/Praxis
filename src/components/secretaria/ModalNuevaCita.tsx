@@ -28,8 +28,7 @@ const TIPO_CONSULTA = [
 const DURACIONES_MIN = [15, 30, 45, 60, 75, 90]
 
 function getToday() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 }
 
 export function ModalNuevaCita({
@@ -65,21 +64,23 @@ export function ModalNuevaCita({
       setFecha(fechaInicial ?? getToday())
       setSlot(horaInicial ?? '')
       setHoraManual('')
-      setDuracion(30)
+      // Usar duración del médico preseleccionado, o 30 min por defecto
+      const medicoInicial = medicos.find((m) => m.id === medicoIdInicial)
+      setDuracion(medicoInicial?.duracion_consulta ?? 30)
       setMotivo('')
       setTipo('control')
       setEnviarEmail(true)
       setEnviarSms(false)
     }
-  }, [open, medicoIdInicial, fechaInicial, horaInicial])
+  }, [open, medicoIdInicial, fechaInicial, horaInicial]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Recalcular slot disponible al cambiar médico o fecha
+  // Recalcular slot disponible al cambiar médico, fecha o duración
   useEffect(() => {
     setSlot('')
     setHoraManual('')
     setErrorSlots(false)
     setErrorCrear(null)
-  }, [medicoId, fecha])
+  }, [medicoId, fecha, duracion])
 
   // Horario real del médico (cargado al cambiar médico)
   const [horarioMedico, setHorarioMedico] = useState<HorarioSemanal | null>(null)

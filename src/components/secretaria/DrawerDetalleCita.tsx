@@ -40,6 +40,7 @@ interface DrawerDetalleCitaProps {
   cita: MockCita | null
   esDoctor?: boolean
   fichaHref?: string
+  cobroBasePath?: string
   onClose: () => void
   onEstadoCambiado: (id: string, nuevoEstado: MockCita['estado']) => void
   onCambioHora: (id: string) => void
@@ -51,6 +52,7 @@ export function DrawerDetalleCita({
   cita,
   esDoctor = false,
   fichaHref,
+  cobroBasePath = '/cobro',
   onClose,
   onEstadoCambiado,
   onCambioHora,
@@ -416,7 +418,7 @@ export function DrawerDetalleCita({
           {/* Cobrar — solo recepcionista/admin, no médico (el cobro lo hace la recepción) */}
           {!esDoctor && isCompletada && (
             <Link
-              href={`/cobro/${cita.id}`}
+              href={`${cobroBasePath}/${cita.id}`}
               className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
               onClick={onClose}
             >

@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import { Search, ChevronDown, Plus, ArrowRight, Pencil, PowerOff, Send } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { DrawerMedico } from './DrawerMedico'
@@ -12,11 +11,9 @@ import { type Especialidad } from '@/types/database'
 type Props = {
   medicosIniciales: MockMedicoAdmin[]
   especialidades: Especialidad[]
-  currentUserId: string
 }
 
-export function MedicosClient({ medicosIniciales, especialidades, currentUserId }: Props) {
-  const router = useRouter()
+export function MedicosClient({ medicosIniciales, especialidades }: Props) {
   const [medicos, setMedicos] = useState<MockMedicoAdmin[]>(medicosIniciales)
   const [busqueda, setBusqueda] = useState('')
   const [filtroEsp, setFiltroEsp] = useState('')
@@ -46,11 +43,6 @@ export function MedicosClient({ medicosIniciales, especialidades, currentUserId 
   }
 
   function abrirEditar(medico: MockMedicoAdmin) {
-    // El admin que edita su propio perfil va a Configuración, no al drawer de médicos
-    if (medico.id === currentUserId && medico.esAdmin) {
-      router.push('/admin/configuracion')
-      return
-    }
     setMedicoEditar(medico)
     setDrawerOpen(true)
   }

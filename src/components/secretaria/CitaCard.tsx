@@ -18,6 +18,8 @@ interface CitaCardProps {
   sesionesRestantesPaquete?: number
   /** True si esta cita ya tiene un cobro registrado (no anulado) */
   yaCobrada?: boolean
+  /** Ruta base para el cobro (ej: '/admin/cobro' o '/cobro') */
+  cobroBasePath?: string
   /** Callback para abrir el flujo de cambio de hora */
   onCambioHora?: (id: string) => void
 }
@@ -40,7 +42,7 @@ const TIPO_LABEL: Record<MockCita['tipo'], string> = {
   urgencia: 'Urgencia',
 }
 
-export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoCambiado, sesionesRestantesPaquete, yaCobrada = false, onCambioHora }: CitaCardProps) {
+export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoCambiado, sesionesRestantesPaquete, yaCobrada = false, cobroBasePath = '/cobro', onCambioHora }: CitaCardProps) {
   const router = useRouter()
   const [estadoLocal, setEstadoLocal] = useState(cita.estado)
   const [loading, setLoading] = useState(false)
@@ -182,7 +184,7 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
               </span>
             ) : (
               <button
-                onClick={() => router.push(`/cobro/${cita.id}`)}
+                onClick={() => router.push(`${cobroBasePath}/${cita.id}`)}
                 title="Registrar cobro"
                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
               >

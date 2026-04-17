@@ -39,6 +39,8 @@ export interface Usuario {
   medicos_asignados: string[]
   // Campo agregado en migración 009
   es_doctor: boolean
+  // Campo agregado en migración 055
+  porcentaje_honorario: number | null
 }
 
 export interface Paciente {
@@ -385,7 +387,7 @@ export interface PlanTratamientoItem {
   updated_at: string
 }
 
-export type EstadoPresupuesto = 'borrador' | 'enviado' | 'aceptado' | 'rechazado' | 'vencido'
+export type EstadoPresupuesto = 'borrador' | 'enviado' | 'aceptado' | 'rechazado' | 'vencido' | 'anulado'
 
 export interface PresupuestoDental {
   id: string

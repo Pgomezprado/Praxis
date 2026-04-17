@@ -63,6 +63,9 @@ export default async function AgendaHoyPage({
           medicos={medicos}
           fecha={fecha}
           medicoId={medicoId}
+          diaPath="/agenda/dia"
+          listPath="/agenda/hoy"
+          semanaPath="/agenda/semana"
           citasCobradas={citasCobradas}
         />
       </Suspense>

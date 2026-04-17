@@ -25,12 +25,26 @@ export async function PATCH(
     }
 
     // Campos actualizables (filtra los que lleguen en el body)
-    const allowed = ['nombre', 'email', 'especialidad', 'rut', 'telefono', 'duracion_consulta', 'medicos_asignados', 'activo', 'es_doctor']
+    const allowed = ['nombre', 'email', 'especialidad', 'rut', 'telefono', 'duracion_consulta', 'medicos_asignados', 'activo', 'es_doctor', 'color_agenda', 'porcentaje_honorario']
     const updates: Record<string, unknown> = {}
     for (const key of allowed) {
       if (key in body) {
         // No sobreescribir especialidad si llega vacía o nula — conservar la existente en DB
         if (key === 'especialidad' && (body[key] === null || body[key] === undefined || body[key] === '')) {
+          continue
+        }
+        // Validar porcentaje_honorario: null (limpiar) o número 0-100
+        if (key === 'porcentaje_honorario') {
+          const val = body[key]
+          if (val !== null && val !== undefined) {
+            const num = Number(val)
+            if (isNaN(num) || num < 0 || num > 100) {
+              return Response.json({ error: 'El honorario debe ser un porcentaje entre 0 y 100' }, { status: 400 })
+            }
+            updates[key] = num
+          } else {
+            updates[key] = null
+          }
           continue
         }
         updates[key] = body[key]

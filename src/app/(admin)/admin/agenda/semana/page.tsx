@@ -48,10 +48,12 @@ export default async function AdminAgendaSemanaPage({
           medicos={medicos}
           fecha={fecha}
           medicoId={medicoId}
+          diaPath="/admin/agenda/dia"
           listPath="/admin/agenda"
           semanaPath="/admin/agenda/semana"
           mesPath="/admin/agenda/mes"
           fichaBasePath="/admin/pacientes"
+          cobroBasePath="/admin/cobro"
         />
       </Suspense>
     </div>

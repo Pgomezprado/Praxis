@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import {
   CheckCircle2, FileText, Building2, User, Phone, ChevronLeft,
-  CreditCard, X, Loader2, AlertCircle, Mail, Printer,
+  CreditCard, X, Loader2, AlertCircle, Mail, Printer, Ban,
 } from 'lucide-react'
 import Link from 'next/link'
 import type { PresupuestoDental, Paciente, PlanTratamientoItem, Cobro, Pago } from '@/types/database'
@@ -383,8 +383,38 @@ export function PresupuestoDentalClient({
   const [emailEnviado, setEmailEnviado] = useState(false)
   const [errorEmail, setErrorEmail] = useState('')
 
+  // Estado anulación
+  const [estadoPresupuesto, setEstadoPresupuesto] = useState(presupuesto.estado)
+  const [confirmandoAnular, setConfirmandoAnular] = useState(false)
+  const [anulando, setAnulando] = useState(false)
+  const [errorAnular, setErrorAnular] = useState('')
+
   const yaAceptado = aceptado || presupuesto.estado === 'aceptado'
-  const vencido = presupuesto.estado === 'vencido' || presupuesto.estado === 'rechazado'
+  const vencido = estadoPresupuesto === 'vencido' || estadoPresupuesto === 'rechazado'
+  const anulado = estadoPresupuesto === 'anulado'
+
+  async function handleAnular() {
+    setAnulando(true)
+    setErrorAnular('')
+    try {
+      const res = await fetch(`/api/odontologia/presupuestos/${presupuesto.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion: 'anular' }),
+      })
+      if (!res.ok) {
+        const body = await res.json() as { error?: string }
+        setErrorAnular(body.error ?? 'Error al anular el presupuesto')
+        return
+      }
+      setEstadoPresupuesto('anulado')
+      setConfirmandoAnular(false)
+    } catch {
+      setErrorAnular('Error de conexión. Intenta nuevamente.')
+    } finally {
+      setAnulando(false)
+    }
+  }
 
   async function handleAceptar() {
     if (!nombreAcepta.trim()) {
@@ -447,7 +477,7 @@ export function PresupuestoDentalClient({
 
       {/* ── Back ── */}
       <Link
-        href={`/medico/pacientes/${paciente.id}`}
+        href={`/medico/odontologia/pacientes/${paciente.id}`}
         className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
       >
         <ChevronLeft className="w-4 h-4" />
@@ -581,7 +611,7 @@ export function PresupuestoDentalClient({
       )}
 
       {/* ── Acciones del médico: email e imprimir ── */}
-      {doctorId && !vencido && (
+      {doctorId && !vencido && !anulado && (
         <div className="flex flex-col sm:flex-row gap-2 print:hidden">
           {/* Botón enviar por email — solo si el paciente tiene email */}
           {paciente.email && (
@@ -614,6 +644,65 @@ export function PresupuestoDentalClient({
         </div>
       )}
 
+      {/* ── Anular presupuesto (solo visible para clínica y si no está ya anulado/vencido/rechazado) ── */}
+      {doctorId && !anulado && !vencido && (
+        <div className="print:hidden">
+          {!confirmandoAnular ? (
+            <button
+              onClick={() => setConfirmandoAnular(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-red-600 bg-white border border-red-200 rounded-xl hover:bg-red-50 transition-colors"
+            >
+              <Ban className="w-4 h-4" />
+              Anular presupuesto
+            </button>
+          ) : (
+            <div className="border border-red-200 bg-red-50 rounded-xl p-4 space-y-3">
+              <p className="text-sm font-medium text-red-800">
+                ¿Confirmas que deseas anular este presupuesto?
+              </p>
+              <p className="text-xs text-red-600">
+                Se anulará el presupuesto y cualquier cobro pendiente vinculado. Esta acción no se puede deshacer.
+              </p>
+              {errorAnular && (
+                <div className="flex items-start gap-2 p-2.5 bg-white border border-red-200 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-700">{errorAnular}</p>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAnular}
+                  disabled={anulando}
+                  className="flex-1 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                >
+                  {anulando ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Anulando...</>
+                  ) : (
+                    <><Ban className="w-3.5 h-3.5" /> Sí, anular</>
+                  )}
+                </button>
+                <button
+                  onClick={() => { setConfirmandoAnular(false); setErrorAnular('') }}
+                  disabled={anulando}
+                  className="flex-1 py-2 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 text-sm font-medium border border-slate-200 rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Banner: presupuesto anulado ── */}
+      {anulado && (
+        <div className="bg-slate-100 border border-slate-300 rounded-2xl p-5 text-center print:hidden">
+          <Ban className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+          <p className="text-sm font-semibold text-slate-600">Presupuesto anulado</p>
+          <p className="text-xs text-slate-500 mt-1">Este presupuesto fue anulado y ya no está vigente.</p>
+        </div>
+      )}
+
       {/* Feedback email */}
       {doctorId && emailEnviado && (
         <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl print:hidden">
@@ -629,7 +718,8 @@ export function PresupuestoDentalClient({
       )}
 
       {/* ── Sección de aceptación ── */}
-      {yaAceptado ? (
+      {/* No mostrar nada de aceptación si el presupuesto está anulado (el banner de anulado ya aparece arriba) */}
+      {!anulado && (yaAceptado ? (
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center">
           <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
           <h3 className="text-base font-bold text-emerald-800 mb-1">Presupuesto aceptado</h3>
@@ -711,10 +801,10 @@ export function PresupuestoDentalClient({
             </button>
           </div>
         )
-      )}
+      ))}
 
-      {/* ── Sección de cobro (solo si está aceptado y hay doctorId — vista médico) ── */}
-      {yaAceptado && doctorId && (
+      {/* ── Sección de cobro (solo si está aceptado, no anulado, y hay doctorId — vista médico) ── */}
+      {yaAceptado && !anulado && doctorId && (
         <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3">
           <h3 className="text-base font-semibold text-slate-800">Cobro</h3>
 

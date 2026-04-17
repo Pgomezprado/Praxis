@@ -71,42 +71,50 @@ export function ListaDia({ citas, showMedico = false, esDoctor = false, citasCob
   )
   const window = SLOTS_DIA.slice(firstIdx, lastIdx + 1)
 
+  // Mapear citas al slot más cercano (soporta horas no-estándar como "09:15")
+  // Usa un array por slot para soportar múltiples profesionales en el mismo horario
+  const citasByHora = new Map<string, MockCita[]>()
+  for (const c of sorted) {
+    const slotIdx = getSlotIndex(c.horaInicio)
+    const slotKey = SLOTS_DIA[slotIdx] ?? c.horaInicio
+    const existing = citasByHora.get(slotKey) ?? []
+    existing.push(c)
+    citasByHora.set(slotKey, existing)
+  }
+
   // Slots ocupados (interior de una cita — entre inicio y fin)
+  // No marcar un slot como ocupado si otra cita EMPIEZA en ese slot
   const occupiedSlots = new Set<string>()
   for (const cita of sorted) {
     const startIdx = getSlotIndex(cita.horaInicio)
     const endIdx = getSlotIndex(cita.horaFin)
     for (let i = startIdx + 1; i < endIdx; i++) {
-      if (SLOTS_DIA[i]) occupiedSlots.add(SLOTS_DIA[i])
-    }
-  }
-
-  // Mapear citas al slot más cercano (soporta horas no-estándar como "09:15")
-  const citasByHora = new Map<string, MockCita>()
-  for (const c of sorted) {
-    const slotIdx = getSlotIndex(c.horaInicio)
-    const slotKey = SLOTS_DIA[slotIdx] ?? c.horaInicio
-    if (!citasByHora.has(slotKey)) {
-      citasByHora.set(slotKey, c)
+      if (SLOTS_DIA[i] && !citasByHora.has(SLOTS_DIA[i])) {
+        occupiedSlots.add(SLOTS_DIA[i])
+      }
     }
   }
 
   return (
     <div className="space-y-1.5">
       {window.map((slot) => {
-        const cita = citasByHora.get(slot)
+        const citasEnSlot = citasByHora.get(slot)
 
-        if (cita) {
+        if (citasEnSlot && citasEnSlot.length > 0) {
           return (
-            <CitaCard
-              key={cita.id}
-              cita={cita}
-              showMedico={showMedico}
-              esDoctor={esDoctor}
-              yaCobrada={citasCobradas?.has(cita.id) ?? false}
-              onEstadoCambiado={onEstadoCambiado}
-              onCambioHora={onCambioHora}
-            />
+            <div key={slot} className="space-y-1.5">
+              {citasEnSlot.map((cita) => (
+                <CitaCard
+                  key={cita.id}
+                  cita={cita}
+                  showMedico={showMedico}
+                  esDoctor={esDoctor}
+                  yaCobrada={citasCobradas?.has(cita.id) ?? false}
+                  onEstadoCambiado={onEstadoCambiado}
+                  onCambioHora={onCambioHora}
+                />
+              ))}
+            </div>
           )
         }
 

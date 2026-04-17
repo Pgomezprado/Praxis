@@ -38,6 +38,8 @@ export type MockMedicoAdmin = {
   invitacionPendiente: boolean
   // Campo agregado para distinguir admin-doctor del doctor puro
   esAdmin?: boolean
+  colorAgenda?: string
+  porcentajeHonorario?: number | null
 }
 
 export type MockSecretaria = {

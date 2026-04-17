@@ -522,7 +522,7 @@ export function FichaDentalClient({ paciente, consultas }: FichaDentalClientProp
           <TabOdontologia
             pacienteId={paciente.id}
             pacienteNombre={paciente.nombre}
-            soloLectura
+            soloLectura={false}
           />
         )}
 

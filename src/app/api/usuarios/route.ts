@@ -48,7 +48,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { nombre, email, rut, telefono, especialidad, duracion_consulta, rol, medicos_asignados } = body
+    const { nombre, email, rut, telefono, especialidad, duracion_consulta, rol, medicos_asignados, color_agenda } = body
 
     if (!nombre || !email || !rol) {
       return Response.json({ error: 'nombre, email y rol son requeridos' }, { status: 400 })
@@ -138,6 +138,7 @@ export async function POST(req: Request) {
         telefono: telefono ?? null,
         duracion_consulta: duracion_consulta ?? 30,
         medicos_asignados: medicos_asignados ?? [],
+        color_agenda: color_agenda ?? 'blue',
       })
       .select()
       .single()

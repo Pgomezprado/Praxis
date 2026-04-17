@@ -1,0 +1,1 @@
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS color_agenda TEXT DEFAULT 'blue';

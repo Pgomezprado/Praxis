@@ -54,7 +54,7 @@ RECEPCIONISTA                    MÉDICO                         ADMIN
 | Iniciar consulta (en_consulta) | No | Si | Si (si es_doctor) |
 | **Cobrar consulta** | **Si** | **No** | **Si** |
 | Crear paciente | Si | No | Si |
-| Editar datos de contacto del paciente | Si (whitelist) | No | Si |
+| Editar datos de contacto del paciente | Si (whitelist) | Si (whitelist) | Si |
 | Editar datos clínicos (alergias, condiciones) | No | Si | Si (si es_doctor) |
 | Escribir historia clínica | No | Si | Si (si es_doctor) |
 | Generar receta | No | Si | Si (si es_doctor) |

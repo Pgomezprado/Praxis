@@ -32,27 +32,36 @@ export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false,
 
   const navItems: NavItem[] = [
     { href: '/medico/inicio',    label: 'Inicio',      icon: LayoutDashboard, exact: true  },
-    { href: '/medico/citas',     label: 'Mis citas',   icon: CalendarDays,    exact: false },
-    ...((esParticular && esAdmin) ? [
-      { href: '/admin/agenda/mes', label: 'Agenda', icon: CalendarDays, exact: false },
-    ] : []),
-    // En clínicas veterinarias se muestra "Mascotas" en lugar de "Pacientes"
+    // Particular: solo "Agenda" (sin "Mis citas" duplicado). No-particular: ambas.
+    ...((esParticular && esAdmin)
+      ? [{ href: '/admin/agenda/mes', label: 'Agenda', icon: CalendarDays, exact: false }]
+      : [{ href: '/medico/citas',     label: 'Mis citas',   icon: CalendarDays,    exact: false }]
+    ),
+    // Particular con odontología: solo lista dental. Sin odonto: lista genérica.
     ...(esVeterinaria
       ? [{ href: '/medico/veterinaria', label: 'Mascotas', icon: PawPrint, exact: false }]
-      : [{ href: '/medico/pacientes',   label: 'Pacientes', icon: Users,    exact: false }]
+      : [{ href: '/medico/pacientes', label: 'Pacientes', icon: Users, exact: false }]
     ),
-    ...(tieneOdontologia ? [
-      { href: '/medico/odontologia/catalogo', label: 'Catálogo dental', icon: BookOpen,   exact: false, separator: 'Odontología' },
-      ...(!esParticular ? [{ href: '/medico/odontologia/finanzas', label: 'Finanzas dental', icon: DollarSign, exact: false }] : []),
+    // No-particular con odontología: sección separada
+    ...(!esParticular && tieneOdontologia ? [
+      { href: '/medico/odontologia/pacientes', label: 'Pacientes', icon: Users,    exact: false, separator: 'Odontología' },
     ] : []),
     ...((esParticular && esAdmin) ? [
       { href: '/admin/horarios',      label: 'Horarios',      icon: Clock,           exact: false, separator: 'Administración' },
       ...(tieneOdontologia
-        ? [{ href: '/medico/odontologia/finanzas', label: 'Finanzas', icon: DollarSign, exact: false }]
-        : [{ href: '/admin/finanzas',              label: 'Finanzas', icon: DollarSign, exact: false }]
+        ? [
+            { href: '/medico/odontologia/finanzas', label: 'Finanzas',        icon: DollarSign, exact: false },
+            { href: '/medico/odontologia/catalogo', label: 'Catálogo dental', icon: BookOpen,   exact: false },
+          ]
+        : [{ href: '/admin/finanzas', label: 'Finanzas', icon: DollarSign, exact: false }]
       ),
-      { href: '/admin/configuracion', label: 'Configuración', icon: Settings,        exact: false },
-    ] : []),
+      { href: '/admin/configuracion', label: 'Configuración', icon: Settings, exact: false },
+    ] : [
+      ...(tieneOdontologia ? [
+        { href: '/medico/odontologia/finanzas', label: 'Finanzas dental', icon: DollarSign, exact: false, separator: 'Administración' },
+        { href: '/medico/odontologia/catalogo', label: 'Catálogo dental',  icon: BookOpen,   exact: false },
+      ] : []),
+    ]),
   ]
 
   async function handleLogout() {
@@ -141,7 +150,7 @@ export function MedicoSidebar({ nombre = '', especialidad = '', esAdmin = false,
 
       {/* Footer: switcher + logout */}
       <div className="p-3 border-t border-slate-700/60 space-y-0.5">
-        {esAdmin && (
+        {esAdmin && !esParticular && (
           <Link
             href="/admin"
             onClick={handleNavClick}

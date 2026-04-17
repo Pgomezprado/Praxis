@@ -27,18 +27,37 @@ export async function GET(req: Request) {
       ? 'id, nombre, rut, email, telefono, alergias, condiciones, fecha_nac, grupo_sang, prevision, direccion, seguro_complementario, created_at'
       : 'id, nombre, rut, email, telefono, created_at'
 
-    let query = supabase
-      .from('pacientes')
-      .select(campos)
-      .eq('clinica_id', usuario.clinica_id)
-      .eq('activo', true)
-      .order('nombre')
+    let data, error
 
     if (search) {
-      query = query.or(`nombre.ilike.%${search}%,rut.ilike.%${search}%`)
+      if (search.length > 200) {
+        return Response.json({ error: 'Búsqueda demasiado larga' }, { status: 400 })
+      }
+      // Búsqueda con unaccent: "Jose" encuentra "José", "Gomez" encuentra "Gómez"
+      // La función SQL aplica RLS via SECURITY INVOKER (respeta clinica_id del usuario)
+      const result = await supabase.rpc('buscar_pacientes', { search_term: search })
+      data = result.data
+      error = result.error
+
+      // Filtrar campos clínicos sensibles para recepcionistas (Ley 20.584 Art. 13)
+      if (!error && data && !esClinico) {
+        type PacienteRpc = { id: string; nombre: string; rut: string; email: string; telefono: string; created_at: string; [key: string]: unknown }
+        data = (data as PacienteRpc[]).map(({ id, nombre, rut, email, telefono, created_at }) => ({
+          id, nombre, rut, email, telefono, created_at
+        }))
+      }
+    } else {
+      const result = await supabase
+        .from('pacientes')
+        .select(campos)
+        .eq('clinica_id', usuario.clinica_id)
+        .eq('activo', true)
+        .order('nombre')
+        .limit(50)
+      data = result.data
+      error = result.error
     }
 
-    const { data, error } = await query.limit(50)
     if (error) throw error
 
     return Response.json({ pacientes: data })

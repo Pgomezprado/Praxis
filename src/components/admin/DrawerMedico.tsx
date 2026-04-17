@@ -6,6 +6,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { type MockMedicoAdmin } from '@/types/domain'
 import { type Especialidad } from '@/types/database'
 import { validarRut, formatearRut } from '@/lib/agendamiento'
+import { MEDICO_COLORS, MEDICO_COLOR_KEYS, type MedicoColorKey } from '@/lib/agenda-colors'
 
 type FormData = {
   nombre: string
@@ -16,6 +17,8 @@ type FormData = {
   registroSIS: string
   duracionConsulta: number
   emailAcceso: string
+  colorAgenda: MedicoColorKey
+  porcentajeHonorario: string
 }
 
 const DURACIONES = [15, 30, 45, 60, 75, 90]
@@ -40,6 +43,8 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
     registroSIS: '',
     duracionConsulta: 30,
     emailAcceso: '',
+    colorAgenda: 'blue',
+    porcentajeHonorario: '',
   }
 
   const [form, setForm] = useState<FormData>(defaultForm)
@@ -61,6 +66,10 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
         registroSIS: '',
         duracionConsulta: medicoEditar.duracionConsulta,
         emailAcceso: medicoEditar.email,
+        colorAgenda: (medicoEditar.colorAgenda as MedicoColorKey) ?? 'blue',
+        porcentajeHonorario: medicoEditar.porcentajeHonorario != null
+          ? String(medicoEditar.porcentajeHonorario)
+          : '',
       })
     } else {
       setForm(defaultForm)
@@ -135,6 +144,7 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
     const url = medicoEditar ? `/api/usuarios/${medicoEditar.id}` : '/api/usuarios'
     const method = medicoEditar ? 'PATCH' : 'POST'
 
+    const honorarioValor = form.porcentajeHonorario.trim()
     const body: Record<string, unknown> = {
       nombre: form.nombre.trim(),
       email: form.email.trim(),
@@ -142,6 +152,8 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
       telefono: form.telefono.trim(),
       duracion_consulta: form.duracionConsulta,
       rol: 'doctor',
+      color_agenda: form.colorAgenda,
+      porcentaje_honorario: honorarioValor !== '' ? Number(honorarioValor) : null,
     }
     // Solo incluir especialidad si tenemos un valor concreto para enviar
     if (especialidadAEnviar !== undefined) {
@@ -178,6 +190,7 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
       estado: u.activo ? 'activo' : 'inactivo',
       citasMes: medicoEditar?.citasMes ?? 0,
       invitacionPendiente: medicoEditar?.invitacionPendiente ?? true,
+      porcentajeHonorario: u.porcentaje_honorario ?? null,
     }
     onGuardar(medico)
   }
@@ -349,6 +362,26 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
                 />
               </div>
 
+              {/* Honorario profesional */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Honorario profesional (%)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.01}
+                  value={form.porcentajeHonorario}
+                  onChange={e => set('porcentajeHonorario', e.target.value)}
+                  placeholder="ej: 60"
+                  className="w-full px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  Porcentaje del cobro que recibe este profesional. Dejar vacío si aún no se define.
+                </p>
+              </div>
+
               {/* Duración consulta */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
@@ -368,6 +401,27 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
                     >
                       {d} min
                     </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Color en agenda */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Color en agenda
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  {MEDICO_COLOR_KEYS.map(key => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => set('colorAgenda', key)}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${MEDICO_COLORS[key].dot} ${
+                        form.colorAgenda === key
+                          ? 'ring-2 ring-offset-2 ring-blue-500 border-white scale-110'
+                          : 'border-transparent hover:scale-110'
+                      }`}
+                    />
                   ))}
                 </div>
               </div>
