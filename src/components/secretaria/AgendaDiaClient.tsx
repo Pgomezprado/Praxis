@@ -128,6 +128,15 @@ export function AgendaDiaClient({
 
   const [citasLocales, setCitasLocales] = useState<MockCita[]>(citas)
   const [bloqueos, setBloqueos] = useState<BloqueoHorario[]>(bloqueosProp)
+
+  useEffect(() => {
+    setCitasLocales(citas)
+  }, [citas])
+
+  useEffect(() => {
+    setBloqueos(bloqueosProp)
+  }, [bloqueosProp])
+
   const [filtroMedico, setFiltroMedico] = useState(soloMedicoId ?? '')
   const [modalOpen, setModalOpen] = useState(false)
   const [horaModalNueva, setHoraModalNueva] = useState<string | undefined>(undefined)
