@@ -55,11 +55,16 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/terminos') ||
     isPublicApiRoute
 
+  // Rutas de dashboard (recepción) — solo recepcionista o admin_clinica
+  const rutasDashboard = ['/inicio', '/pacientes', '/agenda', '/cobro', '/finanzas']
+  const esDashboard = rutasDashboard.some(p => pathname === p || pathname.startsWith(p + '/'))
+
   // Rutas que requieren verificar el rol en DB
   const needsRoleCheck =
     isLoginPage ||
     pathname.startsWith('/admin') ||
-    pathname.startsWith('/medico')
+    pathname.startsWith('/medico') ||
+    esDashboard
 
   // Proteger /superadmin con cookie HMAC firmada.
   // La cookie la emite /api/superadmin/verify-secret tras verificar SUPERADMIN_SECRET.
@@ -122,6 +127,12 @@ export async function middleware(request: NextRequest) {
     // Proteger /medico/* — doctor o admin_clinica con es_doctor
     if (pathname.startsWith('/medico') && rol !== 'doctor' && !(rol === 'admin_clinica' && esDoctor)) {
       return NextResponse.redirect(new URL('/inicio', request.url))
+    }
+
+    // Proteger rutas de dashboard (recepción) — solo recepcionista o admin_clinica
+    if (esDashboard && rol !== 'recepcionista' && rol !== 'admin_clinica') {
+      const destino = rol === 'doctor' ? '/medico/inicio' : '/login'
+      return NextResponse.redirect(new URL(destino, request.url))
     }
   }
 

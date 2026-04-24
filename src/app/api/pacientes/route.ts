@@ -84,11 +84,23 @@ export async function POST(req: Request) {
 
     const { data: usuario } = await supabase
       .from('usuarios')
-      .select('clinica_id')
+      .select('rol, clinica_id')
       .eq('id', user.id)
       .single()
 
     if (!usuario) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
+
+    // Solo recepcionista y admin_clinica pueden crear pacientes (regla de negocio)
+    if (usuario.rol !== 'admin_clinica' && usuario.rol !== 'recepcionista') {
+      return Response.json({ error: 'Sin permisos para crear pacientes' }, { status: 403 })
+    }
+
+    // La recepcionista no escribe datos clínicos (Ley 20.584 Art. 13). Los ignoramos
+    // aunque vengan en el body — evita inyección vía cliente manipulado.
+    const esRecepcionista = usuario.rol === 'recepcionista'
+    const alergiasFinal = esRecepcionista ? [] : (alergias ?? [])
+    const condicionesFinal = esRecepcionista ? [] : (condiciones ?? [])
+    const grupoSangFinal = esRecepcionista ? null : (grupo_sang ?? null)
 
     const { data, error } = await supabase
       .from('pacientes')
@@ -97,9 +109,9 @@ export async function POST(req: Request) {
         nombre,
         rut,
         fecha_nac: fecha_nac ?? null,
-        grupo_sang: grupo_sang ?? null,
-        alergias: alergias ?? [],
-        condiciones: condiciones ?? [],
+        grupo_sang: grupoSangFinal,
+        alergias: alergiasFinal,
+        condiciones: condicionesFinal,
         email: email ?? null,
         telefono: telefono ?? null,
         prevision: prevision ?? null,
