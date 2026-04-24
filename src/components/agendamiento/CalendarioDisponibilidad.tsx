@@ -33,7 +33,13 @@ export function CalendarioDisponibilidad({
 
   useEffect(() => {
     if (fechaSeleccionada && slotsRef.current) {
-      slotsRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      // Safari iOS: 'nearest' puede mover el viewport completo si el elemento
+      // no está completamente visible. 'start' con un frame de delay es más
+      // predecible en mobile.
+      const el = slotsRef.current
+      requestAnimationFrame(() => {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
     }
   }, [fechaSeleccionada])
   const primerDia = new Date(anio, mes, 1).getDay()
@@ -104,7 +110,7 @@ export function CalendarioDisponibilidad({
               key={i}
               disabled={!disponible}
               onClick={() => disponible && onSeleccionar(fecha, '')}
-              className={`aspect-square rounded-lg text-sm font-medium transition-colors ${
+              className={`aspect-square min-h-[44px] rounded-lg text-sm font-medium transition-colors ${
                 seleccionado
                   ? 'bg-blue-600 text-white'
                   : disponible

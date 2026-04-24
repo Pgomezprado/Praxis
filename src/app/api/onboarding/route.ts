@@ -14,39 +14,56 @@ type AdminInput = {
   rut?: string
 }
 
+type CrearAdminResult =
+  | { ok: true; id: string }
+  | { ok: false; error: string; errorType: 'rate_limit' | 'smtp_failure' | 'email_in_use' | 'unknown' }
+
 async function crearAdminEnClinica(
   adminClient: ReturnType<typeof createAdminClient>,
   clinicaId: string,
   adminData: AdminInput,
   appUrl: string,
-): Promise<{ ok: boolean; id?: string; error?: string }> {
-  // 1. Invitar vía Supabase Auth (o buscar si ya existe)
+): Promise<CrearAdminResult> {
+  // 1. Pre-chequeo: si el email ya existe en Auth evitamos el invite (y su potencial fallo SMTP)
+  const { data: userList } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 })
+  const preExisting = userList?.users.find(
+    u => u.email?.toLowerCase() === adminData.email.toLowerCase(),
+  )
+
   let userId: string
+  let recienCreado = false
 
-  const { data: authData, error: authError } = await adminClient.auth.admin.inviteUserByEmail(adminData.email, {
-    data: { nombre: adminData.nombre, rol: 'admin_clinica' },
-    redirectTo: `${appUrl}/activar-cuenta`,
-  })
-
-  if (authError) {
-    const isExisting =
-      authError.message.toLowerCase().includes('already') ||
-      authError.message.toLowerCase().includes('registered') ||
-      authError.message.toLowerCase().includes('exist')
-
-    if (!isExisting) {
-      return { ok: false, error: authError.message }
-    }
-
-    // El email ya existe en Auth — buscar su UUID
-    const { data: list } = await adminClient.auth.admin.listUsers({ page: 1, perPage: 1000 })
-    const existing = list?.users.find(u => u.email === adminData.email)
-    if (!existing) {
-      return { ok: false, error: 'El email ya existe en Auth pero no se pudo localizar' }
-    }
-    userId = existing.id
+  if (preExisting) {
+    userId = preExisting.id
   } else {
+    const { data: authData, error: authError } = await adminClient.auth.admin.inviteUserByEmail(adminData.email, {
+      data: { nombre: adminData.nombre, rol: 'admin_clinica' },
+      redirectTo: `${appUrl}/activar-cuenta`,
+    })
+
+    if (authError) {
+      const msg = authError.message.toLowerCase()
+      const status = (authError as { status?: number }).status
+
+      if (status === 429 || msg.includes('rate') || msg.includes('limit')) {
+        return {
+          ok: false,
+          error: 'Límite de invitaciones por hora alcanzado en Supabase. Intenta en 30-60 minutos.',
+          errorType: 'rate_limit',
+        }
+      }
+      if (msg.includes('sending') || msg.includes('smtp') || msg.includes('email')) {
+        return {
+          ok: false,
+          error: 'No se pudo enviar el email de invitación. Revisa los logs de Resend o prueba con un dominio de email diferente.',
+          errorType: 'smtp_failure',
+        }
+      }
+      return { ok: false, error: authError.message, errorType: 'unknown' }
+    }
+
     userId = authData.user.id
+    recienCreado = true
   }
 
   // 2. Verificar que no esté ya vinculado a otra clínica
@@ -57,7 +74,7 @@ async function crearAdminEnClinica(
     .maybeSingle()
 
   if (usuarioExistente) {
-    return { ok: false, error: `El email ${adminData.email} ya pertenece a una clínica existente` }
+    return { ok: false, error: `El email ${adminData.email} ya pertenece a una clínica existente`, errorType: 'email_in_use' }
   }
 
   // 3. Insertar en tabla usuarios
@@ -73,8 +90,7 @@ async function crearAdminEnClinica(
     })
 
   if (usuarioError) {
-    // Revertir usuario en Auth si fue creado recién (authError === null significa recién creado)
-    if (!authError) {
+    if (recienCreado) {
       try {
         await adminClient.auth.admin.deleteUser(userId)
       } catch (rollbackErr) {
@@ -83,7 +99,7 @@ async function crearAdminEnClinica(
         }
       }
     }
-    return { ok: false, error: usuarioError.message }
+    return { ok: false, error: usuarioError.message, errorType: 'unknown' }
   }
 
   return { ok: true, id: userId }
@@ -186,9 +202,16 @@ export async function POST(req: Request) {
     if (!resultadoPrincipal.ok) {
       // Revertir clínica — no se pudo crear ningún admin
       await adminClient.from('clinicas').delete().eq('id', clinica.id)
+      const statusMap: Record<string, number> = {
+        rate_limit: 429,
+        smtp_failure: 502,
+        email_in_use: 409,
+        unknown: 500,
+      }
+      const httpStatus = statusMap[resultadoPrincipal.errorType] ?? 500
       return Response.json(
         { error: resultadoPrincipal.error ?? 'Error al crear el administrador principal' },
-        { status: 409 }
+        { status: httpStatus }
       )
     }
 

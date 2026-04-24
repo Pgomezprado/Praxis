@@ -19,8 +19,8 @@ export async function POST(req: Request) {
       return Response.json({ error: 'intervalo_semanas debe ser 1 o 2' }, { status: 400 })
     }
 
-    if (!Number.isInteger(repeticiones) || repeticiones < 1 || repeticiones > 52) {
-      return Response.json({ error: 'repeticiones debe ser un número entre 1 y 52' }, { status: 400 })
+    if (!Number.isInteger(repeticiones) || repeticiones < 1 || repeticiones > 104) {
+      return Response.json({ error: 'repeticiones debe ser un número entre 1 y 104' }, { status: 400 })
     }
 
     const supabase = await createClient()
@@ -34,6 +34,15 @@ export async function POST(req: Request) {
       .single()
 
     if (!me) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
+
+    // Respetar el toggle de confirmación manual de la clínica
+    const { data: clinicaConfig } = await supabase
+      .from('clinicas')
+      .select('requiere_confirmacion_manual')
+      .eq('id', me.clinica_id)
+      .single()
+    const configTyped = clinicaConfig as { requiere_confirmacion_manual?: boolean } | null
+    const estadoInicial = configTyped?.requiere_confirmacion_manual === true ? 'pendiente' : 'confirmada'
 
     // Obtener la cita origen (validando que pertenece a la clínica del usuario)
     const { data: citaOrigen, error: citaError } = await supabase
@@ -125,7 +134,7 @@ export async function POST(req: Request) {
             hora_fin: citaOrigen.hora_fin,
             motivo: citaOrigen.motivo ?? null,
             tipo: citaOrigen.tipo ?? 'control',
-            estado: 'confirmada' as const,
+            estado: estadoInicial as 'confirmada' | 'pendiente',
             creada_por: 'secretaria' as const,
           })
           .select(`

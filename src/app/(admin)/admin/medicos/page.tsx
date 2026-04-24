@@ -25,7 +25,7 @@ export default async function AdminMedicosPage() {
   const [{ data: doctoresDb }, { data: especialidadesDb }, { data: citasMesDb }] = await Promise.all([
     supabase
       .from('usuarios')
-      .select('id, nombre, email, especialidad, activo, rut, telefono, duracion_consulta, rol, color_agenda, porcentaje_honorario')
+      .select('id, nombre, nombres, apellido_paterno, apellido_materno, email, especialidad, activo, rut, telefono, duracion_consulta, rol, color_agenda, porcentaje_honorario')
       .eq('clinica_id', clinicaId)
       .or('rol.eq.doctor,es_doctor.eq.true')
       .order('nombre'),
@@ -66,11 +66,14 @@ export default async function AdminMedicosPage() {
       (e) => normalize(e.nombre) === normalize(d.especialidad ?? '')
     )
     const authEntry = authUserMap.get(d.id)
-    const row = d as typeof d & { rol?: string; color_agenda?: string; porcentaje_honorario?: number | null }
+    const row = d as typeof d & { rol?: string; color_agenda?: string; porcentaje_honorario?: number | null; nombres?: string | null; apellido_paterno?: string | null; apellido_materno?: string | null }
     return {
       id: d.id,
       clinicaId: clinicaId ?? '',
       nombre: d.nombre,
+      nombres: row.nombres ?? null,
+      apellido_paterno: row.apellido_paterno ?? null,
+      apellido_materno: row.apellido_materno ?? null,
       rut: d.rut ?? '',
       especialidadId: esp?.id ?? '',
       especialidad: d.especialidad ?? '',

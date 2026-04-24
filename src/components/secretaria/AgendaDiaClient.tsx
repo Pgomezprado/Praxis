@@ -24,6 +24,7 @@ import {
   minutosAHora,
   generarHorasGrid,
 } from '@/lib/agenda-helpers'
+import { formatNombre } from '@/lib/utils/formatters'
 
 // ── helpers locales ───────────────────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ function formatFechaDisplay(fecha: string): string {
   })
 }
 
+// Reemplazado por formatNombre(medico, 'corto') — mantenido por compatibilidad temporal
 function shortMedicoName(nombre: string): string {
   const parts = nombre.split(' ')
   return `${parts[0]} ${parts[parts.length - 1]}`
@@ -68,7 +70,7 @@ const ESTADO_DOT: Record<MockCita['estado'], string> = {
   confirmada:  'bg-blue-500',
   pendiente:   'bg-amber-500',
   en_consulta: 'bg-emerald-500',
-  completada:  'bg-slate-300',
+  completada:  'bg-blue-400', // fallback; se sobreescribe con bg-emerald-500 si tieneCobro
   cancelada:   'bg-red-400',
   no_show:     'bg-slate-400',
 }
@@ -181,14 +183,22 @@ export function AgendaDiaClient({
     router.push(buildUrl(diaPath, newFecha, filtroMedico))
   }
 
-  // Médicos visibles: si hay soloMedicoId solo ese; si hay filtro solo ese; si no, todos
+  const diaKey = getDiaKey(fecha)
+
+  // Médicos con actividad ese día: tienen horario activo O al menos 1 cita
+  const medicosConActividad = medicos.filter(medico => {
+    const horario = horariosMap[medico.id]
+    const configDia = horario?.[diaKey]
+    if (configDia?.activo) return true
+    return citasLocales.some(c => c.fecha === fecha && c.medicoId === medico.id)
+  })
+
+  // Médicos visibles: soloMedicoId > filtroMedico > solo los que tienen actividad ese día
   const medicosVisibles = soloMedicoId
     ? medicos.filter(m => m.id === soloMedicoId)
     : filtroMedico
     ? medicos.filter(m => m.id === filtroMedico)
-    : medicos
-
-  const diaKey = getDiaKey(fecha)
+    : medicosConActividad
 
   // Calcular rango de horas del grid: unión de todos los horarios activos del día
   let horaInicioGrid = '08:00'
@@ -325,7 +335,7 @@ export function AgendaDiaClient({
               <option value="">Todos los profesionales</option>
               {medicos.map(m => (
                 <option key={m.id} value={m.id}>
-                  {m.nombre} · {m.especialidad}
+                  {formatNombre(m, 'corto')} · {m.especialidad}
                 </option>
               ))}
             </select>
@@ -447,6 +457,20 @@ export function AgendaDiaClient({
 
       {/* ── Grid ── */}
       <div className="flex-1 overflow-auto">
+        {/* Empty state: ningún médico atiende este día (y no hay filtro manual activo) */}
+        {medicosVisibles.length === 0 && !filtroMedico && !soloMedicoId && (
+          <div className="flex flex-col items-center justify-center h-full min-h-[320px] gap-3 text-slate-400 px-6">
+            <CalendarDays className="w-12 h-12 text-slate-300" />
+            <p className="text-base font-semibold text-slate-500">No hay profesionales atendiendo este día</p>
+            <p className="text-sm text-center max-w-xs">
+              Ningún profesional tiene horario configurado para{' '}
+              <span className="font-medium capitalize">{formatFechaDisplay(fecha)}</span>.
+              Puedes navegar a otro día o revisar la configuración de horarios.
+            </p>
+          </div>
+        )}
+
+        {medicosVisibles.length > 0 && (
         <div
           className="relative"
           style={{
@@ -474,7 +498,7 @@ export function AgendaDiaClient({
                 <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${mc.dot}`} />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-slate-800 truncate leading-tight">
-                    {shortMedicoName(medico.nombre)}
+                    {formatNombre(medico, 'corto')}
                   </p>
                   <p className="text-xs text-slate-400 truncate leading-tight">{medico.especialidad}</p>
                 </div>
@@ -544,6 +568,7 @@ export function AgendaDiaClient({
                       const span = calcSpan(cita.horaInicio, cita.horaFin)
                       const isCancelled = cita.estado === 'cancelada'
                       const isCompleted = cita.estado === 'completada'
+                      const tieneCobro = citasCobradas.includes(cita.id)
                       return (
                         <div
                           key={`${medico.id}-${hora}`}
@@ -558,12 +583,16 @@ export function AgendaDiaClient({
                           <div
                             onClick={() => setCitaSeleccionada(cita)}
                             className={`h-full rounded-lg px-2 py-1 border overflow-hidden cursor-pointer transition-all ${
-                              isCancelled ? 'border-red-100 bg-red-50/50 opacity-60 hover:opacity-80'
-                                : isCompleted ? 'border-slate-100 bg-slate-50 opacity-60 hover:opacity-80'
+                              isCancelled
+                                ? 'border-red-100 bg-red-50/50 opacity-60 hover:opacity-80'
+                                : isCompleted && tieneCobro
+                                ? 'border-emerald-200 bg-emerald-50/70 hover:shadow-sm'
+                                : isCompleted
+                                ? `${cellMc.border} ${cellMc.fill} hover:shadow-sm`
                                 : `${cellMc.border} ${cellMc.fill} ${cellMc.hover} hover:shadow-sm`
                             }`}
                           >
-                            <p className={`text-xs font-bold tabular-nums leading-tight ${isCancelled || isCompleted ? 'text-slate-400' : 'text-slate-700'}`}>
+                            <p className={`text-xs font-bold tabular-nums leading-tight ${isCancelled ? 'text-slate-400' : 'text-slate-700'}`}>
                               {cita.horaInicio}
                               <span className="font-normal text-slate-400"> –{cita.horaFin}</span>
                             </p>
@@ -571,7 +600,9 @@ export function AgendaDiaClient({
                               {cita.pacienteNombre.split(' ').slice(0, 2).join(' ')}
                             </p>
                             <div className="flex items-center gap-1 mt-0.5">
-                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ESTADO_DOT[cita.estado]}`} />
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                isCompleted && tieneCobro ? 'bg-emerald-500' : ESTADO_DOT[cita.estado]
+                              }`} />
                               <span className={`text-xs truncate ${ESTADO_TEXT[cita.estado]}`}>{ESTADO_LABEL[cita.estado]}</span>
                             </div>
                           </div>
@@ -662,6 +693,7 @@ export function AgendaDiaClient({
                     const cita = bloque.cita
                     const isCancelled = cita.estado === 'cancelada'
                     const isCompleted = cita.estado === 'completada'
+                    const tieneCobro = citasCobradas.includes(cita.id)
                     return (
                       <div
                         key={`${medico.id}-${hora}`}
@@ -678,12 +710,14 @@ export function AgendaDiaClient({
                           className={`h-full rounded-lg px-2 py-1 border overflow-hidden cursor-pointer transition-all ${
                             isCancelled
                               ? 'border-red-100 bg-red-50/50 opacity-60 hover:opacity-80'
+                              : isCompleted && tieneCobro
+                              ? 'border-emerald-200 bg-emerald-50/70 hover:shadow-sm'
                               : isCompleted
-                              ? 'border-slate-100 bg-slate-50 opacity-60 hover:opacity-80'
+                              ? `${cellMc.border} ${cellMc.fill} hover:shadow-sm`
                               : `${cellMc.border} ${cellMc.fill} ${cellMc.hover} hover:shadow-sm`
                           }`}
                         >
-                          <p className={`text-xs font-bold tabular-nums leading-tight ${isCancelled || isCompleted ? 'text-slate-400' : 'text-slate-700'}`}>
+                          <p className={`text-xs font-bold tabular-nums leading-tight ${isCancelled ? 'text-slate-400' : 'text-slate-700'}`}>
                             {cita.horaInicio}
                             <span className="font-normal text-slate-400"> –{cita.horaFin}</span>
                           </p>
@@ -691,7 +725,9 @@ export function AgendaDiaClient({
                             {cita.pacienteNombre.split(' ').slice(0, 2).join(' ')}
                           </p>
                           <div className="flex items-center gap-1 mt-0.5">
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ESTADO_DOT[cita.estado]}`} />
+                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                              isCompleted && tieneCobro ? 'bg-emerald-500' : ESTADO_DOT[cita.estado]
+                            }`} />
                             <span className={`text-xs truncate ${ESTADO_TEXT[cita.estado]}`}>{ESTADO_LABEL[cita.estado]}</span>
                           </div>
                         </div>
@@ -756,7 +792,7 @@ export function AgendaDiaClient({
                   return (
                     <div
                       key={`${medico.id}-${hora}`}
-                      className={`border-l ${borderTop} bg-white overflow-hidden relative`}
+                      className={`border-l ${borderTop} border-dashed border-emerald-100 bg-emerald-50/30 overflow-hidden relative`}
                       style={{ gridRow, gridColumn: colIdx + 2 }}
                     >
                       {lineaEnEsteSlot && lineaOffset && (
@@ -771,6 +807,8 @@ export function AgendaDiaClient({
                         profesionalId={medico.id}
                         onAgendar={(f, h) => abrirNuevaCita(medico.id, h)}
                         onBloqueoCreado={handleBloqueoCreado}
+                        modoGrilla
+                        medicoNombre={medico.nombre}
                       />
                     </div>
                   )
@@ -779,6 +817,7 @@ export function AgendaDiaClient({
             )
           })}
         </div>
+        )}
       </div>
 
       {/* ── Drawer detalle de cita ── */}
@@ -790,6 +829,7 @@ export function AgendaDiaClient({
           ? `${fichaBasePath}/${citaSeleccionada.pacienteId}`
           : undefined}
         cobroBasePath={cobroBasePath}
+        tieneCobro={citaSeleccionada ? citasCobradas.includes(citaSeleccionada.id) : false}
         onClose={() => setCitaSeleccionada(null)}
         onEstadoCambiado={(id, estado) => {
           handleEstadoCambiado(id, estado)

@@ -5,10 +5,14 @@ import Link from 'next/link'
 import { Users, Search, ExternalLink, UserX, X, Loader2 } from 'lucide-react'
 import { DatePicker } from '@/components/ui/DatePicker'
 import type { EstadoPresupuesto } from '@/types/database'
+import { formatNombre } from '@/lib/utils/formatters'
 
 export interface PacienteConPresupuesto {
   id: string
   nombre: string
+  nombres?: string | null
+  apellido_paterno?: string | null
+  apellido_materno?: string | null
   rut: string
   email: string | null
   telefono: string | null
@@ -398,7 +402,7 @@ export function PacientesOdontologiaClient({ pacientes: pacientesIniciales }: Pa
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-semibold text-slate-900 truncate">{p.nombre}</p>
+                    <p className="font-semibold text-slate-900 truncate">{formatNombre(p, 'corto')}</p>
                     <p className="text-xs text-slate-500 mt-0.5">{p.rut}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
@@ -441,7 +445,7 @@ export function PacientesOdontologiaClient({ pacientes: pacientesIniciales }: Pa
               <tbody className="divide-y divide-slate-100">
                 {filtrados.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-5 py-3.5 font-medium text-slate-900">{p.nombre}</td>
+                    <td className="px-5 py-3.5 font-medium text-slate-900">{formatNombre(p, 'corto')}</td>
                     <td className="px-5 py-3.5 text-slate-600">{p.rut}</td>
                     <td className="px-5 py-3.5 text-slate-600">{p.telefono ?? '—'}</td>
                     <td className="px-5 py-3.5">

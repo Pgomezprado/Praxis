@@ -8,12 +8,16 @@ import { TabOdontologia } from '@/components/odontologia/TabOdontologia'
 import { DrawerPaciente } from '@/components/admin/DrawerPaciente'
 import type { MockConsulta, MockPacienteAdmin } from '@/types/domain'
 import type { PlanTratamiento, PlanTratamientoItem } from '@/types/database'
+import { formatNombre } from '@/lib/utils/formatters'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 
 type Paciente = {
   id: string
   nombre: string
+  nombres?: string | null
+  apellido_paterno?: string | null
+  apellido_materno?: string | null
   rut: string
   fecha_nacimiento: string
   edad: number
@@ -394,7 +398,8 @@ export function FichaDentalClient({ paciente, consultas }: FichaDentalClientProp
   const [tabActiva, setTabActiva] = useState<Tab>('odontograma')
   const [drawerOpen, setDrawerOpen] = useState(false)
 
-  const iniciales = paciente.nombre
+  const nombreCorto = formatNombre(paciente, 'corto') || paciente.nombre
+  const iniciales = nombreCorto
     .split(' ')
     .slice(0, 2)
     .map((p) => p[0])
@@ -447,7 +452,7 @@ export function FichaDentalClient({ paciente, consultas }: FichaDentalClientProp
 
             {/* Datos */}
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold text-slate-900 leading-tight">{paciente.nombre}</h1>
+              <h1 className="text-xl font-bold text-slate-900 leading-tight">{formatNombre(paciente, 'completo')}</h1>
 
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-slate-500">
                 <span>{paciente.rut}</span>
@@ -521,7 +526,7 @@ export function FichaDentalClient({ paciente, consultas }: FichaDentalClientProp
         {tabActiva === 'odontograma' && (
           <TabOdontologia
             pacienteId={paciente.id}
-            pacienteNombre={paciente.nombre}
+            pacienteNombre={formatNombre(paciente, 'completo') || paciente.nombre}
             soloLectura={false}
           />
         )}

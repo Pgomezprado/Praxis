@@ -78,7 +78,7 @@ export default async function AdminFinanzasPage() {
   const { data: todosLosCobrosData } = await supabase
     .from('cobros')
     .select(`
-      id, folio_cobro, concepto, monto_neto, estado, notas, created_at,
+      id, folio_cobro, concepto, monto_neto, estado, notas, numero_boleta, created_at, cita_id,
       paciente:pacientes!cobros_paciente_id_fkey ( id, nombre, rut, email, telefono, prevision, direccion ),
       doctor:usuarios!cobros_doctor_id_fkey ( nombre ),
       pagos ( id, monto, medio_pago, referencia, fecha_pago )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { X, CalendarPlus, AlertTriangle, CheckCircle2, Loader2, CalendarDays, XCircle } from 'lucide-react'
 import type { MockCita } from '@/types/domain'
 import { mapCitaDb } from '@/lib/utils/mapCita'
@@ -41,6 +41,8 @@ const FERIADOS_CL = new Set([
   '2027-12-25',
 ])
 
+const MAX_REPETICIONES = 104
+
 function agregarDias(fechaStr: string, dias: number): string {
   const [y, m, d] = fechaStr.split('-').map(Number)
   const fecha = new Date(y, m - 1, d)
@@ -54,6 +56,16 @@ function formatFechaCorta(fechaStr: string): string {
   return fecha.toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+// Devuelve la fecha mínima posible para el date picker: día siguiente a la cita base
+function fechaMinPicker(citaFecha: string): string {
+  return agregarDias(citaFecha, 1)
+}
+
+// Fecha máxima: 2 años desde la cita base
+function fechaMaxPicker(citaFecha: string): string {
+  return agregarDias(citaFecha, MAX_REPETICIONES * 7)
+}
+
 interface ModalRepetirCitaProps {
   cita: MockCita
   onClose: () => void
@@ -65,20 +77,58 @@ type Resultado = {
   conflictos: string[]
 }
 
+type Modo = 'cantidad' | 'hasta_fecha'
+
 export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCitaProps) {
   const [intervaloSemanas, setIntervaloSemanas] = useState<1 | 2>(1)
+  const [modo, setModo] = useState<Modo>('cantidad')
   const [repeticiones, setRepeticiones] = useState(4)
+  const [fechaLimite, setFechaLimite] = useState('')
   const [loading, setLoading] = useState(false)
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Calcular fechas preview en tiempo real — zona horaria de Santiago (BUG-07)
+  // Hoy en Santiago para comparaciones
   const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
+
+  // Calcular repeticiones desde fecha límite (solo en modo hasta_fecha)
+  const { repDesdefecha, errorFecha, warningFecha } = useMemo(() => {
+    if (modo !== 'hasta_fecha' || !fechaLimite) {
+      return { repDesdefecha: null, errorFecha: null, warningFecha: null }
+    }
+    if (fechaLimite <= cita.fecha) {
+      return { repDesdefecha: null, errorFecha: 'La fecha debe ser posterior a la cita base.', warningFecha: null }
+    }
+    const [fy, fm, fd] = cita.fecha.split('-').map(Number)
+    const [ly, lm, ld] = fechaLimite.split('-').map(Number)
+    const base = new Date(fy, fm - 1, fd)
+    const limite = new Date(ly, lm - 1, ld)
+    const diasDiff = Math.floor((limite.getTime() - base.getTime()) / (1000 * 60 * 60 * 24))
+    const calculado = Math.floor(diasDiff / (intervaloSemanas * 7))
+    if (calculado < 1) {
+      return { repDesdefecha: null, errorFecha: 'La fecha debe ser posterior a la cita base.', warningFecha: null }
+    }
+    if (calculado > MAX_REPETICIONES) {
+      return {
+        repDesdefecha: MAX_REPETICIONES,
+        errorFecha: null,
+        warningFecha: `Se crearán ${MAX_REPETICIONES} citas (máximo 2 años). Extiende más adelante si necesitas.`,
+      }
+    }
+    return { repDesdefecha: calculado, errorFecha: null, warningFecha: null }
+  }, [modo, fechaLimite, cita.fecha, intervaloSemanas])
+
+  // Repeticiones efectivas que se enviarán a la API
+  const repEfectivas = modo === 'hasta_fecha' ? (repDesdefecha ?? 0) : repeticiones
+
+  // Preview de fechas
   const fechasPreview: string[] = []
-  for (let i = 1; i <= repeticiones; i++) {
+  for (let i = 1; i <= repEfectivas; i++) {
     const nuevaFecha = agregarDias(cita.fecha, i * intervaloSemanas * 7)
     if (nuevaFecha > hoy) fechasPreview.push(nuevaFecha)
   }
+
+  const puedeConfirmar = repEfectivas > 0 && !errorFecha && fechasPreview.length > 0
 
   async function handleConfirmar() {
     setLoading(true)
@@ -90,7 +140,7 @@ export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCita
         body: JSON.stringify({
           cita_id: cita.id,
           intervalo_semanas: intervaloSemanas,
-          repeticiones,
+          repeticiones: repEfectivas,
         }),
       })
 
@@ -125,7 +175,7 @@ export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCita
     <>
       <div className="fixed inset-0 z-60 bg-black/50 backdrop-blur-[1px]" onClick={!loading ? onClose : undefined} />
       <div className="fixed inset-0 z-70 flex items-center justify-center p-4 pointer-events-none">
-        <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl flex flex-col max-h-[85vh] pointer-events-auto">
+        <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl flex flex-col max-h-[90vh] pointer-events-auto">
 
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
@@ -156,6 +206,8 @@ export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCita
               <>
                 {/* Configuración */}
                 <div className="space-y-4">
+
+                  {/* Intervalo */}
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
                       Cada cuántas semanas
@@ -177,90 +229,155 @@ export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCita
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
+                  {/* Toggle modo */}
+                  <div className="space-y-3">
                     <label className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                      Cantidad de controles
+                      Repetir
                     </label>
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {[4, 8, 12, 24].map((n) => {
-                        const meses = (n * intervaloSemanas) / 4
-                        const duracion = meses === 1 ? '1 mes' : Number.isInteger(meses) ? `${meses} meses` : `${meses.toFixed(1)} meses`
-                        return (
-                          <button
-                            key={n}
-                            onClick={() => setRepeticiones(n)}
-                            className={`flex flex-col items-center py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                              repeticiones === n
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
-                            }`}
-                          >
-                            {n}
-                            <span className={`text-xs ${repeticiones === n ? 'text-blue-200' : 'text-slate-400'}`}>
-                              {duracion}
-                            </span>
-                          </button>
-                        )
-                      })}
+                    <div className="flex rounded-xl border border-slate-200 overflow-hidden">
+                      <button
+                        onClick={() => setModo('cantidad')}
+                        className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+                          modo === 'cantidad'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        Por cantidad
+                      </button>
+                      <button
+                        onClick={() => setModo('hasta_fecha')}
+                        className={`flex-1 py-2.5 text-sm font-medium transition-colors border-l border-slate-200 ${
+                          modo === 'hasta_fecha'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-slate-600 hover:bg-slate-50'
+                        }`}
+                      >
+                        Hasta fecha
+                      </button>
                     </div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <label className="text-xs text-slate-500 whitespace-nowrap">O ingresa:</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={52}
-                        value={repeticiones}
-                        onChange={(e) => {
-                          const v = Math.max(1, Math.min(52, parseInt(e.target.value) || 1))
-                          setRepeticiones(v)
-                        }}
-                        className="w-20 px-3 py-2 rounded-xl text-sm font-medium border border-slate-200 text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                      <span className="text-xs text-slate-400">
-                        {(() => {
-                          const meses = (repeticiones * intervaloSemanas) / 4
-                          return meses === 1 ? '1 mes' : Number.isInteger(meses) ? `${meses} meses` : `${meses.toFixed(1)} meses`
-                        })()}
-                      </span>
-                    </div>
+
+                    {/* Panel: Por cantidad */}
+                    {modo === 'cantidad' && (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                          {[4, 8, 12, 24].map((n) => {
+                            const meses = (n * intervaloSemanas) / 4
+                            const duracion = meses === 1 ? '1 mes' : Number.isInteger(meses) ? `${meses} meses` : `${meses.toFixed(1)} meses`
+                            return (
+                              <button
+                                key={n}
+                                onClick={() => setRepeticiones(n)}
+                                className={`flex flex-col items-center py-2.5 rounded-xl text-sm font-medium border transition-colors ${
+                                  repeticiones === n
+                                    ? 'bg-blue-600 text-white border-blue-600'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
+                                }`}
+                              >
+                                {n}
+                                <span className={`text-xs ${repeticiones === n ? 'text-blue-200' : 'text-slate-400'}`}>
+                                  {duracion}
+                                </span>
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <label className="text-xs text-slate-500 whitespace-nowrap">O ingresa:</label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={MAX_REPETICIONES}
+                            value={repeticiones}
+                            onChange={(e) => {
+                              const v = Math.max(1, Math.min(MAX_REPETICIONES, parseInt(e.target.value) || 1))
+                              setRepeticiones(v)
+                            }}
+                            className="w-20 px-3 py-2 rounded-xl text-sm font-medium border border-slate-200 text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+                          <span className="text-xs text-slate-400">
+                            {(() => {
+                              const meses = (repeticiones * intervaloSemanas) / 4
+                              return meses === 1 ? '1 mes' : Number.isInteger(meses) ? `${meses} meses` : `${meses.toFixed(1)} meses`
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Panel: Hasta fecha */}
+                    {modo === 'hasta_fecha' && (
+                      <div className="space-y-2">
+                        <input
+                          type="date"
+                          value={fechaLimite}
+                          min={fechaMinPicker(cita.fecha)}
+                          max={fechaMaxPicker(cita.fecha)}
+                          onChange={(e) => setFechaLimite(e.target.value)}
+                          className="w-full px-3 py-2.5 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800"
+                        />
+                        {errorFecha && (
+                          <p className="text-xs text-red-600 flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                            {errorFecha}
+                          </p>
+                        )}
+                        {warningFecha && (
+                          <p className="text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-lg flex items-start gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                            {warningFecha}
+                          </p>
+                        )}
+                        {repDesdefecha !== null && !errorFecha && (
+                          <p className="text-xs text-blue-700 bg-blue-50 px-3 py-2 rounded-lg font-medium">
+                            Se crearán {repDesdefecha} {repDesdefecha === 1 ? 'repetición' : 'repeticiones'}
+                          </p>
+                        )}
+                        {fechaLimite && !errorFecha && repDesdefecha === null && (
+                          <p className="text-xs text-slate-400">Elige una fecha para calcular las repeticiones.</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Preview de fechas */}
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
-                    <CalendarDays className="w-3.5 h-3.5" />
-                    Fechas que se crearán ({fechasPreview.length})
-                  </p>
-                  <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
-                    {fechasPreview.map((fecha) => {
-                      const esFeriado = FERIADOS_CL.has(fecha)
-                      return (
-                        <div
-                          key={fecha}
-                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm ${
-                            esFeriado ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50'
-                          }`}
-                        >
-                          <span className={`capitalize ${esFeriado ? 'text-amber-800' : 'text-slate-700'}`}>
-                            {formatFechaCorta(fecha)}
-                          </span>
-                          {esFeriado && (
-                            <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
-                              <AlertTriangle className="w-3 h-3" />
-                              Feriado
-                            </span>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                  {fechasPreview.some((f) => FERIADOS_CL.has(f)) && (
-                    <p className="text-xs text-amber-600">
-                      Las fechas con feriado igual se crearán. Puedes eliminarlas después si es necesario.
+                {fechasPreview.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide flex items-center gap-1.5">
+                      <CalendarDays className="w-3.5 h-3.5" />
+                      Fechas que se crearán ({fechasPreview.length})
                     </p>
-                  )}
-                </div>
+                    <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                      {fechasPreview.map((fecha) => {
+                        const esFeriado = FERIADOS_CL.has(fecha)
+                        return (
+                          <div
+                            key={fecha}
+                            className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm ${
+                              esFeriado ? 'bg-amber-50 border border-amber-200' : 'bg-slate-50'
+                            }`}
+                          >
+                            <span className={`capitalize ${esFeriado ? 'text-amber-800' : 'text-slate-700'}`}>
+                              {formatFechaCorta(fecha)}
+                            </span>
+                            {esFeriado && (
+                              <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
+                                <AlertTriangle className="w-3 h-3" />
+                                Feriado
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                    {fechasPreview.some((f) => FERIADOS_CL.has(f)) && (
+                      <p className="text-xs text-amber-600">
+                        Las fechas con feriado igual se crearán. Puedes eliminarlas después si es necesario.
+                      </p>
+                    )}
+                  </div>
+                )}
 
                 {error && (
                   <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl">{error}</p>
@@ -269,14 +386,14 @@ export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCita
                 {/* Botón confirmar */}
                 <button
                   onClick={handleConfirmar}
-                  disabled={loading || fechasPreview.length === 0}
+                  disabled={loading || !puedeConfirmar}
                   className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
                   {loading
                     ? <Loader2 className="w-4 h-4 animate-spin" />
                     : <CalendarPlus className="w-4 h-4" />
                   }
-                  {loading ? 'Agendando controles…' : `Agendar ${fechasPreview.length} controles`}
+                  {loading ? 'Agendando controles…' : `Agendar ${fechasPreview.length > 0 ? fechasPreview.length : ''} controles`}
                 </button>
               </>
             ) : (

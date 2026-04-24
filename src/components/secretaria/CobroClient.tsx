@@ -6,11 +6,22 @@ import { ArrowLeft, CreditCard, Banknote, Building2, Loader2, CheckCircle2, Pack
 import type { MockCita } from '@/types/domain'
 import type { Arancel, PaquetePaciente } from '@/types/database'
 
+export type CobroExistente = {
+  id: string
+  concepto: string
+  monto_neto: number
+  notas: string | null
+  medio_pago?: string
+  numero_boleta?: string | null
+}
+
 interface CobroClientProps {
   cita: MockCita
   aranceles: Arancel[]
   paqueteActivo: PaquetePaciente | null
   returnPath?: string
+  /** Si se pasa, el componente entra en modo edición de un cobro existente */
+  cobroExistente?: CobroExistente
 }
 
 const TIPO_LABEL: Record<MockCita['tipo'], string> = {
@@ -19,17 +30,26 @@ const TIPO_LABEL: Record<MockCita['tipo'], string> = {
   urgencia: 'Urgencia',
 }
 
-export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/agenda/hoy' }: CobroClientProps) {
+export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/agenda/hoy', cobroExistente }: CobroClientProps) {
   const router = useRouter()
+  const modoEdicion = !!cobroExistente
 
-  // Pre-seleccionar arancel que coincide con el tipo de cita
-  const arancelInicial = aranceles.find(a => a.tipo_cita === cita.tipo)
+  // Pre-seleccionar arancel que coincide con el tipo de cita (solo en modo creación)
+  const arancelInicial = modoEdicion ? undefined : aranceles.find(a => a.tipo_cita === cita.tipo)
 
   const [arancelSeleccionado, setArancelSeleccionado] = useState(arancelInicial?.id ?? '')
-  const [concepto, setConcepto] = useState(arancelInicial?.nombre ?? TIPO_LABEL[cita.tipo])
-  const [monto, setMonto] = useState(arancelInicial ? String(arancelInicial.precio_particular) : '')
-  const [medioPago, setMedioPago] = useState<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo')
+  const [concepto, setConcepto] = useState(
+    modoEdicion ? cobroExistente.concepto : (arancelInicial?.nombre ?? TIPO_LABEL[cita.tipo])
+  )
+  const [monto, setMonto] = useState(
+    modoEdicion ? String(cobroExistente.monto_neto) : (arancelInicial ? String(arancelInicial.precio_particular) : '')
+  )
+  const [medioPago, setMedioPago] = useState<'efectivo' | 'tarjeta' | 'transferencia'>(
+    (cobroExistente?.medio_pago as 'efectivo' | 'tarjeta' | 'transferencia') ?? 'efectivo'
+  )
   const [referencia, setReferencia] = useState('')
+  const [notasEdicion, setNotasEdicion] = useState(cobroExistente?.notas ?? '')
+  const [numeroBoleta, setNumeroBoleta] = useState(cobroExistente?.numero_boleta ?? '')
   const [usarPaquete, setUsarPaquete] = useState(false)
   const [modalidadCobro, setModalidadCobro] = useState<'pagar_ahora' | 'cuenta_por_cobrar'>('pagar_ahora')
   const [loading, setLoading] = useState(false)
@@ -53,6 +73,32 @@ export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/age
     setLoading(true)
 
     try {
+      // ── Modo edición ──────────────────────────────────────────────────────
+      if (modoEdicion && cobroExistente) {
+        const montoNum = parseInt(monto.replace(/\./g, ''), 10)
+        if (!concepto.trim()) { setError('El concepto es obligatorio'); setLoading(false); return }
+        if (isNaN(montoNum) || montoNum <= 0) { setError('Ingresa un monto válido mayor a 0'); setLoading(false); return }
+
+        const res = await fetch(`/api/finanzas/cobros/${cobroExistente.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            monto_neto: montoNum,
+            concepto: concepto.trim(),
+            medio_pago: medioPago,
+            notas: notasEdicion.trim() || null,
+            numero_boleta: numeroBoleta.trim() || null,
+          }),
+        })
+        if (!res.ok) {
+          const json = await res.json()
+          throw new Error(json.error ?? 'Error al guardar los cambios')
+        }
+        router.replace(`${returnPath}?cobrado=${cita.id}`)
+        return
+      }
+
+      // ── Modo creación ─────────────────────────────────────────────────────
       if (usarPaquete && paqueteActivo) {
         const res = await fetch(`/api/paquetes/paciente/${paqueteActivo.id}/sesion`, {
           method: 'POST',
@@ -83,6 +129,7 @@ export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/age
             arancel_id: arancelSeleccionado || null,
             concepto: concepto.trim(),
             monto_neto: montoNum,
+            numero_boleta: numeroBoleta.trim() || null,
           }),
         })
         if (!res.ok) {
@@ -103,6 +150,7 @@ export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/age
             monto_neto: montoNum,
             medio_pago: medioPago,
             referencia: referencia.trim() || null,
+            numero_boleta: numeroBoleta.trim() || null,
           }),
         })
         if (!res.ok) {
@@ -132,7 +180,9 @@ export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/age
           <ArrowLeft className="w-4 h-4" />
         </button>
         <div>
-          <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Registrar cobro</p>
+          <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">
+            {modoEdicion ? 'Editar cobro' : 'Registrar cobro'}
+          </p>
           <h1 className="text-xl font-bold text-slate-900">{cita.pacienteNombre}</h1>
         </div>
       </div>
@@ -155,8 +205,108 @@ export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/age
       {/* Formulario */}
       <form onSubmit={handleSubmit} className="bg-white border border-slate-200 rounded-2xl p-5 pb-6 shadow-sm space-y-5">
 
-        {/* Banner paquete disponible */}
-        {paqueteActivo && (
+        {/* ── Modo edición: formulario simplificado ── */}
+        {modoEdicion && (
+          <>
+            {/* Concepto */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Concepto <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={concepto}
+                onChange={e => setConcepto(e.target.value)}
+                disabled={loading}
+                placeholder="Ej: Consulta medicina general"
+                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Monto */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Monto (CLP) <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">$</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={monto ? parseInt(monto.replace(/\./g, ''), 10).toLocaleString('es-CL') : ''}
+                  onChange={e => {
+                    const raw = e.target.value.replace(/\./g, '').replace(/\D/g, '')
+                    setMonto(raw)
+                  }}
+                  disabled={loading}
+                  placeholder="Ingresa el monto"
+                  className="w-full text-sm rounded-xl border border-slate-200 pl-7 pr-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Medio de pago */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Medio de pago
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {(['efectivo', 'tarjeta', 'transferencia'] as const).map(mp => (
+                  <button
+                    key={mp}
+                    type="button"
+                    onClick={() => setMedioPago(mp)}
+                    disabled={loading}
+                    className={`flex items-center justify-center gap-2 py-3 rounded-xl border text-sm font-medium transition-colors ${
+                      medioPago === mp
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                        : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    {mp === 'efectivo' && <Banknote className="w-4 h-4" />}
+                    {mp === 'tarjeta' && <CreditCard className="w-4 h-4" />}
+                    {mp === 'transferencia' && <Building2 className="w-4 h-4" />}
+                    {mp === 'efectivo' ? 'Efectivo' : mp === 'tarjeta' ? 'Tarjeta' : 'Transfer.'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Número de boleta */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Número de boleta <span className="text-slate-400 font-normal text-xs">(opcional)</span>
+              </label>
+              <input
+                type="text"
+                value={numeroBoleta}
+                onChange={e => setNumeroBoleta(e.target.value)}
+                disabled={loading}
+                placeholder="Ej: 12345678"
+                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <p className="text-xs text-slate-400 mt-1">Opcional — número de boleta física o electrónica</p>
+            </div>
+
+            {/* Notas */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Notas <span className="text-slate-400 font-normal text-xs">(opcional)</span>
+              </label>
+              <textarea
+                rows={2}
+                value={notasEdicion}
+                onChange={e => setNotasEdicion(e.target.value)}
+                disabled={loading}
+                placeholder="Ej: Corrección de monto, acuerdo especial..."
+                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </>
+        )}
+
+        {/* Banner paquete disponible — solo en modo creación */}
+        {!modoEdicion && paqueteActivo && (
           <div className={`border rounded-xl p-4 transition-all ${
             usarPaquete
               ? 'border-indigo-300 bg-indigo-50 ring-1 ring-indigo-300'
@@ -385,6 +535,24 @@ export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/age
               </div>
             )}
 
+            {/* Número de boleta */}
+            {modalidadCobro === 'pagar_ahora' && (
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Número de boleta <span className="text-slate-400 font-normal text-xs">(opcional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={numeroBoleta}
+                  onChange={e => setNumeroBoleta(e.target.value)}
+                  disabled={loading}
+                  placeholder="Ej: 12345678"
+                  className="w-full text-sm rounded-xl border border-slate-200 px-3 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <p className="text-xs text-slate-400 mt-1">Opcional — número de boleta física o electrónica</p>
+              </div>
+            )}
+
             {/* Resumen pre-submit */}
             {montoValido && (
               <div className={`rounded-xl px-4 py-3 border ${
@@ -432,7 +600,9 @@ export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/age
         }}
         disabled={loading}
         className={`w-full mt-4 flex items-center justify-center gap-2 py-4 rounded-xl text-white text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
-          usarPaquete
+          modoEdicion
+            ? 'bg-blue-600 hover:bg-blue-700'
+            : usarPaquete
             ? 'bg-indigo-600 hover:bg-indigo-700'
             : modalidadCobro === 'cuenta_por_cobrar'
               ? 'bg-amber-600 hover:bg-amber-700'
@@ -440,7 +610,9 @@ export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/age
         }`}
       >
         {loading ? (
-          <><Loader2 className="w-4 h-4 animate-spin" />Registrando…</>
+          <><Loader2 className="w-4 h-4 animate-spin" />{modoEdicion ? 'Guardando…' : 'Registrando…'}</>
+        ) : modoEdicion ? (
+          <><CheckCircle2 className="w-4 h-4" />Guardar cambios</>
         ) : usarPaquete ? (
           <><Package className="w-4 h-4" />Confirmar sesión del paquete</>
         ) : modalidadCobro === 'cuenta_por_cobrar' ? (

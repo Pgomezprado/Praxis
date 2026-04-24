@@ -12,6 +12,7 @@ import type { MockCita, HorarioSemanal } from '@/types/domain'
 import { MEDICO_COLORS, type MedicoColorKey } from '@/lib/agenda-colors'
 import type { BloqueoHorario } from '@/app/api/bloqueos/route'
 import { type BloqueGrilla, getDiaKey, calcSpan, generarGrillaDia } from '@/lib/agenda-helpers'
+import { formatNombre } from '@/lib/utils/formatters'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -275,7 +276,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
               <option value="">Todos los profesionales</option>
               {medicos.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.nombre} · {m.especialidad}
+                  {formatNombre(m, 'corto')} · {m.especialidad}
                 </option>
               ))}
             </select>

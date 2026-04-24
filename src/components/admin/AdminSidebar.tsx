@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   CalendarDays,
   DollarSign,
+  Package,
   PawPrint,
   X,
 } from 'lucide-react'
@@ -30,6 +31,7 @@ const navItemsBase = [
   { href: '/admin/pacientes',    label: 'Pacientes',       icon: Users,                        modulo: null, ocultarParticular: false },
   { href: '/admin/veterinaria',  label: 'Veterinaria',     icon: PawPrint,                     modulo: 'veterinaria', ocultarParticular: false },
   { href: '/admin/finanzas',     label: 'Finanzas',        icon: DollarSign,                   modulo: null, ocultarParticular: false },
+  { href: '/admin/finanzas/paquetes', label: 'Paquetes',  icon: Package,                      modulo: null, ocultarParticular: false },
   { href: '/admin/configuracion', label: 'Configuración',  icon: Settings,                     modulo: null, ocultarParticular: false },
 ]
 

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import type { MockCita, MockMedicoAdmin } from '@/types/domain'
+import { formatNombre } from '@/lib/utils/formatters'
 
 type Paciente = {
   id: string
@@ -91,7 +92,7 @@ export function MedicoDashboard({
             {clinicaNombre}
           </p>
           <h1 className="text-2xl font-bold text-slate-900">
-            {getSaludo()}, {medico.nombre.split(' ').slice(0, 2).join(' ')}
+            {getSaludo()}, {formatNombre(medico, 'corto')}
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">
             {capitalize(formatFechaLarga())} · {medico.especialidad}

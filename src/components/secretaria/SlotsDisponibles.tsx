@@ -121,9 +121,13 @@ interface SlotItemProps {
   profesionalId: string
   onAgendar: (fecha: string, hora: string) => void
   onBloqueoCreado: (bloqueo: BloqueoHorario) => void
+  /** Cuando true, renderiza el slot como celda de grilla visible (sin panel de bloqueo) */
+  modoGrilla?: boolean
+  /** Nombre del médico para el aria-label en modo grilla */
+  medicoNombre?: string
 }
 
-export function SlotItem({ fecha, hora, duracionMin, profesionalId, onAgendar, onBloqueoCreado }: SlotItemProps) {
+export function SlotItem({ fecha, hora, duracionMin, profesionalId, onAgendar, onBloqueoCreado, modoGrilla = false, medicoNombre }: SlotItemProps) {
   const [mostrando, setMostrando] = useState<'idle' | 'bloqueo'>('idle')
   const [motivo, setMotivo] = useState('')
   const [recurrente, setRecurrente] = useState(false)
@@ -171,6 +175,27 @@ export function SlotItem({ fecha, hora, duracionMin, profesionalId, onAgendar, o
     } finally {
       setCargando(false)
     }
+  }
+
+  // ── Modo grilla: celda visible "Disponible" sin panel de bloqueo ─────────────
+  if (modoGrilla) {
+    const label = medicoNombre
+      ? `Agendar cita con ${medicoNombre} a las ${hora}`
+      : `Agendar cita a las ${hora}`
+    return (
+      <button
+        onClick={() => onAgendar(fecha, hora)}
+        aria-label={label}
+        className="w-full h-full flex flex-col items-center justify-center gap-0.5 group
+          bg-emerald-50/40 hover:bg-emerald-50 transition-colors cursor-pointer
+          border-0 outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-inset"
+      >
+        <Plus className="w-3.5 h-3.5 text-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+        <span className="text-xs text-slate-400 group-hover:text-emerald-600 transition-colors leading-none select-none">
+          Disponible
+        </span>
+      </button>
+    )
   }
 
   if (exito) {

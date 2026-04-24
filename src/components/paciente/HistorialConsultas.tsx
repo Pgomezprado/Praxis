@@ -1,4 +1,4 @@
-import { formatFecha } from '@/lib/utils/formatters'
+import { formatFecha, formatNombre } from '@/lib/utils/formatters'
 import type { Consulta } from '@/types/database'
 
 interface HistorialConsultasProps {
@@ -27,7 +27,7 @@ export function HistorialConsultas({ consultas }: HistorialConsultasProps) {
             </span>
             {consulta.doctor && (
               <span className="text-sm text-slate-500">
-                Dr(a). {consulta.doctor.nombre}
+                Dr(a). {formatNombre(consulta.doctor, 'corto') || consulta.doctor.nombre}
                 {consulta.doctor.especialidad ? ` — ${consulta.doctor.especialidad}` : ''}
               </span>
             )}

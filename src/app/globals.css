@@ -26,3 +26,13 @@ body {
 body.modal-abierto .sticky {
   z-index: 0 !important;
 }
+
+/*
+  Safari iOS: min-height con viewport dinámico (excluye la barra de URL flotante).
+  dvh no está en Tailwind v3 como clase directa; se declara aquí con fallback
+  para navegadores sin soporte (usan 100vh).
+*/
+.agendar-shell {
+  min-height: 100vh;         /* fallback navegadores sin dvh */
+  min-height: 100dvh;        /* Safari iOS 15.4+, Chrome 108+ */
+}

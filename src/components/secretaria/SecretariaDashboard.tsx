@@ -9,6 +9,7 @@ import {
 import { Avatar } from '@/components/ui/Avatar'
 import { ModalNuevaCita } from './ModalNuevaCita'
 import type { MockCita, MockMedicoAdmin, EstadoMedicoHoy } from '@/types/domain'
+import { formatNombre } from '@/lib/utils/formatters'
 
 type Kpis = {
   total: number
@@ -257,7 +258,7 @@ export function SecretariaDashboard({ kpis, proximasCitas, equipo, clinicaNombre
                 <div key={medico.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
                   <Avatar nombre={medico.nombre} size="sm" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 truncate">{medico.nombre}</p>
+                    <p className="text-sm font-semibold text-slate-800 truncate">{formatNombre(medico, 'corto')}</p>
                     <p className="text-xs text-slate-400 truncate">{medico.especialidad}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">

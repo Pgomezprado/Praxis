@@ -125,6 +125,17 @@ export async function POST(req: Request) {
       )
     }
 
+    // Determinar estado inicial según config de la clínica:
+    // Si requiere_confirmacion_manual = true → nace en 'pendiente' (la recepción debe confirmar tras llamar al paciente)
+    // Si false (default) → nace en 'confirmada' (comportamiento histórico)
+    const { data: clinicaConfig } = await supabase
+      .from('clinicas')
+      .select('requiere_confirmacion_manual')
+      .eq('id', me.clinica_id)
+      .single()
+    const configTyped = clinicaConfig as { requiere_confirmacion_manual?: boolean } | null
+    const estadoInicial = configTyped?.requiere_confirmacion_manual === true ? 'pendiente' : 'confirmada'
+
     const { data, error } = await supabase
       .from('citas')
       .insert({
@@ -137,7 +148,7 @@ export async function POST(req: Request) {
         hora_fin,
         motivo: motivo ?? null,
         tipo: tipo ?? 'control',
-        estado: 'confirmada',
+        estado: estadoInicial,
         creada_por: 'secretaria',
       })
       .select(`

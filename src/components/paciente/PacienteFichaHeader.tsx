@@ -5,11 +5,15 @@ import { useRouter } from 'next/navigation'
 import { Pencil } from 'lucide-react'
 import { DrawerPaciente } from '@/components/admin/DrawerPaciente'
 import { type MockPacienteAdmin, type Prevision } from '@/types/domain'
+import { formatNombre } from '@/lib/utils/formatters'
 
 type Props = {
   paciente: {
     id: string
     nombre: string
+    nombres?: string | null
+    apellido_paterno?: string | null
+    apellido_materno?: string | null
     rut: string
     fecha_nac: string | null
     email: string | null
@@ -76,7 +80,7 @@ export function PacienteFichaHeader({ paciente, edad, fechaDesde, rol }: Props) 
       <div className="mb-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">{paciente.nombre}</h2>
+            <h2 className="text-2xl font-bold text-slate-900">{formatNombre(paciente, 'completo')}</h2>
             <div className="flex items-center gap-4 mt-1 text-sm text-slate-500 flex-wrap">
               <span>RUT: {paciente.rut}</span>
               {edad !== null && <span>{edad} años</span>}

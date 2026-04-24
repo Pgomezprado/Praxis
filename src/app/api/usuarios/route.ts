@@ -22,8 +22,8 @@ export async function GET(req: Request) {
     const puedeVerSensibles = me.rol === 'admin_clinica' || me.rol === 'doctor'
 
     const selectFields = puedeVerSensibles
-      ? 'id, nombre, email, especialidad, rol, activo, rut, telefono, duracion_consulta, medicos_asignados'
-      : 'id, nombre, email, especialidad, rol, activo'
+      ? 'id, nombre, nombres, apellido_paterno, apellido_materno, email, especialidad, rol, activo, rut, telefono, duracion_consulta, medicos_asignados'
+      : 'id, nombre, nombres, apellido_paterno, apellido_materno, email, especialidad, rol, activo'
 
     let query = supabase
       .from('usuarios')

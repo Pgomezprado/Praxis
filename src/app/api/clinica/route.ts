@@ -19,7 +19,7 @@ export async function GET() {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('clinicas')
-    .select('id, nombre, slug, rut, direccion, ciudad, telefono, email, logo_url, timezone, dias_agenda_adelante, hora_apertura, hora_cierre')
+    .select('id, nombre, slug, rut, direccion, ciudad, telefono, email, logo_url, timezone, dias_agenda_adelante, hora_apertura, hora_cierre, requiere_confirmacion_manual')
     .eq('id', me.clinica_id)
     .single()
 
@@ -37,7 +37,7 @@ export async function PUT(req: Request) {
   const {
     nombre, rut, direccion, ciudad, telefono, email,
     timezone, dias_agenda_adelante, hora_apertura, hora_cierre,
-    tipo_especialidad, modulos_activos,
+    tipo_especialidad, modulos_activos, requiere_confirmacion_manual,
   } = body
 
   const TIPOS_VALIDOS = ['medicina_general', 'odontologia', 'mixta']
@@ -74,9 +74,10 @@ export async function PUT(req: Request) {
       ...(hora_cierre !== undefined && { hora_cierre }),
       ...(tipo_especialidad !== undefined && { tipo_especialidad }),
       ...(modulos_activos !== undefined && { modulos_activos }),
+      ...(requiere_confirmacion_manual !== undefined && typeof requiere_confirmacion_manual === 'boolean' && { requiere_confirmacion_manual }),
     })
     .eq('id', me.clinica_id)
-    .select('id, nombre, slug, rut, direccion, ciudad, telefono, email, logo_url, timezone, dias_agenda_adelante, hora_apertura, hora_cierre')
+    .select('id, nombre, slug, rut, direccion, ciudad, telefono, email, logo_url, timezone, dias_agenda_adelante, hora_apertura, hora_cierre, requiere_confirmacion_manual')
     .single()
 
   if (error) return Response.json({ error: error.message }, { status: 500 })

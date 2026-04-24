@@ -18,6 +18,7 @@ import {
   ChevronUp,
 } from 'lucide-react'
 import type { Cobro, Pago } from '@/types/database'
+import { formatNombre } from '@/lib/utils/formatters'
 
 // ── Tipos ───────────────────────────────────────────────────────────────────
 
@@ -131,7 +132,7 @@ function ModalPago({ cobro, onClose, onPagoRegistrado }: ModalPagoProps) {
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
 
-  const nombrePaciente = cobro.paciente?.nombre ?? '—'
+  const nombrePaciente = cobro.paciente ? (formatNombre(cobro.paciente, 'corto') || cobro.paciente.nombre) : '—'
 
   async function handleGuardar() {
     const montoNum = parseFloat(monto.replace(/\./g, '').replace(',', '.'))
@@ -294,7 +295,7 @@ function ModalAnularPago({ pago, cobro, onClose, onPagoAnulado }: ModalAnularPag
   const [anulando, setAnulando] = useState(false)
   const [error, setError] = useState('')
 
-  const nombrePaciente = cobro.paciente?.nombre ?? '—'
+  const nombrePaciente = cobro.paciente ? (formatNombre(cobro.paciente, 'corto') || cobro.paciente.nombre) : '—'
 
   async function handleAnular() {
     if (!motivo) {
@@ -699,11 +700,11 @@ export function FinanzasOdontologiaClient({
                           href={`/medico/odontologia/pacientes/${cobro.paciente.id}`}
                           className="text-sm font-semibold text-blue-700 hover:underline truncate block"
                         >
-                          {cobro.paciente.nombre}
+                          {formatNombre(cobro.paciente, 'corto')}
                         </Link>
                       ) : (
                         <p className="text-sm font-semibold text-slate-900 truncate">
-                          {cobro.paciente?.nombre ?? '—'}
+                          {cobro.paciente ? formatNombre(cobro.paciente, 'corto') : '—'}
                         </p>
                       )}
                       <p className="text-xs text-slate-500 truncate mt-0.5">{cobro.concepto}</p>
@@ -773,11 +774,11 @@ export function FinanzasOdontologiaClient({
                               href={`/medico/odontologia/pacientes/${cobro.paciente.id}`}
                               className="text-sm font-medium text-blue-700 hover:underline truncate"
                             >
-                              {cobro.paciente.nombre}
+                              {formatNombre(cobro.paciente, 'corto')}
                             </Link>
                           ) : (
                             <p className="text-sm font-medium text-slate-900 truncate">
-                              {cobro.paciente?.nombre ?? '—'}
+                              {cobro.paciente ? formatNombre(cobro.paciente, 'corto') : '—'}
                             </p>
                           )}
                           <BadgeEstado estado={cobro.estado} />

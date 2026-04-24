@@ -55,6 +55,74 @@ export function calcularEdad(fechaNac: string): number {
   return edad
 }
 
+// ── Formato de nombres ─────────────────────────────────────────────────────────
+
+type PersonaConNombre = {
+  nombre?: string | null
+  nombres?: string | null
+  apellido_paterno?: string | null
+  apellido_materno?: string | null
+}
+
+/**
+ * Formatea el nombre de una persona para mostrar en UI.
+ *
+ * Variantes:
+ *   'corto'    → "Juan Pérez"   (primer nombre + primer apellido) — listados, tarjetas, agenda
+ *   'completo' → "Juan Pablo Pérez González" — documentos oficiales, recetas, boletas, ficha header
+ *   'formal'   → "Pérez González, Juan Pablo" — índices alfabéticos
+ *
+ * Si la persona tiene campos separados (nombres/apellido_paterno/apellido_materno) los usa.
+ * Si no, hace fallback al campo `nombre` legacy.
+ */
+export function formatNombre(
+  p: PersonaConNombre | null | undefined,
+  variant: 'corto' | 'completo' | 'formal' = 'corto'
+): string {
+  if (!p) return ''
+
+  const nombres = p.nombres?.trim() ?? ''
+  const apPat = p.apellido_paterno?.trim() ?? ''
+  const apMat = p.apellido_materno?.trim() ?? ''
+
+  // Si hay campos separados, usarlos
+  if (nombres || apPat) {
+    if (variant === 'corto') {
+      const primerNombre = nombres.split(/\s+/)[0] ?? ''
+      if (primerNombre && apPat) return `${primerNombre} ${apPat}`
+      if (primerNombre) return primerNombre
+      if (apPat) return apPat
+    }
+
+    if (variant === 'completo') {
+      return [nombres, apPat, apMat].filter(Boolean).join(' ')
+    }
+
+    if (variant === 'formal') {
+      const apellidos = [apPat, apMat].filter(Boolean).join(' ')
+      if (apellidos && nombres) return `${apellidos}, ${nombres}`
+      return apellidos || nombres
+    }
+  }
+
+  // Fallback: parsear nombre legacy
+  const legacyNombre = p.nombre?.trim() ?? ''
+  if (!legacyNombre) return ''
+
+  if (variant === 'corto') {
+    const palabras = legacyNombre.split(/\s+/)
+    if (palabras.length >= 2) {
+      // Tomar primer nombre y penúltima palabra (apellido paterno heurístico)
+      const primerNombre = palabras[0]
+      const apPatFallback = palabras.length >= 3 ? palabras[palabras.length - 2] : palabras[1]
+      return `${primerNombre} ${apPatFallback}`
+    }
+    return legacyNombre
+  }
+
+  return legacyNombre
+}
+
 /**
  * Formatea fecha a string legible: "12 mar 2024"
  */

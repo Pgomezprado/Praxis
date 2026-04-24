@@ -1,8 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
+import { formatNombre } from '@/lib/utils/formatters'
 
 export type HonorarioPorMedico = {
   doctorId: string
   nombre: string
+  nombres?: string | null
+  apellido_paterno?: string | null
+  apellido_materno?: string | null
   especialidad: string | null
   porcentajeHonorario: number | null   // null = no configurado
   sesionesAtendidas: number
@@ -15,7 +19,7 @@ export type HonorarioPorMedico = {
 type CitaRow = {
   id: string
   doctor_id: string
-  doctor: { nombre: string; especialidad: string | null; porcentaje_honorario: number | null } | null
+  doctor: { nombre: string; nombres: string | null; apellido_paterno: string | null; apellido_materno: string | null; especialidad: string | null; porcentaje_honorario: number | null } | null
 }
 
 type CobroRow = {
@@ -38,7 +42,7 @@ export async function getHonorariosPorPeriodo(
     .select(`
       id,
       doctor_id,
-      doctor:usuarios!citas_doctor_id_fkey ( nombre, especialidad, porcentaje_honorario )
+      doctor:usuarios!citas_doctor_id_fkey ( nombre, nombres, apellido_paterno, apellido_materno, especialidad, porcentaje_honorario )
     `)
     .eq('clinica_id', clinicaId)
     .eq('estado', 'completada')
@@ -77,6 +81,9 @@ export async function getHonorariosPorPeriodo(
   // Agrupar citas por doctor y agregar
   const porDoctor = new Map<string, {
     nombre: string
+    nombres: string | null
+    apellido_paterno: string | null
+    apellido_materno: string | null
     especialidad: string | null
     porcentajeHonorario: number | null
     citaIds: string[]
@@ -89,6 +96,9 @@ export async function getHonorariosPorPeriodo(
     } else {
       porDoctor.set(cita.doctor_id, {
         nombre: cita.doctor?.nombre ?? 'Sin nombre',
+        nombres: cita.doctor?.nombres ?? null,
+        apellido_paterno: cita.doctor?.apellido_paterno ?? null,
+        apellido_materno: cita.doctor?.apellido_materno ?? null,
         especialidad: cita.doctor?.especialidad ?? null,
         porcentajeHonorario: cita.doctor?.porcentaje_honorario ?? null,
         citaIds: [cita.id],
@@ -136,6 +146,9 @@ export async function getHonorariosPorPeriodo(
     resultado.push({
       doctorId,
       nombre: datos.nombre,
+      nombres: datos.nombres,
+      apellido_paterno: datos.apellido_paterno,
+      apellido_materno: datos.apellido_materno,
       especialidad: datos.especialidad,
       porcentajeHonorario: datos.porcentajeHonorario,
       sesionesAtendidas: datos.citaIds.length,

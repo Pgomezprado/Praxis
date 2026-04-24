@@ -22,7 +22,7 @@ export default async function AdminPacientesPage() {
   const { data: pacientesDb } = await supabase
     .from('pacientes')
     .select(`
-      id, nombre, rut, fecha_nac, prevision, email, telefono,
+      id, nombre, nombres, apellido_paterno, apellido_materno, rut, fecha_nac, prevision, email, telefono,
       alergias, condiciones, activo,
       consultas ( id, fecha, doctor_id )
     `)
@@ -40,9 +40,13 @@ export default async function AdminPacientesPage() {
       : null
     const ultimoMedicoId = sortedConsultas[0]?.doctor_id ?? null
 
+    const row = p as typeof p & { nombres?: string | null; apellido_paterno?: string | null; apellido_materno?: string | null }
     return {
       id: p.id,
       nombre: p.nombre,
+      nombres: row.nombres ?? null,
+      apellido_paterno: row.apellido_paterno ?? null,
+      apellido_materno: row.apellido_materno ?? null,
       rut: p.rut,
       fechaNacimiento: p.fecha_nac ?? '',
       edad: p.fecha_nac ? calcularEdad(p.fecha_nac) : 0,

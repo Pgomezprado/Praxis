@@ -41,6 +41,10 @@ export interface Usuario {
   es_doctor: boolean
   // Campo agregado en migración 055
   porcentaje_honorario: number | null
+  // Campos agregados en migración 058 — nombre separado en partes
+  nombres: string | null
+  apellido_paterno: string | null
+  apellido_materno: string | null
 }
 
 export interface Paciente {
@@ -62,6 +66,10 @@ export interface Paciente {
   // Campos agregados en migración 039 — facturación y seguros
   direccion: string | null
   seguro_complementario: string | null
+  // Campos agregados en migración 058 — nombre separado en partes
+  nombres: string | null
+  apellido_paterno: string | null
+  apellido_materno: string | null
   consultas?: Consulta[]
 }
 
@@ -76,7 +84,7 @@ export interface Consulta {
   notas: string | null
   medicamentos: string[]
   created_at: string
-  doctor?: Pick<Usuario, 'nombre' | 'especialidad'>
+  doctor?: Pick<Usuario, 'nombre' | 'nombres' | 'apellido_paterno' | 'apellido_materno' | 'especialidad'>
 }
 
 export interface AuditLog {
@@ -165,6 +173,8 @@ export interface Cobro {
   presupuesto_dental_id?: string | null
   // Campo agregado en migración 034 — exención IVA (Ley 21.420, Art. 13 N°6 D.L. 825)
   exento_iva?: boolean
+  // Campo agregado en migración 057 — número de boleta física o SII para conciliación contable
+  numero_boleta?: string | null
   // Joins opcionales
   paciente?: Pick<Paciente, 'id' | 'nombre' | 'rut'>
   doctor?: Pick<Usuario, 'id' | 'nombre' | 'especialidad'>

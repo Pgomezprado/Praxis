@@ -10,6 +10,7 @@ import {
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import type { MockCita } from '@/types/domain'
+import { estadoOperativo } from '@/lib/agenda-colors'
 import { ModalRepetirCita } from './ModalRepetirCita'
 
 const TIPO_LABEL: Record<MockCita['tipo'], string> = {
@@ -23,7 +24,7 @@ const ESTADO_BADGE: Record<
   { label: string; variant: 'activo' | 'pendiente' | 'urgente' | 'completado' | 'info' | 'default' }
 > = {
   confirmada:  { label: 'Confirmada',   variant: 'info' },
-  pendiente:   { label: 'Pendiente',    variant: 'pendiente' },
+  pendiente:   { label: 'Agendada',     variant: 'pendiente' },
   en_consulta: { label: 'En consulta',  variant: 'activo' },
   completada:  { label: 'Completada',   variant: 'completado' },
   cancelada:   { label: 'Cancelada',    variant: 'urgente' },
@@ -41,6 +42,8 @@ interface DrawerDetalleCitaProps {
   esDoctor?: boolean
   fichaHref?: string
   cobroBasePath?: string
+  /** Indica si la cita tiene un cobro pagado activo. Se usa para mostrar el badge de sub-estado. */
+  tieneCobro?: boolean
   onClose: () => void
   onEstadoCambiado: (id: string, nuevoEstado: MockCita['estado']) => void
   onCambioHora: (id: string) => void
@@ -53,6 +56,7 @@ export function DrawerDetalleCita({
   esDoctor = false,
   fichaHref,
   cobroBasePath = '/cobro',
+  tieneCobro = false,
   onClose,
   onEstadoCambiado,
   onCambioHora,
@@ -125,6 +129,12 @@ export function DrawerDetalleCita({
   const isCompletada = estadoActual === 'completada'
   const puedeActuar  = !isCancelada && !isCompletada && !isNoShow
   const { label, variant } = ESTADO_BADGE[estadoActual]
+
+  // Sub-estado operativo derivado: 'cobrada' | 'pdte_cobro' (solo visible en completadas)
+  const subEstado = cita ? estadoOperativo(
+    { estado: estadoActual },
+    isCompletada ? { estado: tieneCobro ? 'pagado' : 'pendiente', activo: tieneCobro } : null,
+  ) : null
 
   if (!cita) return null
 
@@ -248,6 +258,26 @@ export function DrawerDetalleCita({
               ) : label}
             </Badge>
           </div>
+
+          {/* Sub-estado operativo — solo visible cuando la cita está completada */}
+          {isCompletada && subEstado === 'cobrada' && (
+            <div className="flex items-center justify-between -mt-3">
+              <p className="text-xs text-slate-400">Cobro</p>
+              <Badge variant="activo" className="gap-1">
+                <CheckCircle2 className="w-3 h-3" />
+                Completada y cobrada
+              </Badge>
+            </div>
+          )}
+          {isCompletada && subEstado === 'pdte_cobro' && (
+            <div className="flex items-center justify-between -mt-3">
+              <p className="text-xs text-slate-400">Cobro</p>
+              <Badge variant="pendiente" className="gap-1">
+                <Clock className="w-3 h-3" />
+                Pendiente de cobro
+              </Badge>
+            </div>
+          )}
 
           {/* Acciones */}
           {puedeActuar && (

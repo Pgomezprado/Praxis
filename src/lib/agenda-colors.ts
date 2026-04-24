@@ -4,9 +4,68 @@ export const ESTADO_BORDER: Record<MockCita['estado'], string> = {
   pendiente:   'border-l-amber-400',
   confirmada:  'border-l-blue-400',
   en_consulta: 'border-l-emerald-400',
-  completada:  'border-l-slate-300',
+  completada:  'border-l-slate-300', // fallback — usar colorDeCita() en su lugar
   cancelada:   'border-l-red-300',
   no_show:     'border-l-slate-400',
+}
+
+/**
+ * Sub-estado operativo derivado — NO es una columna DB.
+ * Combina `estado_cita` con la existencia de un cobro pagado para exponer
+ * lenguaje de negocio relevante para recepción (ej: "pendiente de cobro").
+ */
+export type EstadoOperativo =
+  | 'agendada'
+  | 'confirmada'
+  | 'en_consulta'
+  | 'cobrada'
+  | 'pdte_cobro'
+  | 'cancelada'
+  | 'no_show'
+
+/**
+ * Calcula el estado operativo de una cita.
+ * - completada + cobro pagado activo → 'cobrada'
+ * - completada + sin cobro pagado   → 'pdte_cobro'
+ * - resto: mapeo 1:1 con estado DB
+ */
+export function estadoOperativo(
+  cita: { estado: string },
+  cobro?: { estado: string; activo: boolean } | null,
+): EstadoOperativo {
+  if (cita.estado === 'completada') {
+    return cobro && cobro.estado === 'pagado' && cobro.activo
+      ? 'cobrada'
+      : 'pdte_cobro'
+  }
+  const mapeo: Record<string, EstadoOperativo> = {
+    confirmada:  'confirmada',
+    pendiente:   'agendada',
+    en_consulta: 'en_consulta',
+    cancelada:   'cancelada',
+    no_show:     'no_show',
+  }
+  return mapeo[cita.estado] ?? 'agendada'
+}
+
+/**
+ * Devuelve la clase Tailwind de border-left para una cita.
+ * Para el estado `completada`, preserva el color funcional subyacente:
+ *   - tieneCobro → verde (cobrada)
+ *   - sin cobro   → azul (confirmada por defecto)
+ * Nunca devuelve gris para completada.
+ */
+export function colorDeCita({
+  estado,
+  tieneCobro,
+}: {
+  estado: MockCita['estado']
+  tieneCobro: boolean
+}): string {
+  if (estado === 'completada') {
+    return tieneCobro ? 'border-l-emerald-400' : 'border-l-blue-400'
+  }
+  return ESTADO_BORDER[estado]
 }
 
 export const MEDICO_COLOR_KEYS = ['violet', 'blue', 'amber', 'emerald', 'rose', 'cyan', 'indigo', 'teal', 'orange', 'pink', 'sky', 'lime'] as const

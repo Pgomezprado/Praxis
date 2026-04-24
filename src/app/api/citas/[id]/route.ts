@@ -28,7 +28,7 @@ export async function PATCH(
 
     const meTyped = me as { clinica_id: string; rol: string; es_doctor: boolean }
 
-    let updatePayload: Record<string, string>
+    let updatePayload: Record<string, string | null>
 
     if ('estado' in body) {
       const { estado } = body as { estado: EstadoCita }
@@ -41,7 +41,8 @@ export async function PATCH(
       const esAdminSinDoctor = meTyped.rol === 'admin_clinica' && !meTyped.es_doctor
       const esRecepcionista = meTyped.rol === 'recepcionista'
 
-      const ESTADOS_RECEPCION: EstadoCita[] = ['confirmada', 'cancelada', 'completada']
+      // pendiente: recepción puede asignar (ej: al reagendar) y también puede confirmar
+      const ESTADOS_RECEPCION: EstadoCita[] = ['confirmada', 'pendiente', 'cancelada', 'completada']
 
       if (esDoctor) {
         // Sin restricción adicional de estados
@@ -54,6 +55,12 @@ export async function PATCH(
       }
 
       updatePayload = { estado }
+
+      // Registrar quién confirmó y cuándo en la transición pendiente → confirmada
+      if (estado === 'confirmada') {
+        updatePayload.confirmada_por = user.id
+        updatePayload.confirmada_at = new Date().toISOString()
+      }
     } else if ('fecha' in body && 'hora_inicio' in body && 'hora_fin' in body) {
       const { fecha, hora_inicio, hora_fin, doctor_id } = body as {
         fecha: string; hora_inicio: string; hora_fin: string; doctor_id?: string

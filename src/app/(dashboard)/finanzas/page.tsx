@@ -75,7 +75,7 @@ export default async function FinanzasPage() {
   const { data: ultimosCobrosData } = await supabase
     .from('cobros')
     .select(`
-      id, folio_cobro, concepto, monto_neto, estado, notas, created_at,
+      id, folio_cobro, concepto, monto_neto, estado, notas, numero_boleta, created_at,
       paciente:pacientes!cobros_paciente_id_fkey ( id, nombre, rut, email, telefono, prevision, direccion ),
       doctor:usuarios!cobros_doctor_id_fkey ( nombre ),
       pagos ( id, monto, medio_pago, referencia, fecha_pago )
@@ -90,7 +90,7 @@ export default async function FinanzasPage() {
   const { data: cobrosPendientesListData } = await supabase
     .from('cobros')
     .select(`
-      id, folio_cobro, concepto, monto_neto, estado, created_at,
+      id, folio_cobro, concepto, monto_neto, estado, numero_boleta, created_at,
       paciente:pacientes!cobros_paciente_id_fkey ( id, nombre, rut, email, telefono, prevision, direccion ),
       doctor:usuarios!cobros_doctor_id_fkey ( nombre )
     `)

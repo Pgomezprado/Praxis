@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircle2, XCircle, Loader2, DollarSign, AlertTriangle, Banknote, CreditCard, Building2 } from 'lucide-react'
 import { DrawerVerPaciente, type PacienteResumen } from './DrawerVerPaciente'
+import { formatNombre } from '@/lib/utils/formatters'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
 
@@ -21,9 +22,10 @@ type CobroPendiente = {
   concepto: string
   monto_neto: number
   estado: string
+  numero_boleta?: string | null
   created_at: string
-  paciente: { id?: string; nombre: string; rut?: string | null; email?: string | null; telefono?: string | null; prevision?: string | null; direccion?: string | null } | null
-  doctor: { nombre: string } | null
+  paciente: { id?: string; nombre: string; nombres?: string | null; apellido_paterno?: string | null; apellido_materno?: string | null; rut?: string | null; email?: string | null; telefono?: string | null; prevision?: string | null; direccion?: string | null } | null
+  doctor: { nombre: string; nombres?: string | null; apellido_paterno?: string | null; apellido_materno?: string | null } | null
   pagos?: PagoDetalle[]
 }
 
@@ -58,6 +60,9 @@ export default function CobrosPendientesClient({
     setPacienteDrawer({
       id: cobro.paciente.id ?? '',
       nombre: cobro.paciente.nombre,
+      nombres: cobro.paciente.nombres,
+      apellido_paterno: cobro.paciente.apellido_paterno,
+      apellido_materno: cobro.paciente.apellido_materno,
       rut: cobro.paciente.rut ?? null,
       email: cobro.paciente.email ?? null,
       telefono: cobro.paciente.telefono ?? null,
@@ -160,9 +165,10 @@ export default function CobrosPendientesClient({
     <>
     <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
       {/* Encabezado de tabla (desktop) */}
-      <div className="hidden sm:grid sm:grid-cols-[1fr_150px_130px_100px_200px] gap-4 px-5 py-3 bg-amber-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+      <div className="hidden sm:grid sm:grid-cols-[1fr_150px_90px_130px_100px_200px] gap-4 px-5 py-3 bg-amber-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wide">
         <span>Paciente / Concepto</span>
         <span>Profesional</span>
+        <span>Nº Boleta</span>
         <span className="text-right">Monto</span>
         <span className="text-center">Fecha cobro</span>
         <span className="text-right">Acciones</span>
@@ -182,7 +188,7 @@ export default function CobrosPendientesClient({
             className={`px-5 py-4 ${idx < cobros.length - 1 ? 'border-b border-slate-100' : ''}`}
           >
             {/* Fila principal */}
-            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_150px_130px_100px_200px] gap-2 sm:gap-4 items-start sm:items-center">
+            <div className="flex flex-col sm:grid sm:grid-cols-[1fr_150px_90px_130px_100px_200px] gap-2 sm:gap-4 items-start sm:items-center">
               {/* Paciente / Concepto */}
               <div className="min-w-0">
                 {cobro.paciente ? (
@@ -190,7 +196,7 @@ export default function CobrosPendientesClient({
                     onClick={() => abrirPaciente(cobro)}
                     className="text-sm font-medium text-blue-600 hover:underline text-left"
                   >
-                    {cobro.paciente.nombre}
+                    {formatNombre(cobro.paciente, 'corto')}
                   </button>
                 ) : (
                   <p className="text-sm font-medium text-slate-800">—</p>
@@ -202,8 +208,17 @@ export default function CobrosPendientesClient({
               {/* Profesional */}
               <div>
                 <p className="text-sm text-slate-600 truncate">
-                  {cobro.doctor?.nombre ?? '—'}
+                  {cobro.doctor ? formatNombre(cobro.doctor, 'corto') : '—'}
                 </p>
+              </div>
+
+              {/* Nº Boleta */}
+              <div>
+                {cobro.numero_boleta ? (
+                  <span className="text-xs font-mono text-slate-700">{cobro.numero_boleta}</span>
+                ) : (
+                  <span className="text-xs text-slate-300">—</span>
+                )}
               </div>
 
               {/* Monto / Saldo */}

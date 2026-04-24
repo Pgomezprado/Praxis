@@ -40,6 +40,10 @@ export type MockMedicoAdmin = {
   esAdmin?: boolean
   colorAgenda?: string
   porcentajeHonorario?: number | null
+  // Campos agregados en migración 058 — nombre separado en partes
+  nombres?: string | null
+  apellido_paterno?: string | null
+  apellido_materno?: string | null
 }
 
 export type MockSecretaria = {
@@ -52,6 +56,10 @@ export type MockSecretaria = {
   medicosAsignados: string[]
   estado: 'activo' | 'inactivo'
   invitacionPendiente: boolean
+  // Campos agregados en migración 058 — nombre separado en partes
+  nombres?: string | null
+  apellido_paterno?: string | null
+  apellido_materno?: string | null
 }
 
 export type EstadoMedicoHoy = 'en_consulta' | 'disponible' | 'sin_agenda'
@@ -113,4 +121,8 @@ export type MockPacienteAdmin = {
   // Campos de facturación — migración 039
   direccion?: string | null
   seguro_complementario?: string | null
+  // Campos agregados en migración 058 — nombre separado en partes
+  nombres?: string | null
+  apellido_paterno?: string | null
+  apellido_materno?: string | null
 }

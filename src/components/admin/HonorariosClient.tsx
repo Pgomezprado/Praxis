@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Users, Pencil, Download, Printer, Check, X, ChevronDown } from 'lucide-react'
 import type { HonorarioPorMedico } from '@/lib/queries/honorarios'
 import { RETENCION_SII } from '@/lib/constants/honorarios'
+import { formatNombre } from '@/lib/utils/formatters'
 
 // ── Helpers de fecha ──────────────────────────────────────────────────────────
 
@@ -183,7 +184,7 @@ export default function HonorariosClient({ datos: datosInicial, desde: desdeInic
     const filas = datosInicial.map(d => {
       const { bruto, retencion, liquido } = calcularMontos(d)
       return [
-        d.nombre,
+        formatNombre(d, 'completo') || d.nombre,
         d.especialidad ?? '',
         d.sesionesAtendidas,
         d.sesionesPagadas,
@@ -358,7 +359,7 @@ export default function HonorariosClient({ datos: datosInicial, desde: desdeInic
                     <tr key={d.doctorId} className="hover:bg-slate-50 transition-colors">
                       {/* Profesional */}
                       <td className="px-5 py-4">
-                        <p className="font-medium text-slate-900">{d.nombre}</p>
+                        <p className="font-medium text-slate-900">{formatNombre(d, 'corto')}</p>
                         <p className="text-xs text-slate-400 sm:hidden">{d.especialidad ?? '—'}</p>
                       </td>
 

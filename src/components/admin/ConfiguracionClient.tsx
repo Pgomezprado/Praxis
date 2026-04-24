@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import {
   Building2, Clock, Bell, AlertTriangle, Save, Upload,
-  Download, Trash2, ChevronDown, CheckCircle2, Stethoscope, PawPrint,
+  Download, Trash2, ChevronDown, CheckCircle2, Stethoscope, PawPrint, CalendarCheck,
 } from 'lucide-react'
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
@@ -24,6 +24,7 @@ type Clinica = {
   horaApertura: string
   horaCierre: string
   tipoEspecialidad: TipoEspecialidad
+  requiereConfirmacionManual: boolean
 }
 
 type NotifConfig = {
@@ -158,6 +159,7 @@ export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, ad
           dias_agenda_adelante: clinica.diasAgendaAdelante,
           hora_apertura: clinica.horaApertura,
           hora_cierre: clinica.horaCierre,
+          requiere_confirmacion_manual: clinica.requiereConfirmacionManual,
         }),
       })
       if (!res.ok) throw new Error('Error al guardar')
@@ -428,6 +430,37 @@ export function ConfiguracionClient({ clinicaInicial, adminId, adminEsDoctor, ad
                   onChange={e => setField('horaCierre', e.target.value)}
                   className="flex-1 px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Confirmación manual de citas */}
+          <div className="pt-1 border-t border-slate-100">
+            <div className="flex items-start gap-3 py-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
+                <CalendarCheck className="w-4 h-4 text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium text-slate-700">Requerir confirmación manual de citas</div>
+                    <div className="text-xs text-slate-400 mt-0.5">
+                      Las citas agendadas por recepción quedan como &quot;Agendada&quot; hasta que se confirme manualmente. Útil si llaman al paciente antes de confirmar.
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setField('requiereConfirmacionManual', !clinica.requiereConfirmacionManual)}
+                    aria-label="Activar o desactivar confirmación manual"
+                    className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 focus:outline-none overflow-hidden ${
+                      clinica.requiereConfirmacionManual ? 'bg-amber-500' : 'bg-slate-300'
+                    }`}
+                  >
+                    <span className={`absolute left-0.5 top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                      clinica.requiereConfirmacionManual ? 'translate-x-5' : 'translate-x-0'
+                    }`} />
+                  </button>
+                </div>
               </div>
             </div>
           </div>

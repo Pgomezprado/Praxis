@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { formatNombre } from '@/lib/utils/formatters'
 
 export async function Header() {
   const supabase = await createClient()
@@ -8,13 +9,15 @@ export async function Header() {
   if (user) {
     const { data: usuario } = await supabase
       .from('usuarios')
-      .select('nombre, rol, especialidad')
+      .select('nombre, nombres, apellido_paterno, apellido_materno, rol, especialidad')
       .eq('id', user.id)
       .single()
     if (usuario) {
-      nombreUsuario = usuario.especialidad
-        ? `Dr(a). ${usuario.nombre} — ${usuario.especialidad}`
-        : usuario.nombre
+      const u = usuario as { nombre: string; nombres: string | null; apellido_paterno: string | null; apellido_materno: string | null; especialidad: string | null }
+      const nombreCorto = formatNombre(u, 'corto') || u.nombre
+      nombreUsuario = u.especialidad
+        ? `Dr(a). ${nombreCorto} — ${u.especialidad}`
+        : nombreCorto
     }
   }
 

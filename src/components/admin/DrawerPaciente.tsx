@@ -1,11 +1,19 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X, Plus } from 'lucide-react'
+import { X, Plus, Package, ArrowRight, Loader2 } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { validarRut, formatearRut } from '@/lib/agendamiento'
 import { type MockPacienteAdmin, type Prevision } from '@/types/domain'
+import type { PaquetePaciente } from '@/types/database'
+
+// Tipo reducido para el resumen de paquetes en el drawer.
+// TODO: si se necesita reutilizar esta vista mini en otros lugares, extraer a
+// src/components/paciente/ResumenPaquetes.tsx con prop variante: 'completo' | 'resumen'
+type PaqueteResumen = Pick<PaquetePaciente, 'id' | 'sesiones_total' | 'sesiones_usadas' | 'estado'> & {
+  paquete_arancel?: { nombre?: string } | null
+}
 
 const ISAPRES: Prevision[] = [
   'Isapre Banmédica', 'Isapre Cruz Blanca', 'Isapre Consalud',
@@ -58,6 +66,10 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar, rol }
   const [inputAlergia, setInputAlergia] = useState('')
   const [inputCondicion, setInputCondicion] = useState('')
 
+  // Estado para el resumen de paquetes (solo en modo edición)
+  const [paquetes, setPaquetes] = useState<PaqueteResumen[]>([])
+  const [cargandoPaquetes, setCargandoPaquetes] = useState(false)
+
   useEffect(() => {
     if (pacienteEditar) {
       setForm({
@@ -72,8 +84,21 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar, rol }
         alergias: [...pacienteEditar.alergias],
         condiciones: [...pacienteEditar.condiciones],
       })
+
+      // Cargar paquetes activos del paciente para el resumen del drawer
+      setCargandoPaquetes(true)
+      setPaquetes([])
+      fetch(`/api/paquetes/paciente?paciente_id=${pacienteEditar.id}`)
+        .then(r => r.ok ? r.json() : Promise.resolve({ paquetes: [] }))
+        .then((json: { paquetes?: PaqueteResumen[] }) => {
+          const soloActivos = (json.paquetes ?? []).filter(p => p.estado === 'activo')
+          setPaquetes(soloActivos)
+        })
+        .catch(() => setPaquetes([]))
+        .finally(() => setCargandoPaquetes(false))
     } else {
       setForm(defaultForm)
+      setPaquetes([])
     }
     setRutError('')
     setErrorApi('')
@@ -500,6 +525,76 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar, rol }
                 </p>
               </div>
             </div>
+          )}
+
+          {/* Sección paquetes de sesiones — solo en modo edición */}
+          {esEdicion && (
+            <section>
+              <div className="flex items-center gap-2 mb-3">
+                <Package className="w-3.5 h-3.5 text-indigo-500" />
+                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                  Paquetes de sesiones
+                </h3>
+              </div>
+
+              {cargandoPaquetes ? (
+                <div className="flex items-center gap-2 text-xs text-slate-400 py-2">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Cargando paquetes…
+                </div>
+              ) : paquetes.length === 0 ? (
+                <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                  <p className="text-sm text-slate-400">Sin paquetes activos</p>
+                  {pacienteEditar?.id && (
+                    <a
+                      href={`/pacientes/${pacienteEditar.id}`}
+                      className="text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+                    >
+                      Vender paquete
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {paquetes.map(p => {
+                    const progresoPct = p.sesiones_total > 0
+                      ? Math.round((p.sesiones_usadas / p.sesiones_total) * 100)
+                      : 0
+                    const nombre = (p.paquete_arancel as { nombre?: string } | null | undefined)?.nombre ?? 'Paquete'
+                    return (
+                      <div key={p.id} className="bg-white border border-slate-200 rounded-xl px-4 py-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-slate-700 truncate mr-2">{nombre}</span>
+                          <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0">
+                            {p.sesiones_usadas}/{p.sesiones_total}
+                          </span>
+                        </div>
+                        <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-indigo-500 rounded-full transition-all"
+                            style={{ width: `${progresoPct}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-slate-400 mt-1.5">
+                          {p.sesiones_total - p.sesiones_usadas} sesión{p.sesiones_total - p.sesiones_usadas !== 1 ? 'es' : ''} restante{p.sesiones_total - p.sesiones_usadas !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Link ficha completa */}
+              {pacienteEditar?.id && (
+                <a
+                  href={`/pacientes/${pacienteEditar.id}`}
+                  className="mt-3 flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+                >
+                  Abrir ficha completa
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              )}
+            </section>
           )}
 
         </div>

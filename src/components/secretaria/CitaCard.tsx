@@ -7,7 +7,7 @@ import { XCircle, PlayCircle, CheckCircle2, Loader2, CheckCheck, FileText, Dolla
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import type { MockCita } from '@/types/domain'
-import { ESTADO_BORDER } from '@/lib/agenda-colors'
+import { colorDeCita } from '@/lib/agenda-colors'
 
 interface CitaCardProps {
   cita: MockCita
@@ -29,7 +29,7 @@ const ESTADO_BADGE: Record<
   { label: string; variant: 'activo' | 'pendiente' | 'urgente' | 'completado' | 'info' | 'default' }
 > = {
   confirmada: { label: 'Confirmada', variant: 'info' },
-  pendiente: { label: 'Pendiente', variant: 'pendiente' },
+  pendiente: { label: 'Agendada', variant: 'pendiente' },
   en_consulta: { label: 'En consulta', variant: 'activo' },
   completada: { label: 'Completada', variant: 'completado' },
   cancelada: { label: 'Cancelada', variant: 'urgente' },
@@ -97,7 +97,7 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
 
   return (
     <div
-      className={`relative bg-white border border-l-4 ${ESTADO_BORDER[estadoLocal]} rounded-xl p-4 transition-all ${
+      className={`relative bg-white border border-l-4 ${colorDeCita({ estado: estadoLocal, tieneCobro: cobrada })} rounded-xl p-4 transition-all ${
         isCancelada
           ? 'opacity-60'
           : isEnConsulta

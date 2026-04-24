@@ -59,7 +59,12 @@ function PopoverTratamiento({
   const ALTO_ESTIMADO = 360
 
   const viewportW = typeof window !== 'undefined' ? window.innerWidth : 1200
-  const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800
+  // Safari iOS: window.innerHeight incluye la barra de URL (que aparece/desaparece).
+  // visualViewport.height refleja el área visible real en cada momento.
+  // offsetTop compensa cuando la barra de URL empuja el viewport hacia abajo.
+  const vvp = typeof window !== 'undefined' ? window.visualViewport : null
+  const viewportH = vvp?.height ?? (typeof window !== 'undefined' ? window.innerHeight : 800)
+  const vvpOffsetTop = vvp?.offsetTop ?? 0
 
   // Centro del elemento clickeado
   const centroX = rect.left + rect.width / 2
@@ -75,12 +80,14 @@ function PopoverTratamiento({
     left = Math.max(8, (viewportW - ANCHO_POPOVER) / 2)
   }
 
-  // Intentar posicionar con el top alineado al elemento; ajustar si sale por abajo
+  // Intentar posicionar con el top alineado al elemento; ajustar si sale por abajo.
+  // Se suma vvpOffsetTop para compensar el desplazamiento de la barra de Safari.
   let top = centroY - 40
-  if (top + ALTO_ESTIMADO > viewportH - 8) {
-    top = viewportH - ALTO_ESTIMADO - 8
+  const limiteInferior = vvpOffsetTop + viewportH - 8
+  if (top + ALTO_ESTIMADO > limiteInferior) {
+    top = limiteInferior - ALTO_ESTIMADO
   }
-  if (top < 8) top = 8
+  if (top < vvpOffsetTop + 8) top = vvpOffsetTop + 8
 
   const normalizar = (s: string) =>
     s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')

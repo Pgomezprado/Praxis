@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { AlertTriangle, ChevronLeft, CheckCircle2, Clock, Printer } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
+import { formatNombre } from '@/lib/utils/formatters'
 import { ResumenIA } from '@/components/paciente/ResumenIA'
 import { HistorialCitas } from '@/components/paciente/HistorialCitas'
 import { SeccionReceta } from '@/components/consulta/SeccionReceta'
@@ -21,6 +22,9 @@ import type { CitaPaciente } from '@/components/paciente/HistorialCitas'
 type Paciente = {
   id: string
   nombre: string
+  nombres?: string | null
+  apellido_paterno?: string | null
+  apellido_materno?: string | null
   rut: string
   fecha_nacimiento: string
   edad: number
@@ -248,7 +252,7 @@ export function PacienteConsultaClient({
         clinica,
         medico,
         paciente: {
-          nombre: paciente.nombre,
+          nombre: formatNombre(paciente, 'completo') || paciente.nombre,
           rut: paciente.rut,
           fechaNacimiento: paciente.fecha_nacimiento,
           edad: paciente.edad,
@@ -297,7 +301,7 @@ export function PacienteConsultaClient({
         <div className="h-5 w-px bg-slate-200" />
         <Avatar nombre={paciente.nombre} size="sm" />
         <div>
-          <h1 className="text-lg font-bold text-slate-900 leading-tight">{paciente.nombre}</h1>
+          <h1 className="text-lg font-bold text-slate-900 leading-tight">{formatNombre(paciente, 'completo')}</h1>
           <p className="text-xs text-slate-500">
             {paciente.rut} · {paciente.edad} años · {paciente.grupo_sanguineo}
           </p>
@@ -348,7 +352,7 @@ export function PacienteConsultaClient({
       {tieneOdontologia && tabActiva === 'odontologia' && (
         <TabOdontologia
           pacienteId={paciente.id}
-          pacienteNombre={paciente.nombre}
+          pacienteNombre={formatNombre(paciente, 'completo') || paciente.nombre}
         />
       )}
 

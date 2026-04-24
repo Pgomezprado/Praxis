@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { DrawerMedico } from './DrawerMedico'
 import { type MockMedicoAdmin } from '@/types/domain'
 import { type Especialidad } from '@/types/database'
+import { formatNombre } from '@/lib/utils/formatters'
 
 type Props = {
   medicosIniciales: MockMedicoAdmin[]
@@ -181,7 +182,7 @@ export function MedicosClient({ medicosIniciales, especialidades }: Props) {
                   <Avatar nombre={medico.nombre} size="sm" />
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{medico.nombre}</p>
+                      <p className="text-sm font-semibold text-slate-800 truncate">{formatNombre(medico, 'corto')}</p>
                       {medico.esAdmin && (
                         <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-violet-100 text-violet-700 border border-violet-200 shrink-0">
                           Admin

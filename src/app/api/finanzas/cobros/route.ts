@@ -25,7 +25,7 @@ export async function GET(req: Request) {
       .from('cobros')
       .select(`
         id, folio_cobro, clinica_id, cita_id, paciente_id, doctor_id, arancel_id,
-        concepto, monto_neto, estado, notas, creado_por, activo, created_at,
+        concepto, monto_neto, estado, notas, numero_boleta, creado_por, activo, created_at,
         paciente:pacientes!cobros_paciente_id_fkey ( id, nombre, rut ),
         doctor:usuarios!cobros_doctor_id_fkey ( id, nombre, especialidad )
       `)
@@ -53,7 +53,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { cita_id, paciente_id, doctor_id, arancel_id, concepto, monto_neto, notas } = body
+    const { cita_id, paciente_id, doctor_id, arancel_id, concepto, monto_neto, notas, numero_boleta } = body
 
     if (!paciente_id || !doctor_id || !concepto || monto_neto === undefined || monto_neto === null) {
       return Response.json(
@@ -131,12 +131,13 @@ export async function POST(req: Request) {
         monto_neto: Math.round(monto_neto),
         estado: 'pendiente',
         notas: notas ?? null,
+        numero_boleta: (typeof numero_boleta === 'string' && numero_boleta.trim()) ? numero_boleta.trim() : null,
         creado_por: user.id,
         activo: true,
       })
       .select(`
         id, folio_cobro, clinica_id, cita_id, paciente_id, doctor_id, arancel_id,
-        concepto, monto_neto, estado, notas, creado_por, activo, created_at,
+        concepto, monto_neto, estado, notas, numero_boleta, creado_por, activo, created_at,
         paciente:pacientes!cobros_paciente_id_fkey ( id, nombre, rut ),
         doctor:usuarios!cobros_doctor_id_fkey ( id, nombre, especialidad )
       `)

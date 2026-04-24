@@ -2,10 +2,14 @@
 
 import { X, Mail, Phone, MapPin, Shield, User } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
+import { formatNombre } from '@/lib/utils/formatters'
 
 export type PacienteResumen = {
   id: string
   nombre: string
+  nombres?: string | null
+  apellido_paterno?: string | null
+  apellido_materno?: string | null
   rut: string | null
   email: string | null
   telefono: string | null
@@ -34,7 +38,7 @@ export function DrawerVerPaciente({ paciente, onClose }: Props) {
           <div className="flex items-center gap-3">
             <Avatar nombre={paciente.nombre} size="sm" />
             <div>
-              <h2 className="text-base font-semibold text-slate-900">{paciente.nombre}</h2>
+              <h2 className="text-base font-semibold text-slate-900">{formatNombre(paciente, 'corto')}</h2>
               {paciente.rut && (
                 <p className="text-xs text-slate-400 font-mono mt-0.5">{paciente.rut}</p>
               )}

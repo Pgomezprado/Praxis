@@ -20,9 +20,11 @@ type CobroUnificado = {
   monto_neto: number
   estado: string
   notas: string | null
+  numero_boleta?: string | null
   created_at: string
-  paciente: { id?: string; nombre: string; rut?: string | null; email?: string | null; telefono?: string | null; prevision?: string | null; direccion?: string | null } | null
-  doctor: { nombre: string } | null
+  cita_id?: string | null
+  paciente: { id?: string; nombre: string; nombres?: string | null; apellido_paterno?: string | null; apellido_materno?: string | null; rut?: string | null; email?: string | null; telefono?: string | null; prevision?: string | null; direccion?: string | null } | null
+  doctor: { nombre: string; nombres?: string | null; apellido_paterno?: string | null; apellido_materno?: string | null } | null
   pagos?: PagoDetalle[]
 }
 
@@ -36,6 +38,8 @@ const TABS: { key: Tab; label: string }[] = [
 
 type Props = {
   cobros: CobroUnificado[]
+  /** Ruta base para cobrar/editar (ej: '/admin/cobro' o '/cobro') */
+  cobroBasePath?: string
 }
 
 function normalizar(texto: string): string {
@@ -45,7 +49,7 @@ function normalizar(texto: string): string {
     .replace(/\p{Diacritic}/gu, '')
 }
 
-export default function FinanzasTabsClient({ cobros }: Props) {
+export default function FinanzasTabsClient({ cobros, cobroBasePath = '/admin/cobro' }: Props) {
   const [tab, setTab] = useState<Tab>('todos')
   const [query, setQuery] = useState('')
 
@@ -65,6 +69,7 @@ export default function FinanzasTabsClient({ cobros }: Props) {
           c.doctor?.nombre ?? '',
           c.concepto ?? '',
           c.folio_cobro ?? '',
+          c.numero_boleta ?? '',
         ]
         return campos.some(campo => normalizar(campo).includes(queryNorm))
       })
@@ -127,7 +132,7 @@ export default function FinanzasTabsClient({ cobros }: Props) {
           {tab === 'todos' && (
             <h2 className="text-base font-semibold text-slate-800 mb-3">Cobrados / Anulados</h2>
           )}
-          <CobrosHoyClient cobros={cobradosYAnulados} />
+          <CobrosHoyClient cobros={cobradosYAnulados} cobroBasePath={cobroBasePath} />
         </section>
       )}
 

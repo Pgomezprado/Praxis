@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Avatar } from '@/components/ui/Avatar'
 import { DrawerPaciente } from './DrawerPaciente'
 import { type MockPacienteAdmin, type Prevision } from '@/types/domain'
+import { formatNombre } from '@/lib/utils/formatters'
 
 const PREVISIONES: Prevision[] = [
   'Fonasa',
@@ -288,7 +289,7 @@ export function PacientesAdminClient({ pacientesIniciales, rol }: Props) {
                     <div className="flex items-center gap-3">
                       <Avatar nombre={p.nombre} size="sm" />
                       <div>
-                        <div className="font-medium text-slate-800 leading-tight">{p.nombre}</div>
+                        <div className="font-medium text-slate-800 leading-tight">{formatNombre(p, 'corto')}</div>
                       </div>
                     </div>
                   </td>
@@ -338,7 +339,8 @@ export function PacientesAdminClient({ pacientesIniciales, rol }: Props) {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-0.5">
                       <button
-                        title="Ver ficha"
+                        title="Ver ficha completa"
+                        aria-label="Ver ficha completa"
                         onClick={() => router.push(`/pacientes/${p.id}`)}
                         className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-400 hover:text-blue-600"
                       >

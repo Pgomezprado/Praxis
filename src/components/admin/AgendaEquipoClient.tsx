@@ -15,6 +15,7 @@ import type { MockCita } from '@/types/domain'
 import type { MedicoAgenda } from '@/lib/queries/agenda'
 import { DrawerDetalleCita } from '@/components/secretaria/DrawerDetalleCita'
 import { ModalCambioHora } from '@/components/secretaria/ModalCambioHora'
+import { formatNombre } from '@/lib/utils/formatters'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -148,7 +149,7 @@ function ColumnaMediaco({
     <div className="flex-shrink-0 w-72 flex flex-col">
       {/* Cabecera columna */}
       <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 mb-3 shadow-sm">
-        <p className="text-sm font-bold text-slate-800 truncate">{medico.nombre}</p>
+        <p className="text-sm font-bold text-slate-800 truncate">{formatNombre(medico, 'corto')}</p>
         {medico.especialidad && (
           <p className="text-xs text-slate-500 truncate mt-0.5">{medico.especialidad}</p>
         )}
@@ -346,7 +347,7 @@ export function AgendaEquipoClient({ medicos, citas, fecha }: AgendaEquipoClient
                 <option value="">Todos los profesionales</option>
                 {medicos.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.nombre}
+                    {formatNombre(m, 'corto')}
                   </option>
                 ))}
               </select>
@@ -383,7 +384,7 @@ export function AgendaEquipoClient({ medicos, citas, fecha }: AgendaEquipoClient
               .map((medico) => (
                 <div key={medico.id} className="mb-6">
                   <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 mb-3 shadow-sm">
-                    <p className="text-sm font-bold text-slate-800">{medico.nombre}</p>
+                    <p className="text-sm font-bold text-slate-800">{formatNombre(medico, 'corto')}</p>
                     {medico.especialidad && (
                       <p className="text-xs text-slate-500 mt-0.5">{medico.especialidad}</p>
                     )}
