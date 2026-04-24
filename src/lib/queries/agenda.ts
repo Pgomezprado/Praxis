@@ -32,6 +32,7 @@ export async function getCitasByFecha(
     `)
     .eq('clinica_id', clinicaId)
     .eq('fecha', fecha)
+    .neq('estado', 'cancelada')
     .order('hora_inicio')
 
   if (doctorId) query = query.eq('doctor_id', doctorId)
