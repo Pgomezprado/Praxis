@@ -86,12 +86,19 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
   ])
 
   // Registrar acceso en audit_log (Decreto 41 MINSAL)
+  // La acción varía según el rol para trazabilidad de auditoría
   if (user) {
+    const accionPorRol: Record<string, string> = {
+      recepcionista: 'ficha_vista_recepcionista',
+      admin_clinica:  'ficha_vista_admin',
+      doctor:         'ficha_vista_doctor',
+    }
+    const accion = (rolUsuario && accionPorRol[rolUsuario]) ?? 'ficha_vista_recepcionista'
     await supabase.from('audit_log').insert({
       usuario_id: user.id,
       paciente_id: paciente.id,
       clinica_id: paciente.clinica_id,
-      accion: 'ficha_vista_recepcionista',
+      accion,
     })
   }
 
@@ -177,19 +184,26 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
           </div>
         </aside>
 
-        {/* COLUMNA CENTRAL — Resumen IA + historial */}
+        {/* COLUMNA CENTRAL — Cuenta corriente, paquetes, consultas, citas, resumen IA */}
         <div className="space-y-6">
-          {/* Resumen IA — siempre lo primero */}
-          <ResumenIA
+          {/* Cuenta corriente del paciente */}
+          <CuentaCorrientePaciente cobros={cobros} />
+
+          {/* Paquetes de sesiones */}
+          <PaquetesPaciente
             pacienteId={paciente.id}
-            alergias={(paciente as unknown as { alergias?: string[] }).alergias ?? []}
-            condiciones={(paciente as unknown as { condiciones?: string[] }).condiciones ?? []}
-            ultimaConsulta={consultas?.[0] ? {
-              fecha: formatFecha((consultas[0] as unknown as { fecha: string }).fecha),
-              motivo: (consultas[0] as unknown as { motivo: string }).motivo,
-              diagnostico: (consultas[0] as unknown as { diagnostico?: string }).diagnostico,
-            } : null}
+            clinicaId={clinicaId}
+            paquetesIniciales={paquetes}
+            rol={rolUsuario}
           />
+
+          {/* Historial de consultas */}
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">
+              Historial de consultas ({consultas?.length ?? 0})
+            </h3>
+            <HistorialConsultas consultas={(consultas as Consulta[]) ?? []} />
+          </div>
 
           {/* Historial de citas */}
           <div>
@@ -202,22 +216,16 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
             })) as CitaPaciente[]} />
           </div>
 
-          {/* Cuenta corriente del paciente */}
-          <CuentaCorrientePaciente cobros={cobros} />
-
-          {/* Historial de consultas */}
-          <div>
-            <h3 className="text-lg font-semibold text-slate-800 mb-4">
-              Historial de consultas ({consultas?.length ?? 0})
-            </h3>
-            <HistorialConsultas consultas={(consultas as Consulta[]) ?? []} />
-          </div>
-
-          {/* Paquetes de sesiones */}
-          <PaquetesPaciente
+          {/* Resumen IA — al final */}
+          <ResumenIA
             pacienteId={paciente.id}
-            clinicaId={clinicaId}
-            paquetesIniciales={paquetes}
+            alergias={(paciente as unknown as { alergias?: string[] }).alergias ?? []}
+            condiciones={(paciente as unknown as { condiciones?: string[] }).condiciones ?? []}
+            ultimaConsulta={consultas?.[0] ? {
+              fecha: formatFecha((consultas[0] as unknown as { fecha: string }).fecha),
+              motivo: (consultas[0] as unknown as { motivo: string }).motivo,
+              diagnostico: (consultas[0] as unknown as { diagnostico?: string }).diagnostico,
+            } : null}
           />
         </div>
 

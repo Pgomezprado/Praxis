@@ -33,9 +33,10 @@ interface ModalVenderPaqueteProps {
   pacienteId: string
   clinicaId: string
   onVendido: (paquete: PaquetePaciente) => void
+  rol?: 'admin_clinica' | 'doctor' | 'recepcionista'
 }
 
-function ModalVenderPaquete({ open, onClose, pacienteId, onVendido }: ModalVenderPaqueteProps) {
+function ModalVenderPaquete({ open, onClose, pacienteId, onVendido, rol }: ModalVenderPaqueteProps) {
   const [paquetesDisponibles, setPaquetesDisponibles] = useState<PaqueteArancel[]>([])
   const [cargando, setCargando] = useState(false)
   const [cargandoLista, setCargandoLista] = useState(false)
@@ -147,11 +148,17 @@ function ModalVenderPaquete({ open, onClose, pacienteId, onVendido }: ModalVende
               </div>
             ) : paquetesDisponibles.length === 0 ? (
               <p className="text-sm text-slate-400 py-2">
-                No hay paquetes configurados. Ve a{' '}
-                <a href="/admin/finanzas/paquetes" className="text-blue-600 hover:underline" target="_blank">
-                  Finanzas › Paquetes
-                </a>{' '}
-                para crear uno.
+                {rol === 'admin_clinica' ? (
+                  <>
+                    No hay paquetes configurados. Ve a{' '}
+                    <a href="/admin/finanzas/paquetes" className="text-blue-600 hover:underline" target="_blank">
+                      Finanzas › Paquetes
+                    </a>{' '}
+                    para crear uno.
+                  </>
+                ) : (
+                  'No hay paquetes configurados. Pídele al administrador de la clínica que cree uno.'
+                )}
               </p>
             ) : (
               <div className="space-y-2">
@@ -606,9 +613,10 @@ interface PaquetesPacienteProps {
   pacienteId: string
   clinicaId: string
   paquetesIniciales: PaquetePaciente[]
+  rol?: 'admin_clinica' | 'doctor' | 'recepcionista'
 }
 
-export function PaquetesPaciente({ pacienteId, clinicaId, paquetesIniciales }: PaquetesPacienteProps) {
+export function PaquetesPaciente({ pacienteId, clinicaId, paquetesIniciales, rol }: PaquetesPacienteProps) {
   const [paquetes, setPaquetes] = useState<PaquetePaciente[]>(paquetesIniciales)
   const [modalVenderOpen, setModalVenderOpen] = useState(false)
 
@@ -705,6 +713,7 @@ export function PaquetesPaciente({ pacienteId, clinicaId, paquetesIniciales }: P
         pacienteId={pacienteId}
         clinicaId={clinicaId}
         onVendido={handleVendido}
+        rol={rol}
       />
     </section>
   )

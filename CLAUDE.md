@@ -225,6 +225,8 @@ lib/
 | `seed_doctor_prueba.sql` | Usuario doctor de prueba |
 | `seed_secretaria_prueba.sql` | Usuario secretaria de prueba |
 
+**Workflow antes de deploy con migraciones nuevas:** ejecutar `npm run check:migrations` desde `medhistorial/` — verifica que todas las migraciones locales estén aplicadas en producción antes del push (exit 1 si hay pendientes).
+
 ---
 
 ## Identidad visual
@@ -261,6 +263,7 @@ lib/
 6. **Sin UC Christus** — producto genérico SaaS, clínica identificada por `CLINICA_SLUG` env var
 7. **API keys nunca en cliente** — todo acceso a Supabase admin y Anthropic en Server Components o API routes
 8. **Un commit por feature:** `feat:`, `fix:`, `refactor:` según corresponda
+9. **Verificar destino de `fichaBasePath`:** cuando una vista de agenda pase `fichaBasePath="/X"`, verificar que existe `src/app/**/X/[id]/page.tsx` en el mismo grupo de rutas antes de deploy.
 
 ---
 
