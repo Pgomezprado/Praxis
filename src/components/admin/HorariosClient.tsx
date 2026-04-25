@@ -1,9 +1,42 @@
 'use client'
 
 import { useState } from 'react'
-import { Copy, Save, ChevronDown } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Copy, Save, ChevronDown, AlertTriangle, X, CalendarDays } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import type { HorarioSemanal, ConfigDia, MockMedicoAdmin } from '@/types/domain'
+
+type MotivoCodigo = 'dia_inactivo' | 'fuera_de_rango' | 'en_colacion'
+
+type CitaAfectada = {
+  id: string
+  folio: string | null
+  fecha: string
+  hora_inicio: string
+  paciente_nombre: string
+  motivo: string
+  motivo_codigo: MotivoCodigo
+}
+
+const ETIQUETA_MOTIVO: Record<MotivoCodigo, string> = {
+  dia_inactivo: 'Día desactivado',
+  fuera_de_rango: 'Fuera de horario',
+  en_colacion: 'En colación',
+}
+
+const COLOR_MOTIVO: Record<MotivoCodigo, string> = {
+  dia_inactivo: 'bg-red-100 text-red-700',
+  fuera_de_rango: 'bg-amber-100 text-amber-700',
+  en_colacion: 'bg-orange-100 text-orange-700',
+}
+
+function formatFechaCita(fecha: string): string {
+  const [y, m, d] = fecha.split('-').map(Number)
+  const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+  const mesesCortos = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+  const diaSemana = diasSemana[new Date(y, m - 1, d).getDay()]
+  return `${diaSemana} ${d}-${mesesCortos[m - 1]}`
+}
 
 const DIAS = [
   { key: 'lunes',     label: 'Lunes',     short: 'Lun' },
@@ -40,6 +73,7 @@ interface HorariosClientProps {
 }
 
 export function HorariosClient({ medicos, horariosInicial }: HorariosClientProps) {
+  const router = useRouter()
   const [medicoId, setMedicoId] = useState(medicos[0]?.id ?? '')
 
   const [horariosState, setHorariosState] = useState<Record<string, HorarioSemanal>>(() => {
@@ -62,6 +96,7 @@ export function HorariosClient({ medicos, horariosInicial }: HorariosClientProps
 
   const [guardando, setGuardando] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [modalCitas, setModalCitas] = useState<CitaAfectada[] | null>(null)
 
   const medico = medicos.find(m => m.id === medicoId)
   const horario = horariosState[medicoId]
@@ -104,8 +139,14 @@ export function HorariosClient({ medicos, horariosInicial }: HorariosClientProps
         body: JSON.stringify({ doctor_id: medicoId, configuracion: horariosState[medicoId] }),
       })
       if (res.ok) {
-        setToast(`Horario de ${medico.nombre} guardado`)
-        setTimeout(() => setToast(null), 5000)
+        const body = await res.json() as { horario: unknown; citasAfectadas?: CitaAfectada[] }
+        const afectadas = body.citasAfectadas ?? []
+        if (afectadas.length > 0) {
+          setModalCitas(afectadas)
+        } else {
+          setToast(`Horario de ${medico.nombre} guardado`)
+          setTimeout(() => setToast(null), 5000)
+        }
       }
     } finally {
       setGuardando(false)
@@ -210,7 +251,7 @@ export function HorariosClient({ medicos, horariosInicial }: HorariosClientProps
                   <button
                     type="button"
                     onClick={() => setDia(key, 'activo', !dia.activo)}
-                    className={`relative inline-flex items-center w-9 h-5 rounded-full transition-colors flex-shrink-0 focus:outline-none ${
+                    className={`relative inline-flex items-center w-9 h-5 rounded-full transition-colors shrink-0 focus:outline-none ${
                       dia.activo ? 'bg-blue-600' : 'bg-slate-300'
                     }`}
                   >
@@ -353,8 +394,84 @@ export function HorariosClient({ medicos, horariosInicial }: HorariosClientProps
       {/* Toast */}
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-sm px-5 py-3 rounded-xl shadow-lg flex items-center gap-2 z-50 max-w-sm text-center">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0" />
+          <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
           {toast}
+        </div>
+      )}
+
+      {/* Modal citas afectadas */}
+      {modalCitas && modalCitas.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            {/* Cabecera */}
+            <div className="flex items-start gap-3 p-5 border-b border-slate-100">
+              <div className="shrink-0 w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
+                <AlertTriangle className="w-5 h-5 text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-sm font-semibold text-slate-900">
+                  El nuevo horario afecta {modalCitas.length} {modalCitas.length === 1 ? 'cita existente' : 'citas existentes'}
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  El horario ya quedó guardado. Estas citas siguen agendadas.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalCitas(null)}
+                className="shrink-0 p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Lista de citas */}
+            <div className="p-5 space-y-2 max-h-72 overflow-y-auto">
+              {modalCitas.map(cita => (
+                <div
+                  key={cita.id}
+                  className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">{cita.paciente_nombre}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {formatFechaCita(cita.fecha)} · {cita.hora_inicio.slice(0, 5)}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 text-xs font-medium px-2 py-1 rounded-lg ${COLOR_MOTIVO[cita.motivo_codigo]}`}>
+                    {ETIQUETA_MOTIVO[cita.motivo_codigo]}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Texto y acciones */}
+            <div className="px-5 pb-5 space-y-4">
+              <p className="text-xs text-slate-500">
+                Coordina con tu equipo para reagendarlas si corresponde.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalCitas(null)
+                    router.push('/admin/agenda/equipo')
+                  }}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:text-blue-600 transition-colors"
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  Ver en agenda
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalCitas(null)}
+                  className="flex-1 inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                >
+                  Entendido
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,4 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
+import { revalidatePath } from 'next/cache'
+import { getDiaKey, horaAMinutos } from '@/lib/agenda-helpers'
+import type { HorarioSemanal, ConfigDia } from '@/types/domain'
 
 export async function GET() {
   try {
@@ -34,6 +37,94 @@ export async function GET() {
     }
     return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
+}
+
+type CitaAfectada = {
+  id: string
+  folio: string | null
+  fecha: string
+  hora_inicio: string
+  paciente_nombre: string
+  motivo: string
+  motivo_codigo: 'dia_inactivo' | 'fuera_de_rango' | 'en_colacion'
+}
+
+type CitaRaw = {
+  id: string
+  folio: string | null
+  fecha: string
+  hora_inicio: string
+  hora_fin: string
+  motivo: string | null
+  pacientes: { nombres: string | null; apellido_paterno: string | null } | null
+}
+
+function calcularCitasAfectadas(citas: CitaRaw[], configuracion: HorarioSemanal): CitaAfectada[] {
+  const afectadas: CitaAfectada[] = []
+
+  for (const cita of citas) {
+    const diaKey = getDiaKey(cita.fecha)
+    const dia = configuracion[diaKey] as ConfigDia | undefined
+    if (!dia) continue
+
+    const paciente = cita.pacientes
+    const primerNombre = paciente?.nombres?.trim().split(/\s+/)[0] ?? ''
+    const apPat = paciente?.apellido_paterno?.trim() ?? ''
+    const paciente_nombre = primerNombre && apPat
+      ? `${primerNombre} ${apPat}`
+      : primerNombre || apPat || 'Paciente'
+
+    const horaIniCita = horaAMinutos(cita.hora_inicio)
+    const horaFinCita = horaAMinutos(cita.hora_fin)
+
+    if (!dia.activo) {
+      afectadas.push({
+        id: cita.id,
+        folio: cita.folio,
+        fecha: cita.fecha,
+        hora_inicio: cita.hora_inicio,
+        paciente_nombre,
+        motivo: 'Día desactivado',
+        motivo_codigo: 'dia_inactivo',
+      })
+      continue
+    }
+
+    const horaIniDia = horaAMinutos(dia.horaInicio)
+    const horaFinDia = horaAMinutos(dia.horaFin)
+
+    if (horaIniCita < horaIniDia || horaFinCita > horaFinDia) {
+      afectadas.push({
+        id: cita.id,
+        folio: cita.folio,
+        fecha: cita.fecha,
+        hora_inicio: cita.hora_inicio,
+        paciente_nombre,
+        motivo: 'Fuera de horario',
+        motivo_codigo: 'fuera_de_rango',
+      })
+      continue
+    }
+
+    if (dia.tieneColacion && dia.colacionInicio && dia.colacionFin) {
+      const colIni = horaAMinutos(dia.colacionInicio)
+      const colFin = horaAMinutos(dia.colacionFin)
+      // Intersección: [horaIniCita, horaFinCita) ∩ [colIni, colFin)
+      if (horaIniCita < colFin && horaFinCita > colIni) {
+        afectadas.push({
+          id: cita.id,
+          folio: cita.folio,
+          fecha: cita.fecha,
+          hora_inicio: cita.hora_inicio,
+          paciente_nombre,
+          motivo: 'En colación',
+          motivo_codigo: 'en_colacion',
+        })
+      }
+    }
+  }
+
+  return afectadas
 }
 
 export async function PUT(req: Request) {
@@ -82,7 +173,42 @@ export async function PUT(req: Request) {
 
     if (error) throw error
 
-    return Response.json({ horario: data })
+    // Invalidar cache de todas las vistas de agenda
+    revalidatePath('/medico/agenda', 'page')
+    revalidatePath('/medico/agenda/semana', 'page')
+    revalidatePath('/medico/agenda/dia', 'page')
+    revalidatePath('/agenda/hoy', 'page')
+    revalidatePath('/agenda/semana', 'page')
+    revalidatePath('/agenda/dia', 'page')
+    revalidatePath('/admin/agenda', 'page')
+    revalidatePath('/admin/agenda/semana', 'page')
+    revalidatePath('/admin/agenda/mes', 'page')
+    revalidatePath('/admin/agenda/equipo', 'page')
+    revalidatePath('/admin/agenda/dia', 'page')
+
+    // Calcular citas futuras afectadas por el nuevo horario (no bloquea el guardado)
+    let citasAfectadas: CitaAfectada[] = []
+    try {
+      const hoyChile = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
+
+      const { data: citasRaw } = await supabase
+        .from('citas')
+        .select('id, folio, fecha, hora_inicio, hora_fin, motivo, pacientes!inner(nombres, apellido_paterno)')
+        .eq('doctor_id', doctor_id)
+        .eq('clinica_id', me.clinica_id)
+        .gte('fecha', hoyChile)
+        .in('estado', ['pendiente', 'confirmada', 'en_consulta'])
+
+      if (citasRaw && citasRaw.length > 0) {
+        citasAfectadas = calcularCitasAfectadas(citasRaw as unknown as CitaRaw[], configuracion as HorarioSemanal)
+      }
+    } catch (err) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Error calculando citas afectadas (no bloquea respuesta):', err)
+      }
+    }
+
+    return Response.json({ horario: data, citasAfectadas })
   } catch (error) {
     if (process.env.NODE_ENV !== 'production') {
       console.error('Error en PUT /api/horarios:', error)
