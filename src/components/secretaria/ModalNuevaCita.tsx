@@ -27,6 +27,24 @@ const TIPO_CONSULTA = [
 
 const DURACIONES_MIN = [15, 30, 45, 60, 75, 90]
 
+// Map de clave interna del día a nombre en español para mensajes de UX
+const NOMBRE_DIA: Record<string, string> = {
+  lunes: 'lunes',
+  martes: 'martes',
+  miercoles: 'miércoles',
+  jueves: 'jueves',
+  viernes: 'viernes',
+  sabado: 'sábados',
+  domingo: 'domingos',
+}
+
+// Discriminated result para el bloque de disponibilidad de slots
+type SlotsResult =
+  | { tipo: 'ok'; slots: ReturnType<typeof generarSlots> }
+  | { tipo: 'dia-no-laboral'; nombreDia: string }
+  | { tipo: 'agenda-llena' }
+  | { tipo: 'sin-seleccion' }
+
 function getToday() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
 }
@@ -55,6 +73,7 @@ export function ModalNuevaCita({
   const enviandoRef = useRef(false)
   const [errorCrear, setErrorCrear] = useState<string | null>(null)
   const [errorSlots, setErrorSlots] = useState(false)
+  const [errorHorario, setErrorHorario] = useState(false)
 
   // Resetear al abrir
   useEffect(() => {
@@ -79,6 +98,7 @@ export function ModalNuevaCita({
     setSlot('')
     setHoraManual('')
     setErrorSlots(false)
+    setErrorHorario(false)
     setErrorCrear(null)
   }, [medicoId, fecha, duracion])
 
@@ -86,6 +106,7 @@ export function ModalNuevaCita({
   const [horarioMedico, setHorarioMedico] = useState<HorarioSemanal | null>(null)
   useEffect(() => {
     if (!medicoId) { setHorarioMedico(null); return }
+    setErrorHorario(false)
     fetch('/api/horarios')
       .then(r => r.json())
       .then(data => {
@@ -104,7 +125,7 @@ export function ModalNuevaCita({
         }
         setHorarioMedico(merged)
       })
-      .catch(() => {})
+      .catch(() => { setErrorHorario(true) })
   }, [medicoId])
 
   // Slots ocupados desde la API (se cargan cuando cambia médico/fecha)
@@ -139,21 +160,31 @@ export function ModalNuevaCita({
     }
   }, [medicoId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Calcular slots disponibles desde horario real (o fallback 09:00–18:00)
-  const slotsDisponibles = medicoId && fecha
-    ? (() => {
-        const diaKey = getDiaKey(fecha)
-        const configDia = horarioMedico?.[diaKey]
-        if (configDia && !configDia.activo) return []
-        const horaInicio = configDia?.horaInicio ?? '09:00'
-        const horaFin = configDia?.horaFin ?? '18:00'
-        // Slots de colación se marcan como ocupados (usan la misma duración para consistencia)
-        const colacionOcupados = configDia?.tieneColacion
-          ? generarSlots(fecha, configDia.colacionInicio, configDia.colacionFin, [], duracion).map(s => s.hora)
-          : []
-        return generarSlots(fecha, horaInicio, horaFin, [...slotsOcupados, ...colacionOcupados], duracion)
-      })()
-    : []
+  const slotsResult: SlotsResult = (() => {
+    if (!medicoId || !fecha) return { tipo: 'sin-seleccion' }
+    const diaKey = getDiaKey(fecha)
+    const configDia = horarioMedico?.[diaKey]
+    // Caso A: día marcado explícitamente como no laboral
+    if (configDia && !configDia.activo) {
+      return { tipo: 'dia-no-laboral', nombreDia: NOMBRE_DIA[diaKey] }
+    }
+    const horaInicio = configDia?.horaInicio ?? '09:00'
+    const horaFin = configDia?.horaFin ?? '18:00'
+    const colacionOcupados = configDia?.tieneColacion
+      ? generarSlots(fecha, configDia.colacionInicio, configDia.colacionFin, [], duracion).map(s => s.hora)
+      : []
+    // Slots totales posibles (sin filtrar ocupados) — detecta si el rango produce algo
+    const slotsTotalesPosibles = generarSlots(fecha, horaInicio, horaFin, colacionOcupados, duracion)
+    const slotsLibres = generarSlots(fecha, horaInicio, horaFin, [...slotsOcupados, ...colacionOcupados], duracion)
+    if (slotsLibres.length > 0) return { tipo: 'ok', slots: slotsLibres }
+    // Caso B: hay rango válido pero todos los slots están tomados
+    if (slotsTotalesPosibles.length > 0) return { tipo: 'agenda-llena' }
+    // Rango sin slots posibles (horaFin <= horaInicio o duración demasiado grande) → agenda-llena genérico
+    return { tipo: 'agenda-llena' }
+  })()
+
+  // Compatibilidad: array de slots disponibles para el render del grid
+  const slotsDisponibles = slotsResult.tipo === 'ok' ? slotsResult.slots : []
 
   // Calcular hora fin según slot + duración
   function calcularHoraFin(horaInicio: string, minutos: number): string {
@@ -324,10 +355,18 @@ export function ModalNuevaCita({
                 <>
                   <div>
                     <p className="text-xs font-medium text-slate-500 mb-2">Horarios disponibles</p>
-                    {errorSlots ? (
-                      <p className="text-sm text-red-500 py-2">Error al cargar horarios. Verifica tu conexión.</p>
-                    ) : slotsDisponibles.length === 0 ? (
-                      <p className="text-sm text-slate-400 py-2">Sin horarios disponibles para esta fecha. Puedes ingresar la hora manualmente.</p>
+                    {(errorSlots || errorHorario) ? (
+                      <p className="text-sm text-amber-600 py-2 px-3 bg-amber-50 rounded-xl border border-amber-200">
+                        No pudimos cargar los horarios. Reintenta o ingresa la hora manualmente.
+                      </p>
+                    ) : slotsResult.tipo === 'dia-no-laboral' ? (
+                      <p className="text-sm text-slate-600 py-2 px-3 bg-slate-50 rounded-xl border border-slate-200">
+                        {medico?.nombre ?? 'El profesional'} no atiende los {slotsResult.nombreDia}. Puedes activar este día en Configuración &rsaquo; Horarios o ingresar la hora manualmente.
+                      </p>
+                    ) : slotsResult.tipo === 'agenda-llena' ? (
+                      <p className="text-sm text-slate-600 py-2 px-3 bg-slate-50 rounded-xl border border-slate-200">
+                        Agenda completa para esta fecha. Puedes ingresar la hora manualmente para sobreagendar.
+                      </p>
                     ) : (
                       <div className="grid grid-cols-4 gap-1.5">
                         {slotsDisponibles.map((s) => (
