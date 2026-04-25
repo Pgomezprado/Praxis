@@ -461,88 +461,8 @@ export function PacienteConsultaClient({
             } : null}
           />
 
-          {/* Citas */}
-          {citas.length > 0 && (
-            <div>
-              <h3 className="text-base font-semibold text-slate-800 mb-4">
-                Citas ({citas.length})
-              </h3>
-              <HistorialCitas citas={citas} />
-            </div>
-          )}
-
-          {/* Historial de consultas */}
-          <div>
-            <h3 className="text-base font-semibold text-slate-800 mb-4">
-              Historial de consultas ({consultasLocales.length})
-            </h3>
-
-            {consultasLocales.length === 0 ? (
-              <div className="py-8 text-center text-slate-400">
-                <p className="text-sm">Sin consultas previas registradas.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {consultasLocales.map((consulta) => (
-                  <div
-                    key={consulta.id}
-                    className="bg-white border border-slate-200 rounded-xl p-5 space-y-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-slate-800">
-                        {formatFecha(consulta.fecha)}
-                      </span>
-                      <span className="text-xs text-slate-500">
-                        {consulta.medicoNombre} — {consulta.especialidad}
-                      </span>
-                    </div>
-
-                    {consulta.motivo && (
-                      <div>
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Motivo</span>
-                        <p className="text-sm text-slate-800 mt-1">{consulta.motivo}</p>
-                      </div>
-                    )}
-
-                    {consulta.diagnostico && (
-                      <div>
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Diagnóstico</span>
-                        <p className="text-sm text-slate-800 mt-1">{consulta.diagnostico}</p>
-                      </div>
-                    )}
-
-                    {consulta.notas && (
-                      <div>
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Notas clínicas</span>
-                        <p className="text-sm text-slate-700 mt-1 whitespace-pre-line">{consulta.notas}</p>
-                      </div>
-                    )}
-
-                    {consulta.medicamentos.length > 0 && (
-                      <div>
-                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Medicamentos</span>
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {consulta.medicamentos.map((med) => (
-                            <span
-                              key={med}
-                              className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200"
-                            >
-                              {med}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── RIGHT — formulario de consulta ── */}
-        <aside className="sticky top-6 md:col-span-2 lg:col-span-1">
-          <div className="bg-white border border-slate-200 rounded-xl p-5">
+          {/* Form: Registrar consulta — movido desde la barra lateral derecha */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 max-w-2xl">
             <h3 className="text-base font-semibold text-slate-800 mb-4">
               Registrar consulta
             </h3>
@@ -730,6 +650,93 @@ export function PacienteConsultaClient({
                   )}
                 </div>
               </form>
+            )}
+          </div>
+
+        </div>
+
+        {/* ── RIGHT — próxima cita + historial de consultas ── */}
+        <aside className="md:col-span-2 lg:col-span-1 space-y-4">
+          {/* Próxima cita */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 lg:sticky lg:top-6">
+            <h3 className="text-base font-semibold text-slate-800 mb-3">
+              Próxima cita
+            </h3>
+            {(() => {
+              const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
+              const proxima = [...(citas ?? [])]
+                .filter(c => c.fecha >= hoy && c.estado !== 'cancelada' && c.id !== citaContext?.id)
+                .sort((a, b) => (a.fecha + a.hora_inicio).localeCompare(b.fecha + b.hora_inicio))[0]
+              if (!proxima) {
+                return <p className="text-sm text-slate-400 italic">Sin próxima cita programada.</p>
+              }
+              return <HistorialCitas citas={[proxima]} />
+            })()}
+          </div>
+
+          {/* Historial de consultas */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5">
+            <h3 className="text-base font-semibold text-slate-800 mb-3">
+              Historial de consultas ({consultasLocales.length})
+            </h3>
+
+            {consultasLocales.length === 0 ? (
+              <p className="text-sm text-slate-400 italic">Sin consultas previas registradas.</p>
+            ) : (
+              <div className="space-y-3">
+                {consultasLocales.map((consulta) => (
+                  <div
+                    key={consulta.id}
+                    className="border border-slate-200 rounded-lg p-3 space-y-2"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-slate-800">
+                        {formatFecha(consulta.fecha)}
+                      </span>
+                      <span className="text-[11px] text-slate-500 truncate">
+                        {consulta.medicoNombre}
+                      </span>
+                    </div>
+
+                    {consulta.motivo && (
+                      <div>
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Motivo</span>
+                        <p className="text-xs text-slate-800 mt-0.5">{consulta.motivo}</p>
+                      </div>
+                    )}
+
+                    {consulta.diagnostico && (
+                      <div>
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Diagnóstico</span>
+                        <p className="text-xs text-slate-800 mt-0.5">{consulta.diagnostico}</p>
+                      </div>
+                    )}
+
+                    {consulta.notas && (
+                      <div>
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Notas</span>
+                        <p className="text-xs text-slate-700 mt-0.5 whitespace-pre-line">{consulta.notas}</p>
+                      </div>
+                    )}
+
+                    {consulta.medicamentos.length > 0 && (
+                      <div>
+                        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Medicamentos</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {consulta.medicamentos.map((med) => (
+                            <span
+                              key={med}
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200"
+                            >
+                              {med}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </aside>

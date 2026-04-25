@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   X, Clock, CalendarDays, User, Stethoscope, FileText,
   CheckCheck, CheckCircle2, XCircle, PlayCircle, Loader2, DollarSign, Trash2,
@@ -63,6 +64,7 @@ export function DrawerDetalleCita({
   onEliminada,
   onRepetida,
 }: DrawerDetalleCitaProps) {
+  const router = useRouter()
   const [estadoLocal, setEstadoLocal] = useState<MockCita['estado'] | null>(null)
   const [accionActiva, setAccionActiva] = useState<string | null>(null)
   const [eliminando, setEliminando] = useState(false)
@@ -76,8 +78,8 @@ export function DrawerDetalleCita({
 
   const loading = accionActiva !== null
 
-  async function cambiarEstado(nuevoEstado: MockCita['estado'], accion: string) {
-    if (!cita) return
+  async function cambiarEstado(nuevoEstado: MockCita['estado'], accion: string): Promise<boolean> {
+    if (!cita) return false
     setAccionActiva(accion)
     setError(null)
     const prev = estadoActual
@@ -91,14 +93,24 @@ export function DrawerDetalleCita({
       if (!res.ok) {
         setEstadoLocal(prev)
         setError('No se pudo actualizar el estado.')
-        return
+        return false
       }
       onEstadoCambiado(cita.id, nuevoEstado)
+      return true
     } catch {
       setEstadoLocal(prev)
       setError('Error de conexión.')
+      return false
     } finally {
       setAccionActiva(null)
+    }
+  }
+
+  async function iniciarConsultaYNavegar() {
+    const ok = await cambiarEstado('en_consulta', 'iniciar')
+    if (ok && cita) {
+      router.push(`/medico/pacientes/${cita.pacienteId}?cita=${cita.id}`)
+      onClose()
     }
   }
 
@@ -286,48 +298,53 @@ export function DrawerDetalleCita({
 
               <div className="flex flex-col gap-2">
 
-                {/* Confirmar — solo si pendiente */}
-                {estadoActual === 'pendiente' && (
-                  <button
-                    onClick={() => cambiarEstado('confirmada', 'confirmar')}
-                    disabled={loading}
-                    className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50"
-                  >
-                    {accionActiva === 'confirmar'
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <CheckCheck className="w-4 h-4" />
-                    }
-                    Confirmar cita
-                  </button>
+                {/* Acciones de recepción — médico no agenda ni cancela */}
+                {!esDoctor && (
+                  <>
+                    {/* Confirmar — solo si pendiente */}
+                    {estadoActual === 'pendiente' && (
+                      <button
+                        onClick={() => cambiarEstado('confirmada', 'confirmar')}
+                        disabled={loading}
+                        className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                      >
+                        {accionActiva === 'confirmar'
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <CheckCheck className="w-4 h-4" />
+                        }
+                        Confirmar cita
+                      </button>
+                    )}
+
+                    {/* Cambiar hora */}
+                    <button
+                      onClick={() => { onCambioHora(cita.id); onClose() }}
+                      disabled={loading}
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50"
+                    >
+                      <Clock className="w-4 h-4" />
+                      Cambiar hora
+                    </button>
+
+                    {/* Programar controles */}
+                    <button
+                      onClick={() => setMostrarModalRepetir(true)}
+                      disabled={loading}
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors disabled:opacity-50"
+                    >
+                      <CalendarPlus className="w-4 h-4" />
+                      Programar controles
+                    </button>
+
+                    {/* Separador */}
+                    <div className="h-px bg-slate-100 my-1" />
+                  </>
                 )}
-
-                {/* Cambiar hora */}
-                <button
-                  onClick={() => { onCambioHora(cita.id); onClose() }}
-                  disabled={loading}
-                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50"
-                >
-                  <Clock className="w-4 h-4" />
-                  Cambiar hora
-                </button>
-
-                {/* Programar controles */}
-                <button
-                  onClick={() => setMostrarModalRepetir(true)}
-                  disabled={loading}
-                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors disabled:opacity-50"
-                >
-                  <CalendarPlus className="w-4 h-4" />
-                  Programar controles
-                </button>
-
-                {/* Separador */}
-                <div className="h-px bg-slate-100 my-1" />
 
                 {/* Iniciar consulta — solo médico */}
                 {esDoctor && (estadoActual === 'pendiente' || estadoActual === 'confirmada') && (
                   <button
-                    onClick={() => cambiarEstado('en_consulta', 'iniciar')}
+                    onClick={iniciarConsultaYNavegar}
                     disabled={loading}
                     className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-50"
                   >
@@ -354,7 +371,9 @@ export function DrawerDetalleCita({
                   </button>
                 )}
 
-                {/* Separador */}
+                {/* Separador + zona destructiva — solo recepción/admin */}
+                {!esDoctor && (
+                <>
                 <div className="h-px bg-slate-100 my-1" />
 
                 {/* Anular cita — con confirmación inline */}
@@ -440,6 +459,8 @@ export function DrawerDetalleCita({
                       </button>
                     </div>
                   </div>
+                )}
+                </>
                 )}
               </div>
             </div>

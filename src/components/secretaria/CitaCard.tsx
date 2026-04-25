@@ -222,7 +222,10 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
               {/* Iniciar consulta — solo médico, pendiente o confirmada */}
               {esDoctor && (estadoLocal === 'pendiente' || estadoLocal === 'confirmada') && (
                 <button
-                  onClick={() => cambiarEstado('en_consulta')}
+                  onClick={() => {
+                    cambiarEstado('en_consulta')
+                    router.push(`/medico/pacientes/${cita.pacienteId}?cita=${cita.id}`)
+                  }}
                   title="Iniciar consulta"
                   className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-colors"
                 >
