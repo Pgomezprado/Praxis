@@ -8,9 +8,18 @@ const supabaseHost = (() => {
   try { return new URL(SUPABASE_URL).host } catch { return '*.supabase.co' }
 })()
 
+// En producción se elimina 'unsafe-inline' de script-src (protección XSS activa).
+// 'unsafe-eval' se mantiene porque posthog-js lo requiere en runtime para su SDK
+// de captura de eventos — eliminarlo rompe la telemetría. Deuda: reemplazar posthog
+// por alternativa CSP-compatible o pedir a Posthog actualizar su bundle.
+// Implementar nonces para eliminar 'unsafe-eval' requiere middleware + todas las
+// páginas dinámicas + soporte Turbopack (pendiente en Next.js, issue #89754).
+const scriptSrcProd = `script-src 'self' 'unsafe-eval'`
+const scriptSrcDev  = `script-src 'self' 'unsafe-inline' 'unsafe-eval'`
+
 const cspDirectives = [
   `default-src 'self'`,
-  `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
+  isDev ? scriptSrcDev : scriptSrcProd,
   `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
   `font-src 'self' https://fonts.gstatic.com`,
   `img-src 'self' data: https://${supabaseHost}`,

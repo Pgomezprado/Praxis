@@ -1,7 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { FinanzasOdontologiaClient } from '@/components/odontologia/FinanzasOdontologiaClient'
-import type { KPIsFinanzas, CobroDental } from '@/components/odontologia/FinanzasOdontologiaClient'
+import type { KPIsFinanzas, CobroDental, DesgloseDentista } from '@/components/odontologia/FinanzasOdontologiaClient'
+import { formatNombre } from '@/lib/utils/formatters'
 
 export const metadata = {
   title: 'Finanzas odontología — Praxis',
@@ -52,7 +53,7 @@ export default async function FinanzasOdontologiaPage() {
       paciente_id, doctor_id, arancel_id, concepto, monto_neto,
       estado, notas, creado_por, activo, created_at,
       paciente:pacientes!cobros_paciente_id_fkey ( id, nombre, rut ),
-      doctor:usuarios!cobros_doctor_id_fkey ( id, nombre, especialidad ),
+      doctor:usuarios!cobros_doctor_id_fkey ( id, nombre, especialidad, nombres, apellido_paterno, apellido_materno ),
       presupuesto:presupuesto_dental ( id, numero_presupuesto, total ),
       pagos ( id, monto, medio_pago, referencia, fecha_pago, registrado_por, activo, created_at )
     `)
@@ -113,6 +114,75 @@ export default async function FinanzasOdontologiaPage() {
     pendiente_cobro: pendienteCobro,
   }
 
+  // ── Desglose por dentista (mes en curso) ─────────────────────────────────
+  // Agrupa cobros del mes actual por doctor, sumando pagos activos.
+  // "Citas atendidas" = presupuestos únicos cobrados (proxy razonable sin join extra).
+
+  // Tipo interno con Set para deduplicar presupuestos — se convierte antes de serializar
+  type DesgloseInterno = {
+    doctor_id: string
+    nombre: string
+    ingresos_mes: number
+    numero_cobros: number
+    presupuestos_ids: Set<string>
+    monto_presupuestado: number
+  }
+
+  const desglosePorDentista = new Map<string, DesgloseInterno>()
+
+  for (const cobro of cobros) {
+    if (!cobro.doctor_id) continue
+
+    const pagosActivosMes = ((cobro.pagos ?? []) as PagoRow[]).filter(
+      (p) => p.activo && p.fecha_pago.slice(0, 10) >= inicioMesStr
+    )
+    const montoMes = pagosActivosMes.reduce((acc, p) => acc + p.monto, 0)
+
+    // Solo incluir doctores que tienen actividad en el mes
+    const tieneActividadMes =
+      montoMes > 0 ||
+      (cobro.estado === 'pendiente' && cobro.created_at.slice(0, 10) >= inicioMesStr)
+
+    if (!tieneActividadMes) continue
+
+    const existente = desglosePorDentista.get(cobro.doctor_id)
+
+    if (existente) {
+      existente.ingresos_mes += montoMes
+      existente.numero_cobros += montoMes > 0 ? 1 : 0
+      // Presupuestos únicos atendidos (aproximación: cobros con presupuesto vinculado)
+      if (cobro.presupuesto_dental_id && montoMes > 0) {
+        existente.presupuestos_ids.add(cobro.presupuesto_dental_id)
+      }
+      existente.monto_presupuestado += cobro.monto_neto
+    } else {
+      const presupuestosIds = new Set<string>()
+      if (cobro.presupuesto_dental_id && montoMes > 0) {
+        presupuestosIds.add(cobro.presupuesto_dental_id)
+      }
+      desglosePorDentista.set(cobro.doctor_id, {
+        doctor_id: cobro.doctor_id,
+        nombre: formatNombre(cobro.doctor ?? null, 'corto') || cobro.doctor?.nombre || 'Sin nombre',
+        ingresos_mes: montoMes,
+        numero_cobros: montoMes > 0 ? 1 : 0,
+        presupuestos_ids: presupuestosIds,
+        monto_presupuestado: cobro.monto_neto,
+      })
+    }
+  }
+
+  // Convertir a array serializable (DesgloseDentista sin Set), ordenado por ingresos desc
+  const desgloseDentistas: DesgloseDentista[] = Array.from(desglosePorDentista.values())
+    .map((d) => ({
+      doctor_id: d.doctor_id,
+      nombre: d.nombre,
+      ingresos_mes: d.ingresos_mes,
+      numero_cobros: d.numero_cobros,
+      citas_atendidas: d.presupuestos_ids.size,
+      monto_presupuestado: d.monto_presupuestado,
+    }))
+    .sort((a, b) => b.ingresos_mes - a.ingresos_mes)
+
   const pendientes = cobros.filter((c) => c.estado === 'pendiente')
   const recientes = cobros.slice(0, 20)
 
@@ -133,6 +203,8 @@ export default async function FinanzasOdontologiaPage() {
         kpis={kpis}
         pendientes={pendientes}
         recientes={recientes}
+        desgloseDentistas={desgloseDentistas}
+        mesLabel={new Date().toLocaleDateString('es-CL', { month: 'long', year: 'numeric', timeZone: 'America/Santiago' })}
       />
     </div>
   )

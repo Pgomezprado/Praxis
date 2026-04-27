@@ -29,9 +29,11 @@ function registrarFalloIp(ip: string): void {
 }
 
 export async function POST(req: Request) {
+  // x-real-ip es inyectado por Vercel y no es spoofeable desde el cliente.
+  // x-forwarded-for puede ser manipulado — se usa solo como fallback.
   const ip =
-    (req.headers.get('x-forwarded-for')?.split(',')[0].trim()) ??
     req.headers.get('x-real-ip') ??
+    (req.headers.get('x-forwarded-for')?.split(',')[0].trim()) ??
     'unknown'
 
   if (estaBloquedaPorIp(ip)) {

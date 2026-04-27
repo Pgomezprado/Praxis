@@ -16,6 +16,7 @@ import {
   Ban,
   ChevronDown,
   ChevronUp,
+  Users,
 } from 'lucide-react'
 import type { Cobro, Pago } from '@/types/database'
 import { formatNombre } from '@/lib/utils/formatters'
@@ -33,10 +34,22 @@ export interface CobroDental extends Cobro {
   pagos?: Pago[]
 }
 
+// Desglose de actividad por dentista en el mes en curso (serializable como JSON)
+export interface DesgloseDentista {
+  doctor_id: string
+  nombre: string
+  ingresos_mes: number
+  numero_cobros: number
+  citas_atendidas: number
+  monto_presupuestado: number
+}
+
 interface FinanzasOdontologiaClientProps {
   kpis: KPIsFinanzas
   pendientes: CobroDental[]
   recientes: CobroDental[]
+  desgloseDentistas: DesgloseDentista[]
+  mesLabel: string
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -506,6 +519,8 @@ export function FinanzasOdontologiaClient({
   kpis: kpisIniciales,
   pendientes: pendientesIniciales,
   recientes: recientesIniciales,
+  desgloseDentistas,
+  mesLabel,
 }: FinanzasOdontologiaClientProps) {
   const [kpis, setKpis] = useState<KPIsFinanzas>(kpisIniciales)
   const [pendientes, setPendientes] = useState<CobroDental[]>(pendientesIniciales)
@@ -657,6 +672,100 @@ export function FinanzasOdontologiaClient({
           colorClass="bg-amber-50"
         />
       </div>
+
+      {/* ── Desglose por dentista ── */}
+      {desgloseDentistas.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-slate-400" />
+            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+              Por dentista — {mesLabel}
+            </h2>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+            {/* Encabezado de tabla — solo desktop */}
+            <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 px-4 py-2.5 bg-slate-50 border-b border-slate-100 text-xs font-medium text-slate-500 uppercase tracking-wide">
+              <span>Dentista</span>
+              <span className="text-right">Ingresos mes</span>
+              <span className="text-right">Cobros</span>
+              <span className="text-right">Presupuestos</span>
+              <span className="text-right">Tasa cobro</span>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {desgloseDentistas.map((d) => {
+                const tasaCobro =
+                  d.monto_presupuestado > 0
+                    ? Math.round((d.ingresos_mes / d.monto_presupuestado) * 100)
+                    : null
+
+                return (
+                  <div key={d.doctor_id} className="px-4 py-3">
+                    {/* Mobile: stack */}
+                    <div className="sm:hidden space-y-2">
+                      <p className="text-sm font-semibold text-slate-900">{d.nombre}</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                        <div>
+                          <span className="text-slate-500">Ingresos</span>
+                          <p className="font-bold text-slate-900 tabular-nums">{formatCLP(d.ingresos_mes)}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">Cobros</span>
+                          <p className="font-medium text-slate-700">{d.numero_cobros}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">Presupuestos</span>
+                          <p className="font-medium text-slate-700">{d.citas_atendidas}</p>
+                        </div>
+                        <div>
+                          <span className="text-slate-500">Tasa cobro</span>
+                          <p className={`font-medium ${tasaCobro !== null ? (tasaCobro >= 80 ? 'text-emerald-700' : tasaCobro >= 50 ? 'text-amber-700' : 'text-red-600') : 'text-slate-400'}`}>
+                            {tasaCobro !== null ? `${tasaCobro}%` : '—'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Desktop: grid */}
+                    <div className="hidden sm:grid grid-cols-[1fr_auto_auto_auto_auto] gap-x-4 items-center">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{d.nombre}</p>
+                      <p className="text-sm font-bold text-slate-900 tabular-nums text-right">
+                        {formatCLP(d.ingresos_mes)}
+                      </p>
+                      <p className="text-sm text-slate-700 tabular-nums text-right w-12">
+                        {d.numero_cobros}
+                      </p>
+                      <p className="text-sm text-slate-700 tabular-nums text-right w-16">
+                        {d.citas_atendidas}
+                      </p>
+                      <p className={`text-sm font-semibold tabular-nums text-right w-14 ${
+                        tasaCobro !== null
+                          ? tasaCobro >= 80
+                            ? 'text-emerald-700'
+                            : tasaCobro >= 50
+                            ? 'text-amber-700'
+                            : 'text-red-600'
+                          : 'text-slate-400'
+                      }`}>
+                        {tasaCobro !== null ? `${tasaCobro}%` : '—'}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Footer con total */}
+            {desgloseDentistas.length > 1 && (
+              <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total clínica</p>
+                <p className="text-sm font-bold text-slate-900 tabular-nums">
+                  {formatCLP(desgloseDentistas.reduce((acc, d) => acc + d.ingresos_mes, 0))}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Estado vacío ── */}
       {sinCobros && (

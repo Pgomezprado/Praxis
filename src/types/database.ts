@@ -177,7 +177,7 @@ export interface Cobro {
   numero_boleta?: string | null
   // Joins opcionales
   paciente?: Pick<Paciente, 'id' | 'nombre' | 'rut'>
-  doctor?: Pick<Usuario, 'id' | 'nombre' | 'especialidad'>
+  doctor?: Pick<Usuario, 'id' | 'nombre' | 'especialidad' | 'nombres' | 'apellido_paterno' | 'apellido_materno'>
   cita?: Pick<Cita, 'id' | 'folio' | 'tipo' | 'fecha' | 'hora_inicio'>
   pagos?: Pago[]
   presupuesto?: Pick<PresupuestoDental, 'id' | 'numero_presupuesto' | 'total'>
