@@ -27,7 +27,7 @@ export async function GET(req: Request) {
         id, clinica_id, paciente_id, doctor_id, paquete_arancel_id,
         sesiones_total, sesiones_usadas, modalidad_pago, num_cuotas,
         precio_total, estado, fecha_inicio, fecha_vencimiento, notas,
-        activo, created_at,
+        numero_orden, activo, created_at,
         doctor:usuarios!paquetes_paciente_doctor_id_fkey(id, nombre, especialidad),
         paquete_arancel:paquetes_arancel!paquetes_paciente_paquete_arancel_id_fkey(id, nombre, prevision),
         cuotas:cuotas_paquete(
@@ -73,6 +73,7 @@ export async function POST(req: Request) {
       fecha_inicio,
       fecha_vencimiento,
       notas,
+      numero_orden,
     } = body
 
     if (!paciente_id) return Response.json({ error: 'paciente_id es obligatorio' }, { status: 400 })
@@ -124,6 +125,7 @@ export async function POST(req: Request) {
         fecha_inicio: fecha_inicio ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }),
         fecha_vencimiento: fecha_vencimiento ?? null,
         notas: notas ?? null,
+        numero_orden: numero_orden?.trim() || null,
         activo: true,
       })
       .select('id, clinica_id, paciente_id, doctor_id, sesiones_total, precio_total, modalidad_pago, num_cuotas, fecha_inicio')

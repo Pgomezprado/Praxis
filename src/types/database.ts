@@ -259,6 +259,7 @@ export interface PaquetePaciente {
   fecha_inicio: string
   fecha_vencimiento: string | null
   notas: string | null
+  numero_orden: string | null
   activo: boolean
   created_at: string
   // Joins opcionales

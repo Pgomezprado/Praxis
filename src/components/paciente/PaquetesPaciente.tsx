@@ -44,6 +44,10 @@ function ModalVenderPaquete({ open, onClose, pacienteId, onVendido, rol }: Modal
   const [modalidadPago, setModalidadPago] = useState<'contado' | 'cuotas'>('contado')
   const [numCuotas, setNumCuotas] = useState(2)
   const [notas, setNotas] = useState('')
+  const [numeroOrden, setNumeroOrden] = useState('')
+  const [fechaCompra, setFechaCompra] = useState(() =>
+    new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
+  )
   const [error, setError] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
 
@@ -63,9 +67,19 @@ function ModalVenderPaquete({ open, onClose, pacienteId, onVendido, rol }: Modal
     }
   }, [loaded])
 
-  // Cargar paquetes cada vez que el modal se abre
+  // Cargar paquetes y resetear formulario cada vez que el modal se abre
   useEffect(() => {
-    if (open) cargarPaquetes()
+    if (open) {
+      cargarPaquetes()
+      // Resetear campos del formulario
+      setPaqueteSeleccionado(null)
+      setModalidadPago('contado')
+      setNumCuotas(2)
+      setNotas('')
+      setNumeroOrden('')
+      setFechaCompra(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }))
+      setError(null)
+    }
   }, [open, cargarPaquetes])
 
   if (!open) return null
@@ -92,6 +106,8 @@ function ModalVenderPaquete({ open, onClose, pacienteId, onVendido, rol }: Modal
           modalidad_pago: modalidadPago,
           num_cuotas: modalidadPago === 'cuotas' ? numCuotas : 1,
           precio_total: paqueteSeleccionado.precio_total,
+          fecha_inicio: fechaCompra,
+          numero_orden: numeroOrden.trim() || null,
           notas: notas.trim() || null,
         }),
       })
@@ -286,6 +302,35 @@ function ModalVenderPaquete({ open, onClose, pacienteId, onVendido, rol }: Modal
               </div>
             </>
           )}
+
+          {/* Número de orden y fecha de compra */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                N° de orden (opcional)
+              </label>
+              <input
+                type="text"
+                value={numeroOrden}
+                onChange={e => setNumeroOrden(e.target.value)}
+                disabled={cargando}
+                placeholder="Ej: ORD-2024-001"
+                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                Fecha de compra
+              </label>
+              <input
+                type="date"
+                value={fechaCompra}
+                onChange={e => setFechaCompra(e.target.value)}
+                disabled={cargando}
+                className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
 
           {/* Notas opcionales */}
           <div>
@@ -577,13 +622,19 @@ function PaqueteCard({ paquete, onCuotaPagada }: PaqueteCardProps) {
           {/* Info adicional */}
           <div className="grid grid-cols-2 gap-3 text-xs">
             <div>
-              <span className="text-slate-400">Inicio</span>
+              <span className="text-slate-400">Fecha de compra</span>
               <p className="text-slate-700 font-medium mt-0.5">{formatFechaCorta(paquete.fecha_inicio)}</p>
             </div>
             <div>
               <span className="text-slate-400">Total paquete</span>
               <p className="text-slate-700 font-medium mt-0.5">${paquete.precio_total.toLocaleString('es-CL')}</p>
             </div>
+            {paquete.numero_orden && (
+              <div>
+                <span className="text-slate-400">N° de orden</span>
+                <p className="text-slate-700 font-medium mt-0.5">{paquete.numero_orden}</p>
+              </div>
+            )}
           </div>
 
           {paquete.notas && (
