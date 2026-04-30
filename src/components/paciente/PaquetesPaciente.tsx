@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Package, ChevronDown, ChevronUp, Plus, CreditCard, Banknote, ArrowLeftRight, Loader2, CheckCircle2, X } from 'lucide-react'
+import { Package, ChevronDown, ChevronUp, Plus, CreditCard, Banknote, ArrowLeftRight, Loader2, CheckCircle2, X, Pencil } from 'lucide-react'
 import type { PaquetePaciente, PaqueteArancel, CuotaPaquete } from '@/types/database'
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -496,16 +496,136 @@ function ModalPagarCuota({ cuota, onClose, onPagada }: ModalPagarCuotaProps) {
   )
 }
 
+// ── Modal editar paquete (numero_orden y notas) ───────────────
+
+interface ModalEditarPaqueteProps {
+  paquete: PaquetePaciente
+  onClose: () => void
+  onEditado: (paqueteId: string, numeroOrden: string | null, notas: string | null) => void
+}
+
+function ModalEditarPaquete({ paquete, onClose, onEditado }: ModalEditarPaqueteProps) {
+  const [numeroOrden, setNumeroOrden] = useState(paquete.numero_orden ?? '')
+  const [notas, setNotas] = useState(paquete.notas ?? '')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/paquetes/paciente/${paquete.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          numero_orden: numeroOrden,
+          notas,
+        }),
+      })
+      if (!res.ok) {
+        const json = await res.json()
+        throw new Error(json.error ?? 'Error al guardar cambios')
+      }
+      const json = await res.json()
+      onEditado(
+        paquete.id,
+        (json.paquete?.numero_orden ?? null) as string | null,
+        (json.paquete?.notas ?? null) as string | null
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error inesperado')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h3 className="text-base font-semibold text-slate-900">Editar paquete</h3>
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
+              N° de orden de compra
+            </label>
+            <input
+              type="text"
+              value={numeroOrden}
+              onChange={e => setNumeroOrden(e.target.value)}
+              disabled={loading}
+              placeholder="Ej: ORD-2024-001"
+              className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1.5">
+              Notas
+            </label>
+            <textarea
+              value={notas}
+              onChange={e => setNotas(e.target.value)}
+              disabled={loading}
+              rows={3}
+              placeholder="Observaciones internas"
+              className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2.5 rounded-xl">
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              Guardar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 // ── Card de paquete individual ────────────────────────────────
 
 interface PaqueteCardProps {
   paquete: PaquetePaciente
   onCuotaPagada: (paqueteId: string, cuotaId: string) => void
+  onEditado: (paqueteId: string, numeroOrden: string | null, notas: string | null) => void
+  puedeEditar: boolean
 }
 
-function PaqueteCard({ paquete, onCuotaPagada }: PaqueteCardProps) {
+function PaqueteCard({ paquete, onCuotaPagada, onEditado, puedeEditar }: PaqueteCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [cuotaAPagar, setCuotaAPagar] = useState<CuotaPaquete | null>(null)
+  const [editarOpen, setEditarOpen] = useState(false)
 
   const restantes = paquete.sesiones_total - paquete.sesiones_usadas
   const progresoPct = Math.round((paquete.sesiones_usadas / paquete.sesiones_total) * 100)
@@ -594,6 +714,18 @@ function PaqueteCard({ paquete, onCuotaPagada }: PaqueteCardProps) {
       {/* Sección expandida con todas las cuotas y sesiones */}
       {expanded && (
         <div className="border-t border-slate-100 px-4 py-3 bg-slate-50 space-y-3">
+          {puedeEditar && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setEditarOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 border border-blue-200 bg-white rounded-lg px-2.5 py-1.5 hover:bg-blue-50 transition-colors"
+              >
+                <Pencil className="w-3 h-3" />
+                Editar
+              </button>
+            </div>
+          )}
           {/* Todas las cuotas */}
           {(paquete.cuotas ?? []).length > 0 && (
             <div>
@@ -654,6 +786,18 @@ function PaqueteCard({ paquete, onCuotaPagada }: PaqueteCardProps) {
           }}
         />
       )}
+
+      {/* Modal editar paquete */}
+      {editarOpen && (
+        <ModalEditarPaquete
+          paquete={paquete}
+          onClose={() => setEditarOpen(false)}
+          onEditado={(id, numeroOrden, notas) => {
+            setEditarOpen(false)
+            onEditado(id, numeroOrden, notas)
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -692,6 +836,14 @@ export function PaquetesPaciente({ pacienteId, clinicaId, paquetesIniciales, rol
       }
     }))
   }
+
+  function handleEditado(paqueteId: string, numeroOrden: string | null, notas: string | null) {
+    setPaquetes(prev => prev.map(p =>
+      p.id === paqueteId ? { ...p, numero_orden: numeroOrden, notas } : p
+    ))
+  }
+
+  const puedeEditar = rol === 'admin_clinica' || rol === 'recepcionista'
 
   return (
     <section>
@@ -738,6 +890,8 @@ export function PaquetesPaciente({ pacienteId, clinicaId, paquetesIniciales, rol
               key={p.id}
               paquete={p}
               onCuotaPagada={handleCuotaPagada}
+              onEditado={handleEditado}
+              puedeEditar={puedeEditar}
             />
           ))}
 
@@ -750,6 +904,8 @@ export function PaquetesPaciente({ pacienteId, clinicaId, paquetesIniciales, rol
                   key={p.id}
                   paquete={p}
                   onCuotaPagada={handleCuotaPagada}
+                  onEditado={handleEditado}
+                  puedeEditar={puedeEditar}
                 />
               ))}
             </>
