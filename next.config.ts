@@ -8,13 +8,10 @@ const supabaseHost = (() => {
   try { return new URL(SUPABASE_URL).host } catch { return '*.supabase.co' }
 })()
 
-// En producción se elimina 'unsafe-inline' de script-src (protección XSS activa).
-// 'unsafe-eval' se mantiene porque posthog-js lo requiere en runtime para su SDK
-// de captura de eventos — eliminarlo rompe la telemetría. Deuda: reemplazar posthog
-// por alternativa CSP-compatible o pedir a Posthog actualizar su bundle.
-// Implementar nonces para eliminar 'unsafe-eval' requiere middleware + todas las
-// páginas dinámicas + soporte Turbopack (pendiente en Next.js, issue #89754).
-const scriptSrcProd = `script-src 'self' 'unsafe-eval'`
+// Next.js App Router emite scripts inline para hidratación; sin 'unsafe-inline'
+// ni nonces configurados la página queda en blanco tras login. Implementar nonces
+// requiere middleware + todas las páginas dinámicas + soporte Turbopack (deuda).
+const scriptSrcProd = `script-src 'self' 'unsafe-inline' 'unsafe-eval'`
 const scriptSrcDev  = `script-src 'self' 'unsafe-inline' 'unsafe-eval'`
 
 const cspDirectives = [
