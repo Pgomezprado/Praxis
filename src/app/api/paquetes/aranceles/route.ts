@@ -123,6 +123,82 @@ export async function POST(req: Request) {
   }
 }
 
+// PUT /api/paquetes/aranceles — editar paquete existente (solo admin_clinica)
+// No afecta paquetes_paciente ya vendidos (tienen precio/sesiones snapshot)
+export async function PUT(req: Request) {
+  try {
+    const body = await req.json()
+    const {
+      id,
+      nombre,
+      doctor_id,
+      especialidad_id,
+      tipo_cita,
+      prevision,
+      num_sesiones,
+      precio_total,
+      vigente_desde,
+      vigente_hasta,
+    } = body
+
+    if (!id) return Response.json({ error: 'id es obligatorio' }, { status: 400 })
+    if (!nombre?.trim()) return Response.json({ error: 'El nombre es obligatorio' }, { status: 400 })
+    if (!doctor_id) return Response.json({ error: 'El profesional es obligatorio' }, { status: 400 })
+    if (!num_sesiones || num_sesiones < 1) return Response.json({ error: 'El número de sesiones debe ser mayor a 0' }, { status: 400 })
+    if (!precio_total || precio_total < 1) return Response.json({ error: 'El precio total debe ser mayor a 0' }, { status: 400 })
+
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return Response.json({ error: 'No autorizado' }, { status: 401 })
+
+    const { data: me } = await supabase
+      .from('usuarios')
+      .select('clinica_id, rol')
+      .eq('id', user.id)
+      .single()
+
+    if (!me) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    const meTyped = me as { clinica_id: string; rol: string }
+
+    if (meTyped.rol !== 'admin_clinica') {
+      return Response.json({ error: 'Solo el administrador puede editar paquetes' }, { status: 403 })
+    }
+
+    const { data, error } = await supabase
+      .from('paquetes_arancel')
+      .update({
+        nombre: nombre.trim(),
+        doctor_id,
+        especialidad_id: especialidad_id ?? null,
+        tipo_cita: tipo_cita ?? 'control',
+        prevision: prevision ?? 'particular',
+        num_sesiones: Math.round(num_sesiones),
+        precio_total: Math.round(precio_total),
+        vigente_desde: vigente_desde ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }),
+        vigente_hasta: vigente_hasta ?? null,
+      })
+      .eq('id', id)
+      .eq('clinica_id', meTyped.clinica_id)
+      .select(`
+        id, clinica_id, nombre, doctor_id, especialidad_id, tipo_cita,
+        prevision, num_sesiones, precio_total, vigente_desde, vigente_hasta,
+        activo, created_at,
+        doctor:usuarios!paquetes_arancel_doctor_id_fkey(id, nombre, especialidad)
+      `)
+      .single()
+
+    if (error) throw error
+    if (!data) return Response.json({ error: 'Paquete no encontrado o no pertenece a esta clínica' }, { status: 404 })
+
+    return Response.json({ paquete: data as unknown as PaqueteArancel })
+  } catch (error) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('Error en PUT /api/paquetes/aranceles:', error)
+    }
+    return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
+  }
+}
+
 // PATCH /api/paquetes/aranceles — desactivar (soft delete, admin only)
 // No DELETE — solo activo = false
 export async function PATCH(req: Request) {

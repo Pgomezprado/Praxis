@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Package, X, Loader2, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, Package, X, Loader2, ToggleLeft, ToggleRight, Pencil } from 'lucide-react'
 import { DatePicker } from '@/components/ui/DatePicker'
-import type { PaqueteArancel, Usuario, Especialidad } from '@/types/database'
+import type { PaqueteArancel, Usuario, Especialidad, PrevisionTipo } from '@/types/database'
+
+type TipoCita = 'primera_consulta' | 'control' | 'urgencia' | 'otro'
 
 const TIPO_LABEL: Record<string, string> = {
   primera_consulta: 'Primera consulta',
@@ -23,37 +25,52 @@ const PREVISION_LABEL: Record<string, string> = {
 interface ModalPaqueteProps {
   open: boolean
   onClose: () => void
-  onGuardar: (p: PaqueteArancel) => void
+  onGuardar: (p: PaqueteArancel, esEdicion: boolean) => void
   medicos: Pick<Usuario, 'id' | 'nombre' | 'especialidad'>[]
   especialidades: Pick<Especialidad, 'id' | 'nombre'>[]
+  paqueteEditar?: PaqueteArancel
 }
 
-function ModalPaquete({ open, onClose, onGuardar, medicos, especialidades }: ModalPaqueteProps) {
-  const [nombre, setNombre] = useState('')
-  const [doctorId, setDoctorId] = useState('')
-  const [especialidadId, setEspecialidadId] = useState('')
-  const [tipoCita, setTipoCita] = useState('control')
-  const [prevision, setPrevision] = useState('particular')
-  const [numSesiones, setNumSesiones] = useState('')
-  const [precioTotal, setPrecioTotal] = useState('')
-  const [vigenteDe, setVigenteDe] = useState(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }))
-  const [vigenteHasta, setVigenteHasta] = useState('')
+function ModalPaquete({ open, onClose, onGuardar, medicos, especialidades, paqueteEditar }: ModalPaqueteProps) {
+  const esEdicion = !!paqueteEditar
+
+  const [nombre, setNombre] = useState(() => paqueteEditar?.nombre ?? '')
+  const [doctorId, setDoctorId] = useState(() => paqueteEditar?.doctor_id ?? '')
+  const [especialidadId, setEspecialidadId] = useState(() => paqueteEditar?.especialidad_id ?? '')
+  const [tipoCita, setTipoCita] = useState<TipoCita>(() => paqueteEditar?.tipo_cita ?? 'control')
+  const [prevision, setPrevision] = useState<PrevisionTipo>(() => (paqueteEditar?.prevision as PrevisionTipo) ?? 'particular')
+  const [numSesiones, setNumSesiones] = useState(() => paqueteEditar ? String(paqueteEditar.num_sesiones) : '')
+  const [precioTotal, setPrecioTotal] = useState(() => paqueteEditar ? String(paqueteEditar.precio_total) : '')
+  const [vigenteDe, setVigenteDe] = useState(() => paqueteEditar?.vigente_desde ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }))
+  const [vigenteHasta, setVigenteHasta] = useState(() => paqueteEditar?.vigente_hasta ?? '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!open) return
-    setNombre('')
-    setDoctorId(medicos[0]?.id ?? '')
-    setEspecialidadId('')
-    setTipoCita('control')
-    setPrevision('particular')
-    setNumSesiones('')
-    setPrecioTotal('')
-    setVigenteDe(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }))
-    setVigenteHasta('')
+    if (paqueteEditar) {
+      setNombre(paqueteEditar.nombre)
+      setDoctorId(paqueteEditar.doctor_id ?? '')
+      setEspecialidadId(paqueteEditar.especialidad_id ?? '')
+      setTipoCita((paqueteEditar.tipo_cita ?? 'control') as TipoCita)
+      setPrevision(((paqueteEditar.prevision ?? 'particular') as PrevisionTipo))
+      setNumSesiones(String(paqueteEditar.num_sesiones))
+      setPrecioTotal(String(paqueteEditar.precio_total))
+      setVigenteDe(paqueteEditar.vigente_desde ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }))
+      setVigenteHasta(paqueteEditar.vigente_hasta ?? '')
+    } else {
+      setNombre('')
+      setDoctorId(medicos[0]?.id ?? '')
+      setEspecialidadId('')
+      setTipoCita('control')
+      setPrevision('particular')
+      setNumSesiones('')
+      setPrecioTotal('')
+      setVigenteDe(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }))
+      setVigenteHasta('')
+    }
     setError(null)
-  }, [open, medicos])
+  }, [open, paqueteEditar, medicos])
 
   if (!open) return null
 
@@ -72,9 +89,10 @@ function ModalPaquete({ open, onClose, onGuardar, medicos, especialidades }: Mod
     setLoading(true)
     try {
       const res = await fetch('/api/paquetes/aranceles', {
-        method: 'POST',
+        method: esEdicion ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          ...(esEdicion ? { id: paqueteEditar!.id } : {}),
           nombre: nombre.trim(),
           doctor_id: doctorId,
           especialidad_id: especialidadId || null,
@@ -93,7 +111,7 @@ function ModalPaquete({ open, onClose, onGuardar, medicos, especialidades }: Mod
       }
 
       const json = await res.json()
-      onGuardar(json.paquete as PaqueteArancel)
+      onGuardar(json.paquete as PaqueteArancel, esEdicion)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error inesperado')
     } finally {
@@ -110,7 +128,7 @@ function ModalPaquete({ open, onClose, onGuardar, medicos, especialidades }: Mod
     <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg my-4">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h3 className="text-base font-semibold text-slate-900">Nuevo paquete</h3>
+          <h3 className="text-base font-semibold text-slate-900">{esEdicion ? 'Editar paquete' : 'Nuevo paquete'}</h3>
           <button
             onClick={onClose}
             disabled={loading}
@@ -181,7 +199,7 @@ function ModalPaquete({ open, onClose, onGuardar, medicos, especialidades }: Mod
               </label>
               <select
                 value={tipoCita}
-                onChange={e => setTipoCita(e.target.value)}
+                onChange={e => setTipoCita(e.target.value as TipoCita)}
                 disabled={loading}
                 className="w-full text-sm rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
@@ -315,7 +333,7 @@ function ModalPaquete({ open, onClose, onGuardar, medicos, especialidades }: Mod
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Guardando…
                 </>
-              ) : 'Crear paquete'}
+              ) : esEdicion ? 'Guardar cambios' : 'Crear paquete'}
             </button>
           </div>
         </form>
@@ -335,6 +353,7 @@ interface Props {
 export function PaquetesClient({ paquetesIniciales, medicos, especialidades }: Props) {
   const [paquetes, setPaquetes] = useState<PaqueteArancel[]>(paquetesIniciales)
   const [modalOpen, setModalOpen] = useState(false)
+  const [paqueteEditando, setPaqueteEditando] = useState<PaqueteArancel | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [desactivando, setDesactivando] = useState<string | null>(null)
 
@@ -343,10 +362,26 @@ export function PaquetesClient({ paquetesIniciales, medicos, especialidades }: P
     setTimeout(() => setToast(null), 4000)
   }
 
-  function handleGuardar(p: PaqueteArancel) {
-    setPaquetes(prev => [...prev, p])
+  function handleGuardar(p: PaqueteArancel, esEdicion: boolean) {
+    if (esEdicion) {
+      setPaquetes(prev => prev.map(x => x.id === p.id ? { ...x, ...p } : x))
+      mostrarToast(`Paquete "${p.nombre}" actualizado`)
+    } else {
+      setPaquetes(prev => [p, ...prev])
+      mostrarToast(`Paquete "${p.nombre}" creado`)
+    }
     setModalOpen(false)
-    mostrarToast(`Paquete "${p.nombre}" creado`)
+    setPaqueteEditando(null)
+  }
+
+  function abrirEdicion(p: PaqueteArancel) {
+    setPaqueteEditando(p)
+    setModalOpen(true)
+  }
+
+  function cerrarModal() {
+    setModalOpen(false)
+    setPaqueteEditando(null)
   }
 
   async function toggleActivo(p: PaqueteArancel) {
@@ -379,7 +414,7 @@ export function PaquetesClient({ paquetesIniciales, medicos, especialidades }: P
           {paquetes.length} paquete{paquetes.length !== 1 ? 's' : ''} configurado{paquetes.length !== 1 ? 's' : ''}
         </p>
         <button
-          onClick={() => setModalOpen(true)}
+          onClick={() => { setPaqueteEditando(null); setModalOpen(true) }}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -407,7 +442,7 @@ export function PaquetesClient({ paquetesIniciales, medicos, especialidades }: P
             <p className="text-sm font-medium text-slate-600">Sin paquetes configurados</p>
             <p className="text-xs text-slate-400 mt-1">Crea paquetes de sesiones con precio por volumen</p>
             <button
-              onClick={() => setModalOpen(true)}
+              onClick={() => { setPaqueteEditando(null); setModalOpen(true) }}
               className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
             >
               <Plus className="w-4 h-4" />
@@ -464,8 +499,15 @@ export function PaquetesClient({ paquetesIniciales, medicos, especialidades }: P
               </p>
             </div>
 
-            {/* Toggle activo */}
-            <div className="w-full sm:w-20 flex sm:justify-center">
+            {/* Acciones: Editar + Toggle activo */}
+            <div className="w-full sm:w-20 flex items-center gap-2 sm:justify-center">
+              <button
+                onClick={() => abrirEdicion(p)}
+                title="Editar paquete"
+                className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 transition-colors"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
               <button
                 onClick={() => toggleActivo(p)}
                 disabled={desactivando === p.id}
@@ -489,7 +531,7 @@ export function PaquetesClient({ paquetesIniciales, medicos, especialidades }: P
       {/* Card dashed para agregar */}
       {paquetes.length > 0 && (
         <button
-          onClick={() => setModalOpen(true)}
+          onClick={() => { setPaqueteEditando(null); setModalOpen(true) }}
           className="mt-3 w-full border-2 border-dashed border-slate-200 rounded-xl p-4 flex items-center justify-center gap-2 text-slate-400 hover:border-blue-300 hover:text-blue-500 transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -499,10 +541,11 @@ export function PaquetesClient({ paquetesIniciales, medicos, especialidades }: P
 
       <ModalPaquete
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={cerrarModal}
         onGuardar={handleGuardar}
         medicos={medicos}
         especialidades={especialidades}
+        paqueteEditar={paqueteEditando ?? undefined}
       />
 
       {/* Toast */}

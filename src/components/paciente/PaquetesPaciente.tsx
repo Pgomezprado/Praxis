@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Package, ChevronDown, ChevronUp, Plus, CreditCard, Banknote, ArrowLeftRight, Loader2, CheckCircle2, X } from 'lucide-react'
 import type { PaquetePaciente, PaqueteArancel, CuotaPaquete } from '@/types/database'
 
@@ -63,10 +63,10 @@ function ModalVenderPaquete({ open, onClose, pacienteId, onVendido, rol }: Modal
     }
   }, [loaded])
 
-  // Cargar al montar si el modal está abierto
-  useState(() => {
+  // Cargar paquetes cada vez que el modal se abre
+  useEffect(() => {
     if (open) cargarPaquetes()
-  })
+  }, [open, cargarPaquetes])
 
   if (!open) return null
 
