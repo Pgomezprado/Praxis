@@ -153,6 +153,7 @@ export default async function PacientePage({ params }: { params: Promise<{ id: s
         edad={edad}
         fechaDesde={formatFecha(paciente.created_at)}
         rol={rolUsuario}
+        fichaBasePath={rolUsuario === 'admin_clinica' ? '/admin/pacientes' : '/pacientes'}
       />
 
       {/* Layout de 2 columnas — recepcionista no tiene acceso al formulario de consulta */}

@@ -71,7 +71,11 @@ export default async function AdminPacientesPage() {
         </p>
       </div>
 
-      <PacientesAdminClient pacientesIniciales={pacientes} />
+      <PacientesAdminClient
+        pacientesIniciales={pacientes}
+        rol="admin_clinica"
+        fichaBasePath="/admin/pacientes"
+      />
     </div>
   )
 }

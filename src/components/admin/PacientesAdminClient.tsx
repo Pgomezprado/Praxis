@@ -38,9 +38,11 @@ type SortDir   = 'asc' | 'desc'
 type Props = {
   pacientesIniciales: MockPacienteAdmin[]
   rol?: 'admin_clinica' | 'doctor' | 'recepcionista'
+  /** Base path para la ficha del paciente — por defecto '/pacientes' (recepcionista) */
+  fichaBasePath?: string
 }
 
-export function PacientesAdminClient({ pacientesIniciales, rol }: Props) {
+export function PacientesAdminClient({ pacientesIniciales, rol, fichaBasePath = '/pacientes' }: Props) {
   const router = useRouter()
   const [pacientes, setPacientes] = useState<MockPacienteAdmin[]>(pacientesIniciales)
   const [busqueda, setBusqueda] = useState('')
@@ -341,7 +343,7 @@ export function PacientesAdminClient({ pacientesIniciales, rol }: Props) {
                       <button
                         title="Ver ficha completa"
                         aria-label="Ver ficha completa"
-                        onClick={() => router.push(`/pacientes/${p.id}`)}
+                        onClick={() => router.push(`${fichaBasePath}/${p.id}`)}
                         className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-400 hover:text-blue-600"
                       >
                         <Eye className="w-3.5 h-3.5" />
@@ -398,6 +400,7 @@ export function PacientesAdminClient({ pacientesIniciales, rol }: Props) {
         onGuardar={handleGuardarPaciente}
         pacienteEditar={pacienteEditar}
         rol={rol}
+        fichaBasePath={fichaBasePath}
       />
     </div>
   )

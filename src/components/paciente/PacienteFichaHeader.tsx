@@ -29,6 +29,8 @@ type Props = {
   edad: number | null
   fechaDesde: string
   rol?: 'admin_clinica' | 'doctor' | 'recepcionista'
+  /** Base path para la ficha del paciente — por defecto '/pacientes' (recepcionista) */
+  fichaBasePath?: string
 }
 
 function PrevisionBadge({ prevision }: { prevision: string }) {
@@ -46,7 +48,7 @@ function PrevisionBadge({ prevision }: { prevision: string }) {
   )
 }
 
-export function PacienteFichaHeader({ paciente, edad, fechaDesde, rol }: Props) {
+export function PacienteFichaHeader({ paciente, edad, fechaDesde, rol, fichaBasePath = '/pacientes' }: Props) {
   const router = useRouter()
   const [drawerOpen, setDrawerOpen] = useState(false)
 
@@ -117,6 +119,7 @@ export function PacienteFichaHeader({ paciente, edad, fechaDesde, rol }: Props) 
         onGuardar={handleGuardar}
         pacienteEditar={pacienteParaDrawer}
         rol={rol}
+        fichaBasePath={fichaBasePath}
       />
     </>
   )

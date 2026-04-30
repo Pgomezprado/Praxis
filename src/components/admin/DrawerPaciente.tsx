@@ -40,9 +40,11 @@ type Props = {
   pacienteEditar?: MockPacienteAdmin | null
   /** Rol del usuario autenticado — restringe campos editables para recepcionista */
   rol?: 'admin_clinica' | 'doctor' | 'recepcionista'
+  /** Base path para la ficha del paciente — por defecto '/pacientes' (recepcionista) */
+  fichaBasePath?: string
 }
 
-export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar, rol }: Props) {
+export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar, rol, fichaBasePath = '/pacientes' }: Props) {
   const esRecepcionista = rol === 'recepcionista'
   const esEdicion = !!pacienteEditar
 
@@ -547,7 +549,7 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar, rol }
                   <p className="text-sm text-slate-400">Sin paquetes activos</p>
                   {pacienteEditar?.id && (
                     <a
-                      href={`/pacientes/${pacienteEditar.id}`}
+                      href={`${fichaBasePath}/${pacienteEditar.id}`}
                       className="text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
                     >
                       Vender paquete
@@ -587,7 +589,7 @@ export function DrawerPaciente({ open, onClose, onGuardar, pacienteEditar, rol }
               {/* Link ficha completa */}
               {pacienteEditar?.id && (
                 <a
-                  href={`/pacientes/${pacienteEditar.id}`}
+                  href={`${fichaBasePath}/${pacienteEditar.id}`}
                   className="mt-3 flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
                 >
                   Abrir ficha completa
