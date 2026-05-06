@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Package, X, Loader2, ToggleLeft, ToggleRight, Pencil } from 'lucide-react'
+import { Plus, Package, X, Loader2, ToggleLeft, ToggleRight, Pencil, Trash2 } from 'lucide-react'
 import { DatePicker } from '@/components/ui/DatePicker'
 import type { PaqueteArancel, Usuario, Especialidad, PrevisionTipo } from '@/types/database'
 
@@ -356,6 +356,8 @@ export function PaquetesClient({ paquetesIniciales, medicos, especialidades }: P
   const [paqueteEditando, setPaqueteEditando] = useState<PaqueteArancel | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [desactivando, setDesactivando] = useState<string | null>(null)
+  // ID del paquete esperando confirmación de desactivación via botón trash
+  const [confirmandoDesactivar, setConfirmandoDesactivar] = useState<string | null>(null)
 
   function mostrarToast(msg: string) {
     setToast(msg)
@@ -401,6 +403,29 @@ export function PaquetesClient({ paquetesIniciales, medicos, especialidades }: P
       mostrarToast(p.activo ? `"${p.nombre}" desactivado` : `"${p.nombre}" activado`)
     } catch {
       mostrarToast('Error al actualizar el paquete')
+    } finally {
+      setDesactivando(null)
+    }
+  }
+
+  async function desactivarPlantilla(p: PaqueteArancel) {
+    setConfirmandoDesactivar(null)
+    setDesactivando(p.id)
+    try {
+      const res = await fetch('/api/paquetes/aranceles', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: p.id, activo: false }),
+      })
+      if (!res.ok) {
+        const json = await res.json()
+        mostrarToast(`Error: ${json.error ?? 'No se pudo desactivar'}`)
+        return
+      }
+      setPaquetes(prev => prev.map(x => x.id === p.id ? { ...x, activo: false } : x))
+      mostrarToast(`"${p.nombre}" desactivado`)
+    } catch {
+      mostrarToast('Error al desactivar la plantilla')
     } finally {
       setDesactivando(null)
     }
@@ -499,30 +524,64 @@ export function PaquetesClient({ paquetesIniciales, medicos, especialidades }: P
               </p>
             </div>
 
-            {/* Acciones: Editar + Toggle activo */}
+            {/* Acciones: Editar + Desactivar (trash) + Toggle activo */}
             <div className="w-full sm:w-20 flex items-center gap-2 sm:justify-center">
-              <button
-                onClick={() => abrirEdicion(p)}
-                title="Editar paquete"
-                className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 transition-colors"
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => toggleActivo(p)}
-                disabled={desactivando === p.id}
-                title={p.activo ? 'Desactivar paquete' : 'Activar paquete'}
-                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-40"
-              >
-                {desactivando === p.id ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : p.activo ? (
-                  <ToggleRight className="w-5 h-5 text-blue-600" />
-                ) : (
-                  <ToggleLeft className="w-5 h-5 text-slate-400" />
-                )}
-                <span className="hidden sm:inline">{p.activo ? 'Activo' : 'Inactivo'}</span>
-              </button>
+              {confirmandoDesactivar === p.id ? (
+                /* Confirmación inline: reemplaza los botones de acción */
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-slate-500 hidden sm:inline">¿Desactivar?</span>
+                  <button
+                    onClick={() => desactivarPlantilla(p)}
+                    disabled={desactivando === p.id}
+                    className="text-xs font-semibold text-white bg-red-600 rounded-lg px-2 py-1 hover:bg-red-700 transition-colors disabled:opacity-60"
+                  >
+                    Sí
+                  </button>
+                  <button
+                    onClick={() => setConfirmandoDesactivar(null)}
+                    disabled={desactivando === p.id}
+                    className="text-xs font-medium text-slate-600 border border-slate-200 rounded-lg px-2 py-1 hover:bg-slate-50 transition-colors"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => abrirEdicion(p)}
+                    title="Editar paquete"
+                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-600 transition-colors"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  {/* Botón desactivar (solo visible en plantillas activas) */}
+                  {p.activo && (
+                    <button
+                      onClick={() => setConfirmandoDesactivar(p.id)}
+                      title="Desactivar plantilla"
+                      disabled={desactivando === p.id}
+                      className="flex items-center gap-1 text-xs text-slate-400 hover:text-red-500 transition-colors disabled:opacity-40"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => toggleActivo(p)}
+                    disabled={desactivando === p.id}
+                    title={p.activo ? 'Desactivar paquete' : 'Activar paquete'}
+                    className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-40"
+                  >
+                    {desactivando === p.id ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : p.activo ? (
+                      <ToggleRight className="w-5 h-5 text-blue-600" />
+                    ) : (
+                      <ToggleLeft className="w-5 h-5 text-slate-400" />
+                    )}
+                    <span className="hidden sm:inline">{p.activo ? 'Activo' : 'Inactivo'}</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ))}

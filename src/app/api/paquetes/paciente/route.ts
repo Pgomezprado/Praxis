@@ -74,6 +74,7 @@ export async function POST(req: Request) {
       fecha_vencimiento,
       notas,
       numero_orden,
+      medio_pago,
     } = body
 
     if (!paciente_id) return Response.json({ error: 'paciente_id es obligatorio' }, { status: 400 })
@@ -85,6 +86,12 @@ export async function POST(req: Request) {
     }
     if (modalidad_pago === 'cuotas' && (!num_cuotas || num_cuotas < 1 || num_cuotas > 12)) {
       return Response.json({ error: 'num_cuotas debe estar entre 1 y 12' }, { status: 400 })
+    }
+    // Para venta al contado el medio de pago es obligatorio
+    if (modalidad_pago === 'contado') {
+      if (!medio_pago || !['efectivo', 'tarjeta', 'transferencia'].includes(medio_pago)) {
+        return Response.json({ error: 'medio_pago es obligatorio para venta al contado (efectivo, tarjeta o transferencia)' }, { status: 400 })
+      }
     }
 
     const supabase = await createClient()
@@ -162,7 +169,8 @@ export async function POST(req: Request) {
         monto: i === totalCuotas - 1 ? montoPorCuota + diferencia : montoPorCuota,
         fecha_vencimiento: fechaVenc.toLocaleDateString('en-CA', { timeZone: 'America/Santiago' }),
         fecha_pago: modalidad_pago === 'contado' ? new Date().toISOString() : null,
-        medio_pago: null,
+        // Para contado se persiste el medio de pago en la cuota (ya validado arriba)
+        medio_pago: modalidad_pago === 'contado' ? (medio_pago as 'efectivo' | 'tarjeta' | 'transferencia') : null,
         estado: modalidad_pago === 'contado' ? 'pagada' : 'pendiente',
       })
     }

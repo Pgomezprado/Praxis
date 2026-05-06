@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Package, ChevronDown, ChevronUp, Plus, CreditCard, Banknote, ArrowLeftRight, Loader2, CheckCircle2, X, Pencil } from 'lucide-react'
+import { Package, ChevronDown, ChevronUp, Plus, CreditCard, Banknote, ArrowLeftRight, Loader2, CheckCircle2, X, Pencil, Trash2, AlertTriangle } from 'lucide-react'
 import type { PaquetePaciente, PaqueteArancel, CuotaPaquete } from '@/types/database'
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -36,12 +36,19 @@ interface ModalVenderPaqueteProps {
   rol?: 'admin_clinica' | 'doctor' | 'recepcionista'
 }
 
+const MEDIOS_PAGO = [
+  { value: 'efectivo' as const, label: 'Efectivo', icon: Banknote },
+  { value: 'tarjeta' as const, label: 'Tarjeta', icon: CreditCard },
+  { value: 'transferencia' as const, label: 'Transferencia', icon: ArrowLeftRight },
+]
+
 function ModalVenderPaquete({ open, onClose, pacienteId, onVendido, rol }: ModalVenderPaqueteProps) {
   const [paquetesDisponibles, setPaquetesDisponibles] = useState<PaqueteArancel[]>([])
   const [cargando, setCargando] = useState(false)
   const [cargandoLista, setCargandoLista] = useState(false)
   const [paqueteSeleccionado, setPaqueteSeleccionado] = useState<PaqueteArancel | null>(null)
   const [modalidadPago, setModalidadPago] = useState<'contado' | 'cuotas'>('contado')
+  const [medioPago, setMedioPago] = useState<'efectivo' | 'tarjeta' | 'transferencia'>('efectivo')
   const [numCuotas, setNumCuotas] = useState(2)
   const [notas, setNotas] = useState('')
   const [numeroOrden, setNumeroOrden] = useState('')
@@ -74,6 +81,7 @@ function ModalVenderPaquete({ open, onClose, pacienteId, onVendido, rol }: Modal
       // Resetear campos del formulario
       setPaqueteSeleccionado(null)
       setModalidadPago('contado')
+      setMedioPago('efectivo')
       setNumCuotas(2)
       setNotas('')
       setNumeroOrden('')
@@ -109,6 +117,8 @@ function ModalVenderPaquete({ open, onClose, pacienteId, onVendido, rol }: Modal
           fecha_inicio: fechaCompra,
           numero_orden: numeroOrden.trim() || null,
           notas: notas.trim() || null,
+          // Solo se envía medio_pago cuando la venta es al contado
+          ...(modalidadPago === 'contado' ? { medio_pago: medioPago } : {}),
         }),
       })
 
@@ -275,6 +285,33 @@ function ModalVenderPaquete({ open, onClose, pacienteId, onVendido, rol }: Modal
                 </div>
               )}
 
+              {/* Medio de pago (solo para venta al contado) */}
+              {modalidadPago === 'contado' && (
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1.5">
+                    Medio de pago <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex gap-2">
+                    {MEDIOS_PAGO.map(({ value, label, icon: Icon }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setMedioPago(value)}
+                        disabled={cargando}
+                        className={`flex-1 flex flex-col items-center gap-1 py-2.5 rounded-xl border text-xs font-medium transition-colors ${
+                          medioPago === value
+                            ? 'border-blue-500 bg-blue-50 text-blue-700 ring-1 ring-blue-500'
+                            : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4" />
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Resumen */}
               <div className="bg-slate-50 rounded-xl p-4 space-y-1.5 text-sm">
                 <div className="flex justify-between">
@@ -297,6 +334,12 @@ function ModalVenderPaquete({ open, onClose, pacienteId, onVendido, rol }: Modal
                     <span className="font-medium text-slate-800">
                       ${montoPorCuota.toLocaleString('es-CL')}
                     </span>
+                  </div>
+                )}
+                {modalidadPago === 'contado' && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Medio de pago</span>
+                    <span className="font-medium text-slate-800 capitalize">{medioPago}</span>
                   </div>
                 )}
               </div>
@@ -619,13 +662,39 @@ interface PaqueteCardProps {
   paquete: PaquetePaciente
   onCuotaPagada: (paqueteId: string, cuotaId: string) => void
   onEditado: (paqueteId: string, numeroOrden: string | null, notas: string | null) => void
+  onAnulado: (paqueteId: string) => void
   puedeEditar: boolean
 }
 
-function PaqueteCard({ paquete, onCuotaPagada, onEditado, puedeEditar }: PaqueteCardProps) {
+function PaqueteCard({ paquete, onCuotaPagada, onEditado, onAnulado, puedeEditar }: PaqueteCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [cuotaAPagar, setCuotaAPagar] = useState<CuotaPaquete | null>(null)
   const [editarOpen, setEditarOpen] = useState(false)
+  const [confirmandoAnulacion, setConfirmandoAnulacion] = useState(false)
+  const [anulando, setAnulando] = useState(false)
+  const [errorAnulacion, setErrorAnulacion] = useState<string | null>(null)
+
+  async function handleAnular() {
+    setAnulando(true)
+    setErrorAnulacion(null)
+    try {
+      const res = await fetch(`/api/paquetes/paciente/${paquete.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: 'anulado' }),
+      })
+      if (!res.ok) {
+        const json = await res.json()
+        throw new Error(json.error ?? 'Error al anular el paquete')
+      }
+      setConfirmandoAnulacion(false)
+      onAnulado(paquete.id)
+    } catch (err) {
+      setErrorAnulacion(err instanceof Error ? err.message : 'Error inesperado')
+    } finally {
+      setAnulando(false)
+    }
+  }
 
   const restantes = paquete.sesiones_total - paquete.sesiones_usadas
   const progresoPct = Math.round((paquete.sesiones_usadas / paquete.sesiones_total) * 100)
@@ -657,7 +726,7 @@ function PaqueteCard({ paquete, onCuotaPagada, onEditado, puedeEditar }: Paquete
           </div>
           <button
             onClick={() => setExpanded(v => !v)}
-            className="text-slate-400 hover:text-slate-600 transition-colors flex-shrink-0"
+            className="text-slate-400 hover:text-slate-600 transition-colors shrink-0"
           >
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
@@ -715,15 +784,65 @@ function PaqueteCard({ paquete, onCuotaPagada, onEditado, puedeEditar }: Paquete
       {expanded && (
         <div className="border-t border-slate-100 px-4 py-3 bg-slate-50 space-y-3">
           {puedeEditar && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => setEditarOpen(true)}
-                className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 border border-blue-200 bg-white rounded-lg px-2.5 py-1.5 hover:bg-blue-50 transition-colors"
-              >
-                <Pencil className="w-3 h-3" />
-                Editar
-              </button>
+            <div className="flex justify-between items-start gap-3">
+              <div>
+                {/* Confirmación inline de anulación */}
+                {confirmandoAnulacion && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-xs font-semibold text-red-700">¿Anular este paquete?</p>
+                        <p className="text-xs text-red-600 mt-0.5">
+                          Las cuotas pagadas anteriores se mantendrán como registro contable.
+                        </p>
+                      </div>
+                    </div>
+                    {errorAnulacion && (
+                      <p className="text-xs text-red-600">{errorAnulacion}</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setConfirmandoAnulacion(false); setErrorAnulacion(null) }}
+                        disabled={anulando}
+                        className="flex-1 text-xs font-medium text-slate-600 border border-slate-200 bg-white rounded-lg px-2.5 py-1.5 hover:bg-slate-50 transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAnular}
+                        disabled={anulando}
+                        className="flex-1 text-xs font-semibold text-white bg-red-600 rounded-lg px-2.5 py-1.5 hover:bg-red-700 transition-colors disabled:opacity-60 flex items-center justify-center gap-1"
+                      >
+                        {anulando ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                        Confirmar anulación
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setEditarOpen(true)}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 border border-blue-200 bg-white rounded-lg px-2.5 py-1.5 hover:bg-blue-50 transition-colors"
+                >
+                  <Pencil className="w-3 h-3" />
+                  Editar
+                </button>
+                {paquete.estado === 'activo' && !confirmandoAnulacion && (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmandoAnulacion(true)}
+                    className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 border border-red-200 bg-white rounded-lg px-2.5 py-1.5 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Anular
+                  </button>
+                )}
+              </div>
             </div>
           )}
           {/* Todas las cuotas */}
@@ -843,6 +962,12 @@ export function PaquetesPaciente({ pacienteId, clinicaId, paquetesIniciales, rol
     ))
   }
 
+  function handleAnulado(paqueteId: string) {
+    setPaquetes(prev => prev.map(p =>
+      p.id === paqueteId ? { ...p, estado: 'anulado' as const } : p
+    ))
+  }
+
   const puedeEditar = rol === 'admin_clinica' || rol === 'recepcionista'
 
   return (
@@ -891,6 +1016,7 @@ export function PaquetesPaciente({ pacienteId, clinicaId, paquetesIniciales, rol
               paquete={p}
               onCuotaPagada={handleCuotaPagada}
               onEditado={handleEditado}
+              onAnulado={handleAnulado}
               puedeEditar={puedeEditar}
             />
           ))}
@@ -905,6 +1031,7 @@ export function PaquetesPaciente({ pacienteId, clinicaId, paquetesIniciales, rol
                   paquete={p}
                   onCuotaPagada={handleCuotaPagada}
                   onEditado={handleEditado}
+                  onAnulado={handleAnulado}
                   puedeEditar={puedeEditar}
                 />
               ))}

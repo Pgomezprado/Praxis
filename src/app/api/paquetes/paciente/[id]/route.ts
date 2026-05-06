@@ -1,8 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { isValidUUID } from '@/lib/utils/validators'
 
-// PATCH /api/paquetes/paciente/[id] — editar campos administrativos del paquete
-// Permite actualizar numero_orden y notas después de creado.
+// PATCH /api/paquetes/paciente/[id]
+// Permite actualizar:
+//   - numero_orden y notas (edición administrativa)
+//   - estado='anulado' (anulación del paquete — solo activo → anulado)
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -12,7 +14,15 @@ export async function PATCH(
     if (!isValidUUID(paqueteId)) return Response.json({ error: 'ID inválido' }, { status: 400 })
 
     const body = await req.json().catch(() => ({}))
-    const { numero_orden, notas } = body as { numero_orden?: string | null; notas?: string | null }
+    const {
+      numero_orden,
+      notas,
+      estado,
+    } = body as {
+      numero_orden?: string | null
+      notas?: string | null
+      estado?: string
+    }
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -31,9 +41,10 @@ export async function PATCH(
       return Response.json({ error: 'Sin permisos para editar paquetes' }, { status: 403 })
     }
 
+    // Leer el paquete actual (necesario para validar transición y para audit_log)
     const { data: paqueteExistente, error: errCheck } = await supabase
       .from('paquetes_paciente')
-      .select('id, clinica_id')
+      .select('id, clinica_id, estado, numero_orden, notas')
       .eq('id', paqueteId)
       .eq('clinica_id', meTyped.clinica_id)
       .eq('activo', true)
@@ -43,6 +54,53 @@ export async function PATCH(
       return Response.json({ error: 'Paquete no encontrado' }, { status: 404 })
     }
 
+    const paqueteActual = paqueteExistente as {
+      id: string
+      clinica_id: string
+      estado: string
+      numero_orden: string | null
+      notas: string | null
+    }
+
+    // ── Rama: anulación del paquete ──────────────────────────────
+    if (estado === 'anulado') {
+      // Solo se puede anular un paquete activo
+      if (paqueteActual.estado !== 'activo') {
+        return Response.json(
+          { error: `No se puede anular un paquete con estado "${paqueteActual.estado}"` },
+          { status: 409 }
+        )
+      }
+
+      const { data: paqueteAnulado, error: errAnular } = await supabase
+        .from('paquetes_paciente')
+        .update({ estado: 'anulado' })
+        .eq('id', paqueteId)
+        .eq('clinica_id', meTyped.clinica_id)
+        .select('id, estado, numero_orden, notas')
+        .single()
+
+      if (errAnular) throw errAnular
+
+      // Registrar en audit_log via RPC (INSERT-only, trigger del lado DB)
+      // Usamos la convención de la sesión 2026-04-23: antes/después en detalle
+      await supabase.from('audit_log').insert({
+        clinica_id: meTyped.clinica_id,
+        tabla: 'paquetes_paciente',
+        registro_id: paqueteId,
+        accion: 'UPDATE',
+        usuario_id: user.id,
+        detalle: JSON.stringify({
+          campo: 'estado',
+          before: { estado: paqueteActual.estado },
+          after: { estado: 'anulado' },
+        }),
+      }).throwOnError()
+
+      return Response.json({ paquete: paqueteAnulado })
+    }
+
+    // ── Rama: edición administrativa (numero_orden, notas) ───────
     const updates: Record<string, string | null> = {}
     if (numero_orden !== undefined) {
       const trimmed = typeof numero_orden === 'string' ? numero_orden.trim() : ''
