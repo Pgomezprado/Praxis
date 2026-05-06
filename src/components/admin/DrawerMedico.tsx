@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { X, Send, ChevronDown } from 'lucide-react'
+import { X, ChevronDown } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { type MockMedicoAdmin } from '@/types/domain'
 import { type Especialidad } from '@/types/database'
@@ -51,8 +51,8 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
   const [rutError, setRutError] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [errorGuardar, setErrorGuardar] = useState<string | null>(null)
-  const [invitando, setInvitando] = useState(false)
-  const [invitadoOk, setInvitadoOk] = useState(false)
+  const [errorInactivo, setErrorInactivo] = useState<{ id: string; nombre: string } | null>(null)
+  const [reactivando, setReactivando] = useState(false)
 
   // Poblar form al abrir en modo edición
   useEffect(() => {
@@ -75,7 +75,8 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
       setForm(defaultForm)
     }
     setRutError('')
-    setInvitadoOk(false)
+    setErrorGuardar(null)
+    setErrorInactivo(null)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [medicoEditar, open])
 
@@ -106,21 +107,19 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
   // Nombre de la especialidad según lo seleccionado en el select
   const especialidadNombre = especialidades.find(e => e.id === form.especialidadId)?.nombre ?? ''
 
-  // Si el select quedó vacío (especialidadId = '') pero el médico ya tenía una
-  // especialidad guardada en DB, lo permitimos guardar igual usando ese nombre como fallback
-  const tieneEspecialidad = !!form.especialidadId || (esEdicion && !!medicoEditar?.especialidad)
-
+  // RUT y especialidad son recomendados pero no obligatorios — el backend solo
+  // requiere nombre, email y rol. Permitir crear sin ellos para no bloquear a clínicas
+  // que aún no cargan especialidades o que agregan al profesional antes de tener su RUT.
   const canGuardar =
-    form.nombre.trim() &&
-    form.rut.trim() &&
-    !rutError &&
-    form.email.trim() &&
-    tieneEspecialidad
+    !!form.nombre.trim() &&
+    !!form.email.trim() &&
+    !rutError
 
   async function handleGuardar() {
     if (!canGuardar) return
     setGuardando(true)
     setErrorGuardar(null)
+    setErrorInactivo(null)
 
     // Determinar qué nombre de especialidad enviar:
     // 1. Si hay especialidadId seleccionado, usar su nombre desde la lista
@@ -170,7 +169,13 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
-      setErrorGuardar(data.error ?? 'Error al guardar el profesional')
+      // Caso especial: email coincide con un profesional desactivado en la clínica
+      // → mostrar botón para reactivarlo en lugar del mensaje genérico
+      if (data.code === 'INACTIVE_USER_EXISTS' && data.inactiveUserId) {
+        setErrorInactivo({ id: data.inactiveUserId, nombre: data.inactiveUserName ?? 'el profesional' })
+      } else {
+        setErrorGuardar(data.error ?? 'Error al guardar el profesional')
+      }
       return
     }
 
@@ -195,13 +200,39 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
     onGuardar(medico)
   }
 
-  async function handleInvitar() {
-    if (!form.emailAcceso.trim()) return
-    setInvitando(true)
-    await new Promise(r => setTimeout(r, 800))
-    setInvitando(false)
-    setInvitadoOk(true)
-    setTimeout(() => setInvitadoOk(false), 4000)
+  async function handleReactivar() {
+    if (!errorInactivo) return
+    setReactivando(true)
+    const res = await fetch(`/api/usuarios/${errorInactivo.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ activo: true }),
+    })
+    setReactivando(false)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setErrorGuardar(data.error ?? 'No se pudo reactivar el profesional')
+      setErrorInactivo(null)
+      return
+    }
+    const data = await res.json()
+    const u = data.usuario
+    const reactivado: MockMedicoAdmin = {
+      id: u.id,
+      clinicaId: u.clinica_id ?? '',
+      nombre: u.nombre,
+      rut: u.rut ?? '',
+      especialidadId: '',
+      especialidad: u.especialidad ?? '',
+      email: u.email,
+      telefono: u.telefono ?? '',
+      duracionConsulta: u.duracion_consulta ?? 30,
+      estado: 'activo',
+      citasMes: 0,
+      invitacionPendiente: false,
+      porcentajeHonorario: u.porcentaje_honorario ?? null,
+    }
+    onGuardar(reactivado)
   }
 
   if (!open) return null
@@ -262,7 +293,8 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
               {/* RUT */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  RUT <span className="text-red-500">*</span>
+                  RUT
+                  <span className="text-slate-400 font-normal ml-1">(opcional)</span>
                 </label>
                 <input
                   type="text"
@@ -319,7 +351,8 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
               {/* Especialidad */}
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Especialidad principal <span className="text-red-500">*</span>
+                  Especialidad principal
+                  <span className="text-slate-400 font-normal ml-1">(opcional)</span>
                 </label>
                 <div className="relative">
                   <select
@@ -327,13 +360,19 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
                     onChange={e => set('especialidadId', e.target.value)}
                     className="w-full appearance-none px-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-colors bg-white pr-9"
                   >
-                    <option value="">Selecciona una especialidad</option>
+                    <option value="">Sin especialidad asignada</option>
                     {especialidades.map(e => (
                       <option key={e.id} value={e.id}>{e.nombre}</option>
                     ))}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 </div>
+
+                {especialidades.length === 0 && (
+                  <p className="text-xs text-slate-400 mt-1">
+                    No hay especialidades creadas. Puedes asignarla después desde Configuración.
+                  </p>
+                )}
 
                 {/* Preview color especialidad */}
                 {form.especialidadId && (
@@ -469,24 +508,11 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
                 </div>
               )}
 
-              {/* Botón invitar */}
-              <button
-                type="button"
-                onClick={handleInvitar}
-                disabled={!form.emailAcceso.trim() || invitando}
-                className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors ${
-                  invitadoOk
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-white text-slate-700 border-slate-200 hover:border-blue-300 hover:text-blue-600 disabled:opacity-40 disabled:cursor-not-allowed'
-                }`}
-              >
-                {invitando ? (
-                  <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4" />
-                )}
-                {invitadoOk ? 'Invitación enviada ✓' : 'Enviar invitación por email'}
-              </button>
+              {!esEdicion && (
+                <p className="text-xs text-slate-500">
+                  Al guardar se enviará automáticamente una invitación por email para activar la cuenta.
+                </p>
+              )}
 
             </div>
           </section>
@@ -499,6 +525,25 @@ export function DrawerMedico({ open, onClose, onGuardar, medicoEditar, especiali
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5 text-center">
               {errorGuardar}
             </p>
+          )}
+          {errorInactivo && (
+            <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-3 py-3 space-y-2">
+              <p>
+                Este email pertenece a <strong>{errorInactivo.nombre}</strong>, que está
+                desactivado en la clínica.
+              </p>
+              <button
+                type="button"
+                onClick={handleReactivar}
+                disabled={reactivando}
+                className="w-full py-2 rounded-lg text-sm font-medium bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              >
+                {reactivando && (
+                  <span className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                )}
+                Reactivar a {errorInactivo.nombre}
+              </button>
+            </div>
           )}
         <div className="flex items-center gap-3">
           <button

@@ -79,15 +79,32 @@ export async function POST(req: Request) {
     const admin = createAdminClient()
 
     // Verificar si el email ya existe en la tabla usuarios de esta clínica
+    // (incluye desactivados para distinguir el caso de reactivación)
     const { data: existente } = await supabase
       .from('usuarios')
-      .select('id')
+      .select('id, nombre, activo, rol')
       .eq('clinica_id', me.clinica_id)
       .eq('email', email)
-      .single()
+      .maybeSingle()
 
     if (existente) {
-      return Response.json({ error: 'Este email ya está registrado en la clínica' }, { status: 409 })
+      if (existente.activo) {
+        return Response.json(
+          { error: 'Este email ya está registrado en la clínica' },
+          { status: 409 }
+        )
+      }
+      // Email coincide con un profesional desactivado en esta clínica.
+      // Devolvemos info para que la UI ofrezca reactivar en lugar de crear duplicado.
+      return Response.json(
+        {
+          error: `Este email pertenece a ${existente.nombre}, que está desactivado. Reactívalo desde el filtro "Inactivos" en lugar de crear uno nuevo.`,
+          code: 'INACTIVE_USER_EXISTS',
+          inactiveUserId: existente.id,
+          inactiveUserName: existente.nombre,
+        },
+        { status: 409 }
+      )
     }
 
     // Intentar invitar al usuario en Supabase Auth
@@ -106,7 +123,12 @@ export async function POST(req: Request) {
         authError.message.toLowerCase().includes('exist')
 
       if (!isAlreadyRegistered) {
-        return Response.json({ error: 'No se pudo registrar el usuario' }, { status: 400 })
+        // Loggear siempre (incluso en prod) — necesitamos diagnosticar fallos de SMTP/rate-limit
+        console.error('[POST /api/usuarios] inviteUserByEmail falló:', authError.message)
+        return Response.json(
+          { error: 'No se pudo enviar la invitación. Revisa el email o vuelve a intentar en unos minutos.' },
+          { status: 400 }
+        )
       }
 
       // Buscar el usuario existente en auth
@@ -143,13 +165,29 @@ export async function POST(req: Request) {
       .select()
       .single()
 
-    if (dbError) throw dbError
+    if (dbError) {
+      // 23505 = unique_violation: el authUserId ya existe en `usuarios` de otra clínica.
+      // Pasa cuando el email tiene cuenta en otra clínica de Praxis.
+      if ((dbError as { code?: string }).code === '23505') {
+        console.error('[POST /api/usuarios] PK violation insertando usuario:', { email, authUserId })
+        return Response.json(
+          {
+            error: 'Este email ya tiene una cuenta de Praxis vinculada a otra clínica. Contacta a soporte para reasignarla.',
+            code: 'EMAIL_IN_OTHER_CLINIC',
+          },
+          { status: 409 }
+        )
+      }
+      throw dbError
+    }
 
     return Response.json({ usuario: nuevo }, { status: 201 })
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('Error en POST /api/usuarios:', error)
-    }
+    // Loggear siempre — sin esto no podemos diagnosticar incidentes de clientes en producción
+    console.error('[POST /api/usuarios] Error:', {
+      message: error instanceof Error ? error.message : String(error),
+      code: (error as { code?: string })?.code,
+    })
     return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

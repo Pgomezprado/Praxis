@@ -67,9 +67,10 @@ export async function PATCH(
 
     return Response.json({ usuario: data })
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.error('Error en PATCH /api/usuarios/[id]:', error)
-    }
+    console.error('[PATCH /api/usuarios/[id]] Error:', {
+      message: error instanceof Error ? error.message : String(error),
+      code: (error as { code?: string })?.code,
+    })
     return Response.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
