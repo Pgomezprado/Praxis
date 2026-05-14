@@ -22,6 +22,12 @@ interface CobroClientProps {
   returnPath?: string
   /** Si se pasa, el componente entra en modo edición de un cobro existente */
   cobroExistente?: CobroExistente
+  /**
+   * Si true, el toggle "usar paquete" arranca activado.
+   * Se activa cuando la cita fue agendada imputada a un paquete (cita.paquetePacienteId está poblado
+   * y el paqueteActivo sigue con saldo). La secretaria puede desactivarlo manualmente si necesita cobrar aparte.
+   */
+  autoUsarPaquete?: boolean
 }
 
 const TIPO_LABEL: Record<MockCita['tipo'], string> = {
@@ -30,7 +36,7 @@ const TIPO_LABEL: Record<MockCita['tipo'], string> = {
   urgencia: 'Urgencia',
 }
 
-export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/agenda/hoy', cobroExistente }: CobroClientProps) {
+export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/agenda/hoy', cobroExistente, autoUsarPaquete = false }: CobroClientProps) {
   const router = useRouter()
   const modoEdicion = !!cobroExistente
 
@@ -50,7 +56,8 @@ export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/age
   const [referencia, setReferencia] = useState('')
   const [notasEdicion, setNotasEdicion] = useState(cobroExistente?.notas ?? '')
   const [numeroBoleta, setNumeroBoleta] = useState(cobroExistente?.numero_boleta ?? '')
-  const [usarPaquete, setUsarPaquete] = useState(false)
+  // Pre-seleccionar "usar paquete" si la cita fue agendada imputada a un paquete activo con saldo
+  const [usarPaquete, setUsarPaquete] = useState(!modoEdicion && autoUsarPaquete && paqueteActivo !== null)
   const [modalidadCobro, setModalidadCobro] = useState<'pagar_ahora' | 'cuenta_por_cobrar'>('pagar_ahora')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

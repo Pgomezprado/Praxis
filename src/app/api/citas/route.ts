@@ -59,7 +59,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { doctor_id, paciente_id, fecha, hora_inicio, hora_fin, motivo, tipo } = body
+    const { doctor_id, paciente_id, fecha, hora_inicio, hora_fin, motivo, tipo, paquete_paciente_id } = body
 
     if (!doctor_id || !paciente_id || !fecha || !hora_inicio || !hora_fin) {
       return Response.json({ error: 'Campos obligatorios faltantes' }, { status: 400 })
@@ -107,6 +107,25 @@ export async function POST(req: Request) {
     if (!doctorValido) return Response.json({ error: 'Profesional no pertenece a esta clínica' }, { status: 403 })
     if (!pacienteValido) return Response.json({ error: 'Paciente no pertenece a esta clínica' }, { status: 403 })
 
+    // Si viene paquete_paciente_id, validar que pertenezca al paciente + doctor + clínica y tenga saldo
+    if (paquete_paciente_id) {
+      const { data: paquete } = await supabase
+        .from('paquetes_paciente')
+        .select('id, sesiones_total, sesiones_usadas, estado')
+        .eq('id', paquete_paciente_id)
+        .eq('clinica_id', me.clinica_id)
+        .eq('paciente_id', paciente_id)
+        .eq('doctor_id', doctor_id)
+        .maybeSingle()
+      const paqueteTyped = paquete as { sesiones_total: number; sesiones_usadas: number; estado: string } | null
+      if (!paqueteTyped) {
+        return Response.json({ error: 'Paquete no válido para este paciente y profesional' }, { status: 400 })
+      }
+      if (paqueteTyped.estado !== 'activo' || paqueteTyped.sesiones_usadas >= paqueteTyped.sesiones_total) {
+        return Response.json({ error: 'El paquete no está activo o no tiene sesiones disponibles' }, { status: 400 })
+      }
+    }
+
     // Verificar colisión de slots: que el médico no tenga otra cita activa en ese bloque
     // Usar maybeSingle() — devuelve null si no hay fila, sin lanzar error (a diferencia de single())
     const { data: citaExistente } = await supabase
@@ -150,6 +169,7 @@ export async function POST(req: Request) {
         tipo: tipo ?? 'control',
         estado: estadoInicial,
         creada_por: 'secretaria',
+        paquete_paciente_id: paquete_paciente_id ?? null,
       })
       .select(`
         id, folio, fecha, hora_inicio, hora_fin, motivo, tipo, estado,

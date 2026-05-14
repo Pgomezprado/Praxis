@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { X, User, Stethoscope, CalendarDays, FileText, Loader2 } from 'lucide-react'
+import { X, User, Stethoscope, CalendarDays, FileText, Loader2, Package } from 'lucide-react'
 import { BuscadorPaciente, type PacienteSeleccionado } from './BuscadorPaciente'
 import { Avatar } from '@/components/ui/Avatar'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { generarSlots } from '@/lib/agendamiento'
 import type { MockCita, HorarioSemanal } from '@/types/domain'
+import type { PaquetePaciente } from '@/types/database'
 
 interface ModalNuevaCitaProps {
   open: boolean
@@ -75,6 +76,11 @@ export function ModalNuevaCita({
   const [errorSlots, setErrorSlots] = useState(false)
   const [errorHorario, setErrorHorario] = useState(false)
 
+  // Paquetes activos detectados para este paciente + médico (disponibles para imputar)
+  const [paqueteActivo, setPaqueteActivo] = useState<PaquetePaciente | null>(null)
+  // Paquete que la recepcionista decidió asociar explícitamente a esta cita
+  const [paqueteSeleccionado, setPaqueteSeleccionado] = useState<PaquetePaciente | null>(null)
+
   // Resetear al abrir
   useEffect(() => {
     if (open) {
@@ -90,6 +96,8 @@ export function ModalNuevaCita({
       setTipo('control')
       setEnviarEmail(true)
       setEnviarSms(false)
+      setPaqueteActivo(null)
+      setPaqueteSeleccionado(null)
     }
   }, [open, medicoIdInicial, fechaInicial, horaInicial]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -143,6 +151,31 @@ export function ModalNuevaCita({
       })
       .catch(() => { setErrorSlots(true) })
   }, [medicoId, fecha])
+
+  // Detectar paquetes activos cuando hay paciente + médico seleccionados.
+  // Resetear la selección explícita cada vez que cambia el contexto.
+  useEffect(() => {
+    setPaqueteSeleccionado(null)
+    if (!paciente?.id || !medicoId) {
+      setPaqueteActivo(null)
+      return
+    }
+    fetch(`/api/paquetes/paciente?paciente_id=${paciente.id}`)
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => {
+        const paquetes = (data.paquetes ?? []) as PaquetePaciente[]
+        // Filtrar paquetes activos con saldo para este médico específico.
+        // Si hay varios, usar el más antiguo (created_at asc, que el API devuelve desc → último del array).
+        const candidatos = paquetes.filter(
+          p => p.doctor_id === medicoId
+            && p.estado === 'activo'
+            && (p.sesiones_total - p.sesiones_usadas) > 0
+        )
+        // API ordena desc por created_at → el más antiguo es el último
+        setPaqueteActivo(candidatos.length > 0 ? candidatos[candidatos.length - 1] : null)
+      })
+      .catch(() => { setPaqueteActivo(null) })
+  }, [paciente?.id, medicoId])
 
   // Obtener config del día de la semana seleccionado
   function getDiaKey(f: string): keyof HorarioSemanal {
@@ -215,6 +248,8 @@ export function ModalNuevaCita({
         hora_fin: calcularHoraFin(horaEfectiva, duracion),
         motivo: motivo || 'Sin motivo especificado',
         tipo,
+        // Solo imputar al paquete si la recepcionista lo asoció explícitamente
+        paquete_paciente_id: paqueteSeleccionado?.id ?? null,
       }),
     })
 
@@ -283,6 +318,65 @@ export function ModalNuevaCita({
 
         {/* Contenido scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
+          {/* Paquete activo — acción explícita de la recepcionista */}
+          {paqueteActivo && !paqueteSeleccionado && (
+            <div className="flex items-center justify-between gap-3 px-3.5 py-3 bg-slate-50 border border-slate-200 rounded-xl">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center shrink-0">
+                  <Package className="w-4 h-4 text-slate-500" />
+                </div>
+                <p className="text-xs text-slate-600 leading-snug">
+                  Paquete disponible:{' '}
+                  <span className="font-semibold text-slate-800">
+                    {(paqueteActivo.paquete_arancel as { nombre?: string } | undefined)?.nombre ?? 'Paquete de sesiones'}
+                  </span>
+                  {' '}·{' '}
+                  {paqueteActivo.sesiones_total - paqueteActivo.sesiones_usadas} sesión
+                  {(paqueteActivo.sesiones_total - paqueteActivo.sesiones_usadas) !== 1 ? 'es' : ''} disponible
+                  {(paqueteActivo.sesiones_total - paqueteActivo.sesiones_usadas) !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPaqueteSeleccionado(paqueteActivo)}
+                className="shrink-0 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap"
+              >
+                Imputar a paquete
+              </button>
+            </div>
+          )}
+
+          {/* Chip confirmación — paquete seleccionado explícitamente */}
+          {paqueteSeleccionado && (
+            <div className="flex items-center justify-between gap-3 px-3.5 py-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                  <Package className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-emerald-900">
+                    Paquete aplicado
+                  </p>
+                  <p className="text-xs text-emerald-700 mt-0.5">
+                    {(paqueteSeleccionado.paquete_arancel as { nombre?: string } | undefined)?.nombre ?? 'Paquete de sesiones'}
+                    {' '}·{' '}
+                    {paqueteSeleccionado.sesiones_total - paqueteSeleccionado.sesiones_usadas} sesión
+                    {(paqueteSeleccionado.sesiones_total - paqueteSeleccionado.sesiones_usadas) !== 1 ? 'es' : ''} disponible
+                    {(paqueteSeleccionado.sesiones_total - paqueteSeleccionado.sesiones_usadas) !== 1 ? 's' : ''}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPaqueteSeleccionado(null)}
+                aria-label="Quitar paquete asociado"
+                className="shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-emerald-500 hover:text-emerald-700 hover:bg-emerald-100 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
           {/* Sección 1 — Paciente */}
           <section>

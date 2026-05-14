@@ -21,6 +21,8 @@ export type MockCita = {
   estado: 'confirmada' | 'pendiente' | 'en_consulta' | 'completada' | 'cancelada' | 'no_show'
   creadaEn: string
   creadaPor: 'secretaria' | 'paciente'
+  /** ID del paquete al que se imputó esta cita al agendarla (migración 061) */
+  paquetePacienteId?: string | null
 }
 
 export type MockMedicoAdmin = {

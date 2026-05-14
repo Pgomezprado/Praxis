@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { mapCitaDb } from '@/lib/utils/mapCita'
 import { CobroClient } from '@/components/secretaria/CobroClient'
+import type { PaquetePaciente } from '@/types/database'
 
 export const metadata = { title: 'Cobro — Praxis' }
 
@@ -35,6 +36,7 @@ export default async function AdminCobroPage({
     .from('citas')
     .select(`
       id, folio, fecha, hora_inicio, hora_fin, motivo, tipo, estado, creada_por, created_at,
+      paquete_paciente_id,
       doctor:usuarios!citas_doctor_id_fkey ( id, nombre, especialidad ),
       paciente:pacientes!citas_paciente_id_fkey ( id, nombre, rut, email, telefono )
     `)
@@ -121,11 +123,23 @@ export default async function AdminCobroPage({
     .eq('estado', 'activo')
     .gt('sesiones_restantes', 0)
 
+  const paquetes = (paquetesDb ?? []) as unknown as PaquetePaciente[]
+  // paquete_paciente_id viene en el select — citaDb tiene el campo pero el tipo generado no lo conoce aún
+  const paqueteIdImputado = (citaDb as unknown as { paquete_paciente_id?: string | null }).paquete_paciente_id ?? null
+  // Priorizar el paquete al que se imputó la cita al agendar (si todavía tiene saldo)
+  const paqueteImputado = paqueteIdImputado
+    ? paquetes.find(p => p.id === paqueteIdImputado) ?? null
+    : null
+  const paqueteActivo: PaquetePaciente | null = paqueteImputado ?? (paquetes[0] ?? null)
+  // Pre-seleccionar "usar paquete" si la cita tiene imputación y el paquete sigue activo con saldo
+  const autoUsarPaquete = !!paqueteImputado
+
   return (
     <CobroClient
       cita={cita}
       aranceles={(arancelesDb ?? []) as Parameters<typeof CobroClient>[0]['aranceles']}
-      paqueteActivo={(paquetesDb ?? [])[0] ?? null}
+      paqueteActivo={paqueteActivo}
+      autoUsarPaquete={autoUsarPaquete}
       returnPath="/admin/agenda/dia"
     />
   )

@@ -20,6 +20,8 @@ type CitaDb = {
   estado: string
   creada_por: string
   created_at: string
+  /** Campo agregado en migración 061 */
+  paquete_paciente_id?: string | null
   doctor: (PersonaDb & { especialidad: string | null }) | (PersonaDb & { especialidad: string | null })[] | null
   paciente: (PersonaDb & { rut: string; email: string | null; telefono: string | null }) | (PersonaDb & { rut: string; email: string | null; telefono: string | null })[] | null
 }
@@ -46,5 +48,6 @@ export function mapCitaDb(c: CitaDb): MockCita {
     estado: c.estado as MockCita['estado'],
     creadaEn: c.created_at,
     creadaPor: c.creada_por as MockCita['creadaPor'],
+    paquetePacienteId: c.paquete_paciente_id ?? null,
   }
 }

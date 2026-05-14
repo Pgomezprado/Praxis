@@ -197,6 +197,8 @@ export interface Cita {
   estado: 'confirmada' | 'pendiente' | 'en_consulta' | 'completada' | 'cancelada'
   creada_por: 'secretaria' | 'paciente'
   created_at: string
+  /** FK a paquetes_paciente — se popula al agendar si el paciente tiene paquete activo con ese médico (migración 061) */
+  paquete_paciente_id?: string | null
 }
 
 // ── Recetas ────────────────────────────────────────────────────────────────
