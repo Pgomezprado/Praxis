@@ -32,7 +32,7 @@ export async function GET(req: Request) {
         paquete_arancel:paquetes_arancel!paquetes_paciente_paquete_arancel_id_fkey(id, nombre, prevision),
         cuotas:cuotas_paquete(
           id, numero_cuota, monto, fecha_vencimiento, fecha_pago,
-          medio_pago, estado, activo, created_at
+          medio_pago, numero_boleta, estado, activo, created_at
         ),
         sesiones:sesiones_paquete(id, numero_sesion, cita_id, activo, created_at)
       `)
@@ -75,6 +75,7 @@ export async function POST(req: Request) {
       notas,
       numero_orden,
       medio_pago,
+      numero_boleta,
     } = body
 
     if (!paciente_id) return Response.json({ error: 'paciente_id es obligatorio' }, { status: 400 })
@@ -171,6 +172,10 @@ export async function POST(req: Request) {
         fecha_pago: modalidad_pago === 'contado' ? new Date().toISOString() : null,
         // Para contado se persiste el medio de pago en la cuota (ya validado arriba)
         medio_pago: modalidad_pago === 'contado' ? (medio_pago as 'efectivo' | 'tarjeta' | 'transferencia') : null,
+        // numero_boleta solo aplica a la primera cuota en modalidad contado
+        numero_boleta: (modalidad_pago === 'contado' && i === 0 && numero_boleta)
+          ? String(numero_boleta).trim() || null
+          : null,
         estado: modalidad_pago === 'contado' ? 'pagada' : 'pendiente',
       })
     }

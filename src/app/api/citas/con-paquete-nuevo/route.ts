@@ -90,6 +90,7 @@ export async function POST(req: Request) {
       fecha_vencimiento,
       notas,
       numero_orden,
+      numero_boleta,
       es_retroactiva,
     } = body
 
@@ -193,6 +194,7 @@ export async function POST(req: Request) {
         p_fecha_vencimiento:  fecha_vencimiento ?? null,
         p_notas:              notas ?? null,
         p_numero_orden:       numero_orden ?? null,
+        p_numero_boleta:      numero_boleta ?? null,
       }
     )
 

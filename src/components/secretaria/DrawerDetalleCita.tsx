@@ -6,14 +6,24 @@ import { useRouter } from 'next/navigation'
 import {
   X, Clock, CalendarDays, User, Stethoscope, FileText,
   CheckCheck, CheckCircle2, XCircle, PlayCircle, Loader2, DollarSign, Trash2,
-  AlertTriangle, CalendarPlus, Package,
+  AlertTriangle, CalendarPlus, Package, Banknote, CreditCard, ArrowLeftRight,
 } from 'lucide-react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import type { MockCita } from '@/types/domain'
 import { estadoOperativo } from '@/lib/agenda-colors'
 import { ModalRepetirCita } from './ModalRepetirCita'
-import { SelectorPaqueteCita, type PaqueteCitaSeleccion } from './SelectorPaqueteCita'
+import { SelectorPaqueteCita, type PaqueteCitaSeleccion, type PaqueteNuevoParaVender } from './SelectorPaqueteCita'
+
+// ── Constantes de medio de pago ────────────────────────────────────────────────
+type MedioPago = 'efectivo' | 'tarjeta' | 'transferencia'
+type ModalidadPago = 'contado' | 'cuotas'
+
+const MEDIOS_PAGO: { value: MedioPago; label: string; icon: React.ElementType }[] = [
+  { value: 'efectivo',      label: 'Efectivo',       icon: Banknote },
+  { value: 'tarjeta',       label: 'Tarjeta',        icon: CreditCard },
+  { value: 'transferencia', label: 'Transferencia',  icon: ArrowLeftRight },
+]
 
 const TIPO_LABEL: Record<MockCita['tipo'], string> = {
   primera_consulta: 'Primera consulta',
@@ -82,6 +92,13 @@ export function DrawerDetalleCita({
   const [asociandoPaquete, setAsociandoPaquete] = useState(false)
   const [mostrarSelectorPaquete, setMostrarSelectorPaquete] = useState(false)
 
+  // Modal de confirmación de medio de pago (solo para paquetes nuevos)
+  const [mostrarModalPago, setMostrarModalPago] = useState(false)
+  const [modalMedioPago, setModalMedioPago] = useState<MedioPago>('efectivo')
+  const [modalModalidadPago, setModalModalidadPago] = useState<ModalidadPago>('contado')
+  const [modalNumCuotas, setModalNumCuotas] = useState(2)
+  const [modalNumeroBoleta, setModalNumeroBoleta] = useState('')
+
   // ID del paquete ya asociado a esta cita (puede venir como prop o actualizarse localmente)
   const [paquetePacienteIdLocal, setPaquetePacienteIdLocal] = useState<string | null | undefined>(
     cita?.paquetePacienteId
@@ -129,10 +146,52 @@ export function DrawerDetalleCita({
   }
 
   /**
+   * Abre el modal de confirmación de pago cuando el paquete seleccionado es nuevo.
+   * Para paquetes existentes (ya comprados) no hay cobro adicional — confirma directo.
+   */
+  function handleClickConfirmar() {
+    if (!paqueteDrawerSeleccion) return
+    if (paqueteDrawerSeleccion.tipo === 'nuevo') {
+      // Pre-poblar el modal con los valores que ya eligió el usuario en el selector
+      const s = paqueteDrawerSeleccion as PaqueteNuevoParaVender
+      setModalModalidadPago(s.modalidadPago)
+      setModalMedioPago(s.medioPago ?? 'efectivo')
+      setModalNumCuotas(s.numCuotas > 1 ? s.numCuotas : 2)
+      setModalNumeroBoleta('')
+      setMostrarModalPago(true)
+    } else {
+      // Paquete existente: asociar directo, sin cobro adicional
+      void handleAsociarPaquete(null)
+    }
+  }
+
+  /**
+   * Confirma la venta del paquete desde el modal de pago.
+   * Recibe los datos de pago finales del modal.
+   */
+  async function handleConfirmarDesdeModal() {
+    if (!paqueteDrawerSeleccion || paqueteDrawerSeleccion.tipo !== 'nuevo') return
+    const datosPago: PaqueteNuevoParaVender = {
+      ...paqueteDrawerSeleccion,
+      modalidadPago: modalModalidadPago,
+      medioPago: modalModalidadPago === 'contado' ? modalMedioPago : null,
+      numCuotas: modalModalidadPago === 'cuotas' ? modalNumCuotas : 1,
+    }
+    const numeroBoleta = modalModalidadPago === 'contado'
+      ? (modalNumeroBoleta.trim() || null)
+      : null
+    setMostrarModalPago(false)
+    await handleAsociarPaquete(datosPago, numeroBoleta)
+  }
+
+  /**
    * Asocia un paquete a una cita ya agendada.
    * Si se eligió un paquete nuevo, primero lo crea y luego hace PATCH a la cita.
+   * @param datosPagoOverride — si viene del modal de pago, reemplaza la modalidad/medio/cuotas
+   *   de la selección original. Si es null, se usa la selección tal cual (caso existente).
+   * @param numeroBoleta — número de boleta capturado en el modal (solo para contado)
    */
-  async function handleAsociarPaquete() {
+  async function handleAsociarPaquete(datosPagoOverride: PaqueteNuevoParaVender | null, numeroBoleta: string | null = null) {
     if (!cita || !paqueteDrawerSeleccion) return
     setAsociandoPaquete(true)
     setError(null)
@@ -143,8 +202,8 @@ export function DrawerDetalleCita({
       if (paqueteDrawerSeleccion.tipo === 'existente') {
         paquetePacienteId = paqueteDrawerSeleccion.paquete.id
       } else {
-        // Crear primero el paquete nuevo
-        const s = paqueteDrawerSeleccion
+        // Usar los datos del override (modal de pago) si existen, o la selección original
+        const s = datosPagoOverride ?? paqueteDrawerSeleccion
         const resPaquete = await fetch('/api/paquetes/paciente', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -158,6 +217,7 @@ export function DrawerDetalleCita({
             precio_total: s.paqueteArancel.precio_total,
             fecha_inicio: cita.fecha,
             ...(s.modalidadPago === 'contado' ? { medio_pago: s.medioPago } : {}),
+            ...(s.modalidadPago === 'contado' && numeroBoleta ? { numero_boleta: numeroBoleta } : {}),
           }),
         })
         if (!resPaquete.ok) {
@@ -377,30 +437,44 @@ export function DrawerDetalleCita({
                         disabled={asociandoPaquete}
                       />
                       {paqueteDrawerSeleccion && (
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPaqueteDrawerSeleccion(null)
-                              setMostrarSelectorPaquete(false)
-                            }}
-                            disabled={asociandoPaquete}
-                            className="flex-1 py-2 rounded-xl text-xs font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50"
-                          >
-                            Cancelar
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleAsociarPaquete}
-                            disabled={asociandoPaquete || !paqueteDrawerSeleccion}
-                            className="flex-1 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
-                          >
-                            {asociandoPaquete
-                              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              : <Package className="w-3.5 h-3.5" />
-                            }
-                            Confirmar
-                          </button>
+                        <div className="space-y-2">
+                          {/* Resumen de pago visible antes de confirmar (solo para paquetes nuevos) */}
+                          {paqueteDrawerSeleccion.tipo === 'nuevo' && (
+                            <div className="flex items-center justify-between px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
+                              <p className="text-xs text-slate-500">Medio de pago</p>
+                              <p className="text-xs font-semibold text-slate-800 capitalize">
+                                {paqueteDrawerSeleccion.modalidadPago === 'cuotas'
+                                  ? `${paqueteDrawerSeleccion.numCuotas} cuotas`
+                                  : (paqueteDrawerSeleccion.medioPago ?? 'Efectivo')
+                                }
+                              </p>
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPaqueteDrawerSeleccion(null)
+                                setMostrarSelectorPaquete(false)
+                              }}
+                              disabled={asociandoPaquete}
+                              className="flex-1 py-2 rounded-xl text-xs font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleClickConfirmar}
+                              disabled={asociandoPaquete || !paqueteDrawerSeleccion}
+                              className="flex-1 py-2 rounded-xl text-xs font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-1.5"
+                            >
+                              {asociandoPaquete
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : <Package className="w-3.5 h-3.5" />
+                              }
+                              {paqueteDrawerSeleccion.tipo === 'nuevo' ? 'Confirmar venta' : 'Confirmar'}
+                            </button>
+                          </div>
                         </div>
                       )}
                       {!paqueteDrawerSeleccion && (
@@ -781,6 +855,194 @@ export function DrawerDetalleCita({
             setMostrarModalRepetir(false)
           }}
         />
+      )}
+
+      {/* Modal de confirmación de medio de pago — solo para paquetes nuevos */}
+      {mostrarModalPago && paqueteDrawerSeleccion?.tipo === 'nuevo' && (
+        <>
+          <div
+            className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-[1px]"
+            onClick={() => setMostrarModalPago(false)}
+          />
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 pointer-events-none">
+            <div className="w-full max-w-xs bg-white rounded-2xl shadow-2xl pointer-events-auto">
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+                <div className="flex items-center gap-2">
+                  <Package className="w-4 h-4 text-indigo-500" />
+                  <h3 className="text-sm font-bold text-slate-900">Confirmar venta de paquete</h3>
+                </div>
+                <button
+                  onClick={() => setMostrarModalPago(false)}
+                  aria-label="Cerrar"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="px-5 py-4 space-y-4">
+                {/* Resumen del paquete */}
+                <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-3.5 py-3 space-y-1.5">
+                  <p className="text-xs font-semibold text-indigo-900">
+                    {paqueteDrawerSeleccion.paqueteArancel.nombre}
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-indigo-600">
+                      {paqueteDrawerSeleccion.paqueteArancel.num_sesiones} sesiones
+                    </span>
+                    <span className="text-sm font-bold text-indigo-900">
+                      ${paqueteDrawerSeleccion.paqueteArancel.precio_total.toLocaleString('es-CL')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Modalidad de pago */}
+                <div>
+                  <p className="text-xs font-medium text-slate-500 mb-1.5">Modalidad de pago</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setModalModalidadPago('contado')}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-xs font-medium transition-colors ${
+                        modalModalidadPago === 'contado'
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500'
+                          : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <Banknote className="w-3.5 h-3.5" />
+                      Paga ahora
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalModalidadPago('cuotas')}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl border text-xs font-medium transition-colors ${
+                        modalModalidadPago === 'cuotas'
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500'
+                          : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      Cuotas / pendiente
+                    </button>
+                  </div>
+                </div>
+
+                {/* Medio de pago — solo para contado */}
+                {modalModalidadPago === 'contado' && (
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 mb-1.5">Medio de pago</p>
+                    <div className="flex gap-1.5">
+                      {MEDIOS_PAGO.map(({ value, label, icon: Icon }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setModalMedioPago(value)}
+                          className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 rounded-xl border text-xs font-medium transition-colors ${
+                            modalMedioPago === value
+                              ? 'border-indigo-500 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500'
+                              : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                          }`}
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cuotas — solo para modalidad cuotas */}
+                {modalModalidadPago === 'cuotas' && (
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 mb-1.5">
+                      Número de cuotas:{' '}
+                      <span className="text-slate-800 font-semibold">{modalNumCuotas}</span>
+                      <span className="text-slate-400 ml-1">
+                        (${Math.floor(paqueteDrawerSeleccion.paqueteArancel.precio_total / modalNumCuotas).toLocaleString('es-CL')}/c.u.)
+                      </span>
+                    </p>
+                    <input
+                      type="range"
+                      min={2}
+                      max={12}
+                      value={modalNumCuotas}
+                      onChange={e => setModalNumCuotas(parseInt(e.target.value, 10))}
+                      className="w-full accent-indigo-600"
+                    />
+                  </div>
+                )}
+
+                {/* Número de boleta — solo para contado */}
+                {modalModalidadPago === 'contado' && (
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 mb-1.5">
+                      N° de boleta{' '}
+                      <span className="text-slate-400 font-normal">(opcional)</span>
+                    </p>
+                    <input
+                      type="text"
+                      value={modalNumeroBoleta}
+                      onChange={e => setModalNumeroBoleta(e.target.value)}
+                      disabled={asociandoPaquete}
+                      placeholder="Ej: 12345678"
+                      className="w-full text-xs rounded-xl border border-slate-200 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50"
+                    />
+                  </div>
+                )}
+
+                {/* Resumen de cobro */}
+                <div className="bg-slate-50 rounded-xl px-3.5 py-3 text-xs space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Total a cobrar</span>
+                    <span className="font-bold text-slate-800">
+                      ${paqueteDrawerSeleccion.paqueteArancel.precio_total.toLocaleString('es-CL')}
+                    </span>
+                  </div>
+                  {modalModalidadPago === 'contado' && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Medio de pago</span>
+                      <span className="font-medium text-slate-700 capitalize">{modalMedioPago}</span>
+                    </div>
+                  )}
+                  {modalModalidadPago === 'cuotas' && (
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">{modalNumCuotas} cuotas de</span>
+                      <span className="font-medium text-slate-700">
+                        ${Math.floor(paqueteDrawerSeleccion.paqueteArancel.precio_total / modalNumCuotas).toLocaleString('es-CL')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Botones */}
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setMostrarModalPago(false)}
+                    disabled={asociandoPaquete}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                  >
+                    Volver
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmarDesdeModal}
+                    disabled={asociandoPaquete}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {asociandoPaquete
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Package className="w-4 h-4" />
+                    }
+                    Confirmar venta
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </>
   )
