@@ -374,17 +374,6 @@ export function ModalNuevaCita({
         {/* Contenido scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
 
-          {/* Selector de paquete — maneja existente + venta nueva */}
-          {paciente && medicoId && (
-            <SelectorPaqueteCita
-              pacienteId={paciente.id}
-              medicoId={medicoId}
-              value={paqueteCitaSeleccion}
-              onChange={setPaqueteCitaSeleccion}
-              disabled={loading}
-            />
-          )}
-
           {/* Sección 1 — Paciente */}
           <section>
             <SectionHeader icon={User} label="Paciente" />
@@ -418,6 +407,17 @@ export function ModalNuevaCita({
               </div>
             )}
           </section>
+
+          {/* Selector de paquete — visible apenas hay paciente + médico */}
+          {paciente && medicoId && (
+            <SelectorPaqueteCita
+              pacienteId={paciente.id}
+              medicoId={medicoId}
+              value={paqueteCitaSeleccion}
+              onChange={setPaqueteCitaSeleccion}
+              disabled={loading}
+            />
+          )}
 
           {/* Sección 3 — Fecha y hora */}
           <section>
