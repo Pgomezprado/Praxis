@@ -4,7 +4,7 @@
  * SelectorPaqueteCita — Componente compartido para asociar un paquete de sesiones a una cita.
  *
  * Maneja dos casos:
- *   Caso 1 — Paciente ya tiene paquete activo con ese médico: botón "Imputar a paquete".
+ *   Caso 1 — Paciente ya tiene paquete activo con ese médico: botón "Agregar paquete".
  *   Caso 2 — No hay paquete o se quiere uno nuevo: mini-selector del catálogo con toggle de pago.
  *
  * Usado por:
@@ -482,7 +482,7 @@ export function SelectorPaqueteCita({
             }}
             className="shrink-0 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap disabled:opacity-50"
           >
-            Imputar a paquete
+            Agregar paquete
           </button>
         </div>
       )}

@@ -348,7 +348,7 @@ export function DrawerDetalleCita({
                     <Package className="w-3.5 h-3.5 text-indigo-600" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-indigo-900">Imputada a paquete</p>
+                    <p className="text-xs font-semibold text-indigo-900">Paquete agregado</p>
                     <p className="text-xs text-indigo-600 mt-0.5">
                       La sesión quedó descontada del paquete del paciente.
                     </p>
