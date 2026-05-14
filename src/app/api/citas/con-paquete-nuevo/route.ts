@@ -126,8 +126,8 @@ export async function POST(req: Request) {
     if (!modalidad_pago || !['contado', 'cuotas'].includes(modalidad_pago)) {
       return Response.json({ error: 'modalidad_pago debe ser contado o cuotas' }, { status: 400 })
     }
-    if (modalidad_pago === 'cuotas' && (!num_cuotas || num_cuotas < 1 || num_cuotas > 12)) {
-      return Response.json({ error: 'num_cuotas debe estar entre 1 y 12' }, { status: 400 })
+    if (modalidad_pago === 'cuotas' && (!num_cuotas || num_cuotas < 2 || num_cuotas > 12)) {
+      return Response.json({ error: 'num_cuotas debe estar entre 2 y 12 cuando modalidad_pago es cuotas' }, { status: 400 })
     }
     if (modalidad_pago === 'contado') {
       if (!medio_pago || !['efectivo', 'tarjeta', 'transferencia'].includes(medio_pago)) {
