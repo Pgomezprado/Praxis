@@ -95,7 +95,7 @@ export function ModalCambioHora({ open, onClose, cita, medicos, onCambiado }: Mo
       .then(data => {
         setSlotsOcupados(
           (data.citas ?? [])
-            .filter((c: { estado: string; id: string }) => c.estado !== 'cancelada' && c.id !== cita?.id)
+            .filter((c: { estado: string; id: string }) => c.estado !== 'cancelada' && c.estado !== 'no_show' && c.id !== cita?.id)
             .map((c: { hora_inicio: string }) => c.hora_inicio)
         )
       })

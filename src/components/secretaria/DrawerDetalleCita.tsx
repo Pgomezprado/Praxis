@@ -478,14 +478,74 @@ export function DrawerDetalleCita({
             </Link>
           )}
 
+          {/* Acciones para citas anuladas / no asistió — solo recepción/admin */}
+          {(isCancelada || isNoShow) && !esDoctor && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Acciones</p>
+              <div className="flex flex-col gap-2">
+                {/* Reagendar: abre el modal de cambio de hora */}
+                <button
+                  onClick={() => { onCambioHora(cita.id); onClose() }}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+                >
+                  <Clock className="w-4 h-4" />
+                  Reagendar cita
+                </button>
+
+                <div className="h-px bg-slate-100 my-1" />
+
+                {/* Eliminar definitivamente */}
+                {!confirmarEliminar ? (
+                  <button
+                    onClick={() => setConfirmarEliminar(true)}
+                    disabled={eliminando}
+                    className="flex items-center justify-center gap-2 w-full py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Eliminar cita
+                  </button>
+                ) : (
+                  <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-700 leading-snug">
+                        ¿Eliminar permanentemente? Esta acción no se puede deshacer.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleEliminar}
+                        disabled={eliminando}
+                        className="flex items-center justify-center gap-1.5 flex-1 py-2 rounded-lg text-sm font-medium bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                      >
+                        {eliminando
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />
+                        }
+                        Sí, eliminar
+                      </button>
+                      <button
+                        onClick={() => setConfirmarEliminar(false)}
+                        disabled={eliminando}
+                        className="flex items-center justify-center gap-1.5 flex-1 py-2 rounded-lg text-sm font-medium bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {error && (
             <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl">{error}</p>
           )}
 
-          {/* Cita anulada, no_show o completada — solo lectura */}
-          {(isCancelada || isCompletada || isNoShow) && (
+          {/* Texto informativo para citas en estado terminal */}
+          {isCompletada && (
             <p className="text-sm text-slate-400 text-center py-4">
-              {isCancelada ? 'Esta cita fue anulada.' : isNoShow ? 'El paciente no asistió.' : 'Esta cita ya fue completada.'}
+              Esta cita ya fue completada.
             </p>
           )}
         </div>

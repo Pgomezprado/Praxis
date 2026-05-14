@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { ChevronLeft, ChevronRight, List, CalendarRange, CalendarDays } from 'lucide-react'
 import type { MockCita } from '@/types/domain'
 
+const ESTADOS_TERMINALES_NEG: MockCita['estado'][] = ['cancelada', 'no_show']
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 function getToday(): string {
@@ -126,6 +128,7 @@ export function AgendaMesClient({
   const primerDia = getPrimerDiaMes(fecha)
 
   const [filtroMedico, setFiltroMedico] = useState(medicoId)
+  const [mostrarAnuladas, setMostrarAnuladas] = useState(false)
 
   const grilla = buildGrilla(primerDia)
 
@@ -149,10 +152,23 @@ export function AgendaMesClient({
     router.push(buildUrl(listPath, dia, filtroMedico))
   }
 
-  /** Citas del día filtradas por médico, sin canceladas */
+  /**
+   * Citas del día filtradas por médico.
+   * Cuando `mostrarAnuladas` está activo, incluye canceladas/no_show.
+   * El conteo del badge del día siempre excluye anuladas para no confundir.
+   */
   function citasDia(dia: string): MockCita[] {
     return allCitas.filter((c) => {
-      if (c.estado === 'cancelada') return false
+      if (!mostrarAnuladas && ESTADOS_TERMINALES_NEG.includes(c.estado)) return false
+      if (filtroMedico && c.medicoId !== filtroMedico) return false
+      return c.fecha === dia
+    })
+  }
+
+  /** Citas activas del día (para estadísticas y badge de conteo) */
+  function citasActivasDia(dia: string): MockCita[] {
+    return allCitas.filter((c) => {
+      if (ESTADOS_TERMINALES_NEG.includes(c.estado)) return false
       if (filtroMedico && c.medicoId !== filtroMedico) return false
       return c.fecha === dia
     })
@@ -164,7 +180,7 @@ export function AgendaMesClient({
     primerY === new Date().getFullYear()
 
   const totalMes = allCitas.filter((c) => {
-    if (c.estado === 'cancelada') return false
+    if (ESTADOS_TERMINALES_NEG.includes(c.estado)) return false
     if (filtroMedico && c.medicoId !== filtroMedico) return false
     const [cy, cm] = c.fecha.split('-').map(Number)
     return cy === primerY && cm === primerM
@@ -172,6 +188,13 @@ export function AgendaMesClient({
 
   const pendientesMes = allCitas.filter((c) => {
     if (c.estado !== 'pendiente') return false
+    if (filtroMedico && c.medicoId !== filtroMedico) return false
+    const [cy, cm] = c.fecha.split('-').map(Number)
+    return cy === primerY && cm === primerM
+  }).length
+
+  const anuladasMes = allCitas.filter((c) => {
+    if (!ESTADOS_TERMINALES_NEG.includes(c.estado)) return false
     if (filtroMedico && c.medicoId !== filtroMedico) return false
     const [cy, cm] = c.fecha.split('-').map(Number)
     return cy === primerY && cm === primerM
@@ -259,7 +282,7 @@ export function AgendaMesClient({
         </div>
 
         {/* Resumen del mes */}
-        <div className="px-4 sm:px-6 pb-3">
+        <div className="px-4 sm:px-6 pb-3 flex items-center justify-between gap-3 flex-wrap">
           <p className="text-sm text-slate-500">
             <span className="font-semibold text-slate-700">{totalMes}</span>{' '}
             citas este mes
@@ -272,6 +295,18 @@ export function AgendaMesClient({
               </>
             )}
           </p>
+          {anuladasMes > 0 && (
+            <button
+              onClick={() => setMostrarAnuladas(v => !v)}
+              className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
+                mostrarAnuladas
+                  ? 'bg-slate-200 text-slate-700 border-slate-300'
+                  : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+              }`}
+            >
+              {mostrarAnuladas ? 'Ocultar' : 'Ver'} {anuladasMes} anulada{anuladasMes > 1 ? 's' : ''}
+            </button>
+          )}
         </div>
       </div>
 
@@ -296,10 +331,13 @@ export function AgendaMesClient({
           {grilla.map((semana, si) => (
             <div key={si} className="grid grid-cols-7 gap-px bg-slate-200">
               {semana.map((dia, di) => {
-                const citas = citasDia(dia.fecha)
+                const citasActivas = citasActivasDia(dia.fecha)
+                const citasAnuladas = mostrarAnuladas
+                  ? allCitas.filter(c => ESTADOS_TERMINALES_NEG.includes(c.estado) && c.fecha === dia.fecha && (!filtroMedico || c.medicoId === filtroMedico))
+                  : []
                 const isToday = dia.fecha === today
                 const isWeekend = di >= 5
-                const hasPendientes = citas.some((c) => c.estado === 'pendiente')
+                const hasPendientes = citasActivas.some((c) => c.estado === 'pendiente')
                 const diaNum = parseInt(dia.fecha.split('-')[2], 10)
 
                 return (
@@ -335,21 +373,28 @@ export function AgendaMesClient({
 
                       {/* Dot amber para pendientes */}
                       {hasPendientes && dia.enMes && (
-                        <span className="w-2 h-2 rounded-full bg-amber-400 mt-1 flex-shrink-0" aria-label="Tiene citas pendientes" />
+                        <span className="w-2 h-2 rounded-full bg-amber-400 mt-1 shrink-0" aria-label="Tiene citas pendientes" />
                       )}
                     </div>
 
-                    {/* Badge de citas */}
-                    {citas.length > 0 && dia.enMes && (
+                    {/* Badge de citas activas */}
+                    {citasActivas.length > 0 && dia.enMes && (
                       <span className="inline-flex items-center self-start px-2 py-0.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-sm">
-                        {citas.length} {citas.length === 1 ? 'cita' : 'citas'}
+                        {citasActivas.length} {citasActivas.length === 1 ? 'cita' : 'citas'}
                       </span>
                     )}
 
-                    {/* Lista resumida de citas (solo desktop, máx 2) */}
-                    {citas.length > 0 && dia.enMes && (
+                    {/* Chip de anuladas (solo cuando toggle activo) */}
+                    {citasAnuladas.length > 0 && dia.enMes && (
+                      <span className="inline-flex items-center self-start px-2 py-0.5 rounded-lg text-xs font-medium bg-slate-200 text-slate-500 opacity-70">
+                        {citasAnuladas.length} anulada{citasAnuladas.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+
+                    {/* Lista resumida de citas activas (solo desktop, máx 2) */}
+                    {citasActivas.length > 0 && dia.enMes && (
                       <div className="hidden sm:flex flex-col gap-0.5 mt-0.5">
-                        {citas.slice(0, 2).map((c) => (
+                        {citasActivas.slice(0, 2).map((c) => (
                           <p
                             key={c.id}
                             className="text-xs text-slate-500 truncate leading-tight"
@@ -359,8 +404,8 @@ export function AgendaMesClient({
                             {c.pacienteNombre.split(' ')[0]}
                           </p>
                         ))}
-                        {citas.length > 2 && (
-                          <p className="text-xs text-slate-400">+{citas.length - 2} más</p>
+                        {citasActivas.length > 2 && (
+                          <p className="text-xs text-slate-400">+{citasActivas.length - 2} más</p>
                         )}
                       </div>
                     )}

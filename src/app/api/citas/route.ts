@@ -115,7 +115,7 @@ export async function POST(req: Request) {
       .eq('doctor_id', doctor_id)
       .eq('fecha', fecha)
       .eq('hora_inicio', hora_inicio)
-      .neq('estado', 'cancelada')
+      .not('estado', 'in', '(cancelada,no_show)')
       .maybeSingle()
 
     if (citaExistente) {

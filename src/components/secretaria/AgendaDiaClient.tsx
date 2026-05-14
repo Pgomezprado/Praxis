@@ -57,12 +57,15 @@ function shortMedicoName(nombre: string): string {
 
 // ── constantes de color ───────────────────────────────────────────────────────
 
+/** Estados terminales negativos: citas que se muestran atenuadas como registro histórico */
+export const ESTADOS_TERMINALES_NEG_DIA: MockCita['estado'][] = ['cancelada', 'no_show']
+
 const ESTADO_LABEL: Record<MockCita['estado'], string> = {
   confirmada:  'Confirmada',
   pendiente:   'Pendiente',
   en_consulta: 'En consulta',
   completada:  'Completada',
-  cancelada:   'Cancelada',
+  cancelada:   'Anulada',
   no_show:     'No asistió',
 }
 
@@ -71,7 +74,7 @@ const ESTADO_DOT: Record<MockCita['estado'], string> = {
   pendiente:   'bg-amber-500',
   en_consulta: 'bg-emerald-500',
   completada:  'bg-blue-400', // fallback; se sobreescribe con bg-emerald-500 si tieneCobro
-  cancelada:   'bg-red-400',
+  cancelada:   'bg-slate-400',
   no_show:     'bg-slate-400',
 }
 
@@ -80,7 +83,7 @@ const ESTADO_TEXT: Record<MockCita['estado'], string> = {
   pendiente:   'text-amber-700',
   en_consulta: 'text-emerald-700',
   completada:  'text-slate-500',
-  cancelada:   'text-red-600',
+  cancelada:   'text-slate-500',
   no_show:     'text-slate-500',
 }
 
@@ -254,9 +257,11 @@ export function AgendaDiaClient({
     }
   })
 
-  // Estadísticas del día
-  const citasDia = citasLocales.filter(c => c.fecha === fecha && c.estado !== 'cancelada')
+  // Estadísticas del día — excluye estados terminales negativos del conteo activo
+  const ESTADOS_TERMINALES_NEG: MockCita['estado'][] = ['cancelada', 'no_show']
+  const citasDia = citasLocales.filter(c => c.fecha === fecha && !ESTADOS_TERMINALES_NEG.includes(c.estado))
   const pendientesDia = citasDia.filter(c => c.estado === 'pendiente').length
+  const anuladas = citasLocales.filter(c => c.fecha === fecha && ESTADOS_TERMINALES_NEG.includes(c.estado))
 
   // Handlers
   function handleCrearCita(cita: MockCita) {
@@ -435,6 +440,14 @@ export function AgendaDiaClient({
                 </span>
               </>
             )}
+            {anuladas.length > 0 && (
+              <>
+                {' · '}
+                <span className="text-slate-400">
+                  {anuladas.length} anulada{anuladas.length > 1 ? 's' : ''}
+                </span>
+              </>
+            )}
             {isHoy && (
               <>
                 {' · '}
@@ -488,7 +501,7 @@ export function AgendaDiaClient({
           {medicosVisibles.map((medico, colIdx) => {
             const mc = MEDICO_COLORS[(medico.color as MedicoColorKey) ?? 'blue'] ?? MEDICO_COLORS.blue
             const citasMedico = citasLocales.filter(
-              c => c.fecha === fecha && c.medicoId === medico.id && c.estado !== 'cancelada',
+              c => c.fecha === fecha && c.medicoId === medico.id && !ESTADOS_TERMINALES_NEG.includes(c.estado),
             )
             return (
               <div
@@ -566,7 +579,7 @@ export function AgendaDiaClient({
                     if (citaEnHora) {
                       const cita = citaEnHora
                       const span = calcSpan(cita.horaInicio, cita.horaFin)
-                      const isCancelled = cita.estado === 'cancelada'
+                      const isTerminalNeg = ESTADOS_TERMINALES_NEG_DIA.includes(cita.estado)
                       const isCompleted = cita.estado === 'completada'
                       const tieneCobro = citasCobradas.includes(cita.id)
                       return (
@@ -583,8 +596,8 @@ export function AgendaDiaClient({
                           <div
                             onClick={() => setCitaSeleccionada(cita)}
                             className={`h-full rounded-lg px-2 py-1 border overflow-hidden cursor-pointer transition-all ${
-                              isCancelled
-                                ? 'border-red-100 bg-red-50/50 opacity-60 hover:opacity-80'
+                              isTerminalNeg
+                                ? 'border-slate-200 bg-slate-100/70 opacity-55 hover:opacity-75'
                                 : isCompleted && tieneCobro
                                 ? 'border-emerald-200 bg-emerald-50/70 hover:shadow-sm'
                                 : isCompleted
@@ -592,19 +605,18 @@ export function AgendaDiaClient({
                                 : `${cellMc.border} ${cellMc.fill} ${cellMc.hover} hover:shadow-sm`
                             }`}
                           >
-                            <p className={`text-xs font-bold tabular-nums leading-tight ${isCancelled ? 'text-slate-400' : 'text-slate-700'}`}>
+                            {isTerminalNeg && (
+                              <span className="inline-block text-[9px] font-semibold px-1 py-0.5 rounded bg-slate-300/60 text-slate-500 leading-none mb-0.5">
+                                {ESTADO_LABEL[cita.estado]}
+                              </span>
+                            )}
+                            <p className={`text-xs font-bold tabular-nums leading-tight ${isTerminalNeg ? 'text-slate-400' : 'text-slate-700'}`}>
                               {cita.horaInicio}
                               <span className="font-normal text-slate-400"> –{cita.horaFin}</span>
                             </p>
-                            <p className="text-xs font-semibold text-slate-800 truncate leading-tight mt-0.5">
+                            <p className={`text-xs font-semibold truncate leading-tight mt-0.5 ${isTerminalNeg ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
                               {cita.pacienteNombre.split(' ').slice(0, 2).join(' ')}
                             </p>
-                            <div className="flex items-center gap-1 mt-0.5">
-                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                isCompleted && tieneCobro ? 'bg-emerald-500' : ESTADO_DOT[cita.estado]
-                              }`} />
-                              <span className={`text-xs truncate ${ESTADO_TEXT[cita.estado]}`}>{ESTADO_LABEL[cita.estado]}</span>
-                            </div>
                           </div>
                         </div>
                       )
@@ -691,7 +703,7 @@ export function AgendaDiaClient({
 
                   if (bloque.tipo === 'cita') {
                     const cita = bloque.cita
-                    const isCancelled = cita.estado === 'cancelada'
+                    const isTerminalNeg = ESTADOS_TERMINALES_NEG_DIA.includes(cita.estado)
                     const isCompleted = cita.estado === 'completada'
                     const tieneCobro = citasCobradas.includes(cita.id)
                     return (
@@ -708,8 +720,8 @@ export function AgendaDiaClient({
                         <div
                           onClick={() => setCitaSeleccionada(cita)}
                           className={`h-full rounded-lg px-2 py-1 border overflow-hidden cursor-pointer transition-all ${
-                            isCancelled
-                              ? 'border-red-100 bg-red-50/50 opacity-60 hover:opacity-80'
+                            isTerminalNeg
+                              ? 'border-slate-200 bg-slate-100/70 opacity-55 hover:opacity-75'
                               : isCompleted && tieneCobro
                               ? 'border-emerald-200 bg-emerald-50/70 hover:shadow-sm'
                               : isCompleted
@@ -717,19 +729,26 @@ export function AgendaDiaClient({
                               : `${cellMc.border} ${cellMc.fill} ${cellMc.hover} hover:shadow-sm`
                           }`}
                         >
-                          <p className={`text-xs font-bold tabular-nums leading-tight ${isCancelled ? 'text-slate-400' : 'text-slate-700'}`}>
+                          {isTerminalNeg && (
+                            <span className="inline-block text-[9px] font-semibold px-1 py-0.5 rounded bg-slate-300/60 text-slate-500 leading-none mb-0.5">
+                              {ESTADO_LABEL[cita.estado]}
+                            </span>
+                          )}
+                          <p className={`text-xs font-bold tabular-nums leading-tight ${isTerminalNeg ? 'text-slate-400' : 'text-slate-700'}`}>
                             {cita.horaInicio}
                             <span className="font-normal text-slate-400"> –{cita.horaFin}</span>
                           </p>
-                          <p className="text-xs font-semibold text-slate-800 truncate leading-tight mt-0.5">
+                          <p className={`text-xs font-semibold truncate leading-tight mt-0.5 ${isTerminalNeg ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
                             {cita.pacienteNombre.split(' ').slice(0, 2).join(' ')}
                           </p>
-                          <div className="flex items-center gap-1 mt-0.5">
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                              isCompleted && tieneCobro ? 'bg-emerald-500' : ESTADO_DOT[cita.estado]
-                            }`} />
-                            <span className={`text-xs truncate ${ESTADO_TEXT[cita.estado]}`}>{ESTADO_LABEL[cita.estado]}</span>
-                          </div>
+                          {!isTerminalNeg && (
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                isCompleted && tieneCobro ? 'bg-emerald-500' : ESTADO_DOT[cita.estado]
+                              }`} />
+                              <span className={`text-xs truncate ${ESTADO_TEXT[cita.estado]}`}>{ESTADO_LABEL[cita.estado]}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )

@@ -64,7 +64,7 @@ export function AgendaToolbar({ citas, medicos, onNuevaCita, diaPath, listPath =
   })
 
   const pendientes = citasDelDia.filter((c) => c.estado === 'pendiente').length
-  const canceladas = citasDelDia.filter((c) => c.estado === 'cancelada').length
+  const canceladas = citasDelDia.filter((c) => c.estado === 'cancelada' || c.estado === 'no_show').length
   const isHoy = fecha === today
 
   return (
@@ -206,7 +206,7 @@ export function AgendaToolbar({ citas, medicos, onNuevaCita, diaPath, listPath =
           {canceladas > 0 && (
             <>
               {' · '}
-              <span className="text-red-500 font-medium">{canceladas} cancelada{canceladas > 1 ? 's' : ''}</span>
+              <span className="text-slate-500 font-medium">{canceladas} anulada{canceladas > 1 ? 's' : ''}</span>
             </>
           )}
         </p>

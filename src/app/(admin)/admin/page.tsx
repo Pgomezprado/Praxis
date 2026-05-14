@@ -23,9 +23,11 @@ const estadoBadge: Record<EstadoMedicoHoy, { label: string; classes: string }> =
   sin_agenda:  { label: 'Sin agenda hoy', classes: 'bg-slate-100 text-slate-500 border-slate-200' },
 }
 
+const ESTADOS_TERMINALES_NEG = ['cancelada', 'no_show'] as const
+
 function getEstadoHoy(citasDoctor: { estado: string }[]): EstadoMedicoHoy {
   if (citasDoctor.some(c => c.estado === 'en_consulta')) return 'en_consulta'
-  if (citasDoctor.some(c => c.estado !== 'cancelada')) return 'disponible'
+  if (citasDoctor.some(c => !ESTADOS_TERMINALES_NEG.includes(c.estado as typeof ESTADOS_TERMINALES_NEG[number]))) return 'disponible'
   return 'sin_agenda'
 }
 
@@ -78,7 +80,7 @@ export default async function AdminInicioPage() {
   const equipo = (medicos ?? []).map((m) => {
     const citasDoctor = (citasHoy ?? []).filter(c => c.doctor_id === m.id)
     const estadoHoy = citasDoctor.length === 0 ? 'sin_agenda' as EstadoMedicoHoy : getEstadoHoy(citasDoctor)
-    const citasTotal = citasDoctor.filter(c => c.estado !== 'cancelada').length
+    const citasTotal = citasDoctor.filter(c => !ESTADOS_TERMINALES_NEG.includes(c.estado as typeof ESTADOS_TERMINALES_NEG[number])).length
     const citasAtendidas = citasDoctor.filter(c => c.estado === 'completada').length
     return { ...m, especialidad: m.especialidad ?? '', estadoHoy, citasTotal, citasAtendidas }
   })

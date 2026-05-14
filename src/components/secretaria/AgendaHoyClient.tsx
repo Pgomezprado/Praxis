@@ -103,7 +103,7 @@ export function AgendaHoyClient({
 
       <div className="max-w-[720px] mx-auto px-4 py-6">
         <ListaDia
-          citas={citasLocales.filter((c) => c.estado !== 'cancelada')}
+          citas={citasLocales}
           showMedico={!medicoId}
           esDoctor={esDoctor}
           citasCobradas={cobradosSet}
