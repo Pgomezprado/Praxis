@@ -85,6 +85,15 @@ export async function POST(req: Request) {
       return Response.json({ error: 'Todas las fechas calculadas están en el pasado' }, { status: 400 })
     }
 
+    // Log estructurado para diagnóstico en Vercel — siempre activo (no datos clínicos, solo parámetros)
+    console.log('[repetir]', JSON.stringify({
+      cita_id,
+      intervalo_semanas,
+      repeticiones,
+      fecha_base: citaOrigen.fecha,
+      fechas_candidatas: fechasCandidatas,
+    }))
+
     // Pre-verificar conflictos (best-effort — la DB también los captura con el índice único)
     const conflictos: string[] = []
     const fechasValidas: string[] = []
@@ -170,6 +179,13 @@ export async function POST(req: Request) {
         conflictos.push(fecha)
       }
     }
+
+    console.log('[repetir] resultado', JSON.stringify({
+      cita_id,
+      intervalo_semanas,
+      creadas: citasCreadas.length,
+      conflictos,
+    }))
 
     return Response.json({ creadas: citasCreadas, conflictos }, { status: 201 })
   } catch (error) {
