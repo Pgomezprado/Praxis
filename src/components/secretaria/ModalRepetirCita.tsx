@@ -383,6 +383,21 @@ export function ModalRepetirCita({ cita, onClose, onRepetida }: ModalRepetirCita
                   <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-xl">{error}</p>
                 )}
 
+                {/* Resumen pre-confirmación — evita errores de intervalo */}
+                {puedeConfirmar && (
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 flex items-center gap-3">
+                    <CalendarPlus className="w-4 h-4 text-blue-500 shrink-0" />
+                    <p className="text-sm text-blue-800">
+                      Se agendarán{' '}
+                      <span className="font-bold">{fechasPreview.length} control{fechasPreview.length !== 1 ? 'es' : ''}</span>
+                      {' '}·{' '}
+                      <span className="font-bold">
+                        {intervaloSemanas === 1 ? 'cada semana' : 'cada 2 semanas'}
+                      </span>
+                    </p>
+                  </div>
+                )}
+
                 {/* Botón confirmar */}
                 <button
                   onClick={handleConfirmar}
