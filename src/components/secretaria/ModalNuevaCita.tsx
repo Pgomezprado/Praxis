@@ -78,6 +78,8 @@ export function ModalNuevaCita({
 
   // Selección de paquete — puede ser existente (imputar) o nuevo (vender y asociar)
   const [paqueteCitaSeleccion, setPaqueteCitaSeleccion] = useState<PaqueteCitaSeleccion>(null)
+  // Número de boleta para la venta de paquete nuevo al contado
+  const [paqueteNumeroBoleta, setPaqueteNumeroBoleta] = useState('')
 
   // Resetear al abrir
   useEffect(() => {
@@ -95,6 +97,7 @@ export function ModalNuevaCita({
       setEnviarEmail(true)
       setEnviarSms(false)
       setPaqueteCitaSeleccion(null)
+      setPaqueteNumeroBoleta('')
     }
   }, [open, medicoIdInicial, fechaInicial, horaInicial]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -152,6 +155,7 @@ export function ModalNuevaCita({
   // Resetear selección de paquete cuando cambia paciente o médico
   useEffect(() => {
     setPaqueteCitaSeleccion(null)
+    setPaqueteNumeroBoleta('')
   }, [paciente?.id, medicoId])
 
   // Obtener config del día de la semana seleccionado
@@ -239,6 +243,9 @@ export function ModalNuevaCita({
           fecha_inicio:       fecha,
           es_retroactiva:     esFechaPasada,
           ...(s.modalidadPago === 'contado' ? { medio_pago: s.medioPago } : {}),
+          ...(s.modalidadPago === 'contado' && paqueteNumeroBoleta.trim()
+            ? { numero_boleta: paqueteNumeroBoleta.trim() }
+            : {}),
         }),
       })
 
@@ -414,9 +421,34 @@ export function ModalNuevaCita({
               pacienteId={paciente.id}
               medicoId={medicoId}
               value={paqueteCitaSeleccion}
-              onChange={setPaqueteCitaSeleccion}
+              onChange={seleccion => {
+                setPaqueteCitaSeleccion(seleccion)
+                // Limpiar boleta si se quita el paquete o cambia a cuotas
+                if (!seleccion || seleccion.tipo !== 'nuevo' || seleccion.modalidadPago !== 'contado') {
+                  setPaqueteNumeroBoleta('')
+                }
+              }}
               disabled={loading}
             />
+          )}
+
+          {/* N° de boleta — solo cuando hay paquete nuevo al contado */}
+          {paqueteCitaSeleccion?.tipo === 'nuevo' && paqueteCitaSeleccion.modalidadPago === 'contado' && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                N° de boleta{' '}
+                <span className="text-slate-400 normal-case font-normal">(opcional)</span>
+              </label>
+              <input
+                type="text"
+                value={paqueteNumeroBoleta}
+                onChange={e => setPaqueteNumeroBoleta(e.target.value)}
+                disabled={loading}
+                placeholder="Ej: 12345678"
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              />
+              <p className="text-xs text-slate-400 mt-1">Número de boleta física o electrónica del paquete</p>
+            </div>
           )}
 
           {/* Sección 3 — Fecha y hora */}

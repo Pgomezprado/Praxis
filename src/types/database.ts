@@ -280,6 +280,8 @@ export interface CuotaPaquete {
   fecha_vencimiento: string
   fecha_pago: string | null
   medio_pago: 'efectivo' | 'tarjeta' | 'transferencia' | null
+  /** Número de boleta física o electrónica. Solo aplica a la cuota 1 en modalidad contado. */
+  numero_boleta?: string | null
   estado: 'pendiente' | 'pagada' | 'vencida'
   activo: boolean
   created_at: string
