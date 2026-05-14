@@ -86,6 +86,57 @@ export async function PATCH(
         }
         updatePayload.doctor_id = doctor_id
       }
+    } else if ('paquete_paciente_id' in body) {
+      // Caso 3: asociar (o quitar) un paquete a una cita ya agendada
+      const { paquete_paciente_id } = body as { paquete_paciente_id: string | null }
+
+      if (paquete_paciente_id !== null) {
+        // Validar que el paquete pertenece a la clínica + paciente + doctor de la cita
+        const { data: citaActual } = await supabase
+          .from('citas')
+          .select('paciente_id, doctor_id')
+          .eq('id', id)
+          .eq('clinica_id', meTyped.clinica_id)
+          .maybeSingle()
+
+        if (!citaActual) {
+          return Response.json({ error: 'Cita no encontrada' }, { status: 404 })
+        }
+
+        const { data: paquete } = await supabase
+          .from('paquetes_paciente')
+          .select('id, sesiones_total, sesiones_usadas, estado')
+          .eq('id', paquete_paciente_id)
+          .eq('clinica_id', meTyped.clinica_id)
+          .eq('paciente_id', (citaActual as { paciente_id: string }).paciente_id)
+          .eq('doctor_id', (citaActual as { doctor_id: string }).doctor_id)
+          .maybeSingle()
+
+        const paqueteTyped = paquete as {
+          sesiones_total: number
+          sesiones_usadas: number
+          estado: string
+        } | null
+
+        if (!paqueteTyped) {
+          return Response.json(
+            { error: 'Paquete no válido para este paciente y profesional' },
+            { status: 400 }
+          )
+        }
+
+        if (
+          paqueteTyped.estado !== 'activo' ||
+          paqueteTyped.sesiones_usadas >= paqueteTyped.sesiones_total
+        ) {
+          return Response.json(
+            { error: 'El paquete no está activo o no tiene sesiones disponibles' },
+            { status: 400 }
+          )
+        }
+      }
+
+      updatePayload = { paquete_paciente_id: paquete_paciente_id ?? null }
     } else {
       return Response.json({ error: 'datos inválidos' }, { status: 400 })
     }

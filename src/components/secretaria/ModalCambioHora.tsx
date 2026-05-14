@@ -219,10 +219,19 @@ export function ModalCambioHora({ open, onClose, cita, medicos, onCambiado }: Mo
             <div className="space-y-3">
               <DatePicker
                 value={fecha}
-                min={getToday()}
                 onChange={setFecha}
                 placeholder="Seleccionar fecha"
               />
+
+              {/* Aviso de registro retroactivo */}
+              {fecha && fecha < getToday() && (
+                <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+                  <span className="text-amber-500 mt-0.5 shrink-0 text-base leading-none">⚠</span>
+                  <p className="text-xs text-amber-700 leading-snug">
+                    Estás moviendo la cita a una fecha pasada. Se registrará como histórica.
+                  </p>
+                </div>
+              )}
 
               {/* Selector de duración */}
               <div>

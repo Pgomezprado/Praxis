@@ -59,20 +59,17 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { doctor_id, paciente_id, fecha, hora_inicio, hora_fin, motivo, tipo, paquete_paciente_id } = body
+    const { doctor_id, paciente_id, fecha, hora_inicio, hora_fin, motivo, tipo, paquete_paciente_id, es_retroactiva } = body
 
     if (!doctor_id || !paciente_id || !fecha || !hora_inicio || !hora_fin) {
       return Response.json({ error: 'Campos obligatorios faltantes' }, { status: 400 })
     }
 
-    // Validar formato y valor de fecha
+    // Validar formato de fecha
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || isNaN(Date.parse(fecha))) {
       return Response.json({ error: 'Formato de fecha inválido. Usa YYYY-MM-DD.' }, { status: 400 })
     }
-    const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
-    if (fecha < hoy) {
-      return Response.json({ error: 'No se pueden crear citas en fechas pasadas.' }, { status: 400 })
-    }
+    // Nota: se permiten fechas pasadas para registro retroactivo de atenciones en papel.
 
     // Validar formato de horas
     const horaRegex = /^([01]\d|2[0-3]):[0-5]\d$/
@@ -144,16 +141,22 @@ export async function POST(req: Request) {
       )
     }
 
-    // Determinar estado inicial según config de la clínica:
-    // Si requiere_confirmacion_manual = true → nace en 'pendiente' (la recepción debe confirmar tras llamar al paciente)
-    // Si false (default) → nace en 'confirmada' (comportamiento histórico)
-    const { data: clinicaConfig } = await supabase
-      .from('clinicas')
-      .select('requiere_confirmacion_manual')
-      .eq('id', me.clinica_id)
-      .single()
-    const configTyped = clinicaConfig as { requiere_confirmacion_manual?: boolean } | null
-    const estadoInicial = configTyped?.requiere_confirmacion_manual === true ? 'pendiente' : 'confirmada'
+    // Determinar estado inicial:
+    // - Si la cita es retroactiva (fecha pasada), nace como 'completada' para ahorrar pasos al registrar atenciones históricas.
+    // - Si no, respetar la config de la clínica: requiere_confirmacion_manual → 'pendiente', default → 'confirmada'.
+    const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
+    let estadoInicial: string
+    if (es_retroactiva === true && fecha < hoy) {
+      estadoInicial = 'completada'
+    } else {
+      const { data: clinicaConfig } = await supabase
+        .from('clinicas')
+        .select('requiere_confirmacion_manual')
+        .eq('id', me.clinica_id)
+        .single()
+      const configTyped = clinicaConfig as { requiere_confirmacion_manual?: boolean } | null
+      estadoInicial = configTyped?.requiere_confirmacion_manual === true ? 'pendiente' : 'confirmada'
+    }
 
     const { data, error } = await supabase
       .from('citas')
