@@ -211,6 +211,12 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
     setCitasLocales((prev) => prev.map((c) => c.id === id ? { ...c, estado: nuevoEstado } : c))
   }
 
+  function handlePaqueteAsociado(citaId: string, paquetePacienteId: string) {
+    setCitasLocales(prev => prev.map(c =>
+      c.id === citaId ? { ...c, paquetePacienteId } : c
+    ))
+  }
+
   function handleAbrirCambioHora(id: string) {
     const cita = citasLocales.find(c => c.id === id) ?? null
     setCitaCambioHora(cita)
@@ -950,6 +956,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
         }}
         onEliminada={(id) => setCitasLocales((prev) => prev.filter((c) => c.id !== id))}
         onRepetida={(nuevas) => setCitasLocales((prev) => [...prev, ...nuevas])}
+        onPaqueteAsociado={handlePaqueteAsociado}
       />
 
       {/* Drawer de bloqueo */}
