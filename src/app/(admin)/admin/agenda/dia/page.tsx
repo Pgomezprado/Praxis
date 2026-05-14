@@ -15,11 +15,12 @@ export const metadata = { title: 'Agenda del día — Praxis Admin' }
 export default async function AdminAgendaDiaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ fecha?: string; medico?: string }>
+  searchParams: Promise<{ fecha?: string; medico?: string; cobrado?: string }>
 }) {
   const params = await searchParams
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
   const fecha = params.fecha ?? today
+  const cobradoParam = params.cobrado ?? ''
 
   const me = await getClinicsId()
   if (!me) return null
@@ -46,6 +47,11 @@ export default async function AdminAgendaDiaPage({
     citasCobradas = (cobrosDb ?? [])
       .map(c => (c as { cita_id: string }).cita_id)
       .filter(Boolean)
+  }
+
+  // Si el param ?cobrado= trae un citaId válido, sumarlo aunque la query aún no lo incluya
+  if (cobradoParam && !citasCobradas.includes(cobradoParam)) {
+    citasCobradas = [...citasCobradas, cobradoParam]
   }
 
   return (

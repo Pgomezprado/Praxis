@@ -48,8 +48,11 @@ export default async function AdminCobroPage({
 
   const cita = mapCitaDb(citaDb as Parameters<typeof mapCitaDb>[0])
 
+  // Construir returnPath apuntando al día de la cita (no al día de hoy)
+  const returnPath = `/admin/agenda/dia?fecha=${cita.fecha}`
+
   // Solo citas completadas se pueden cobrar o editar
-  if (cita.estado !== 'completada') redirect('/admin/agenda/dia')
+  if (cita.estado !== 'completada') redirect(returnPath)
 
   // ── Modo edición ──────────────────────────────────────────────────────────
   if (editarCobroId) {
@@ -62,7 +65,7 @@ export default async function AdminCobroPage({
       .neq('estado', 'anulado')
       .single()
 
-    if (!cobroDb) redirect('/admin/agenda/dia')
+    if (!cobroDb) redirect(returnPath)
 
     const cobro = cobroDb as {
       id: string; concepto: string; monto_neto: number; notas: string | null
@@ -83,7 +86,7 @@ export default async function AdminCobroPage({
         cita={cita}
         aranceles={(arancelesDb ?? []) as Parameters<typeof CobroClient>[0]['aranceles']}
         paqueteActivo={null}
-        returnPath="/admin/agenda/dia"
+        returnPath={returnPath}
         cobroExistente={{
           id: cobro.id,
           concepto: cobro.concepto,
@@ -105,7 +108,7 @@ export default async function AdminCobroPage({
     .neq('estado', 'anulado')
     .maybeSingle()
 
-  if (cobroExistente) redirect('/admin/agenda/dia?ya_cobrada=1')
+  if (cobroExistente) redirect(`${returnPath}&ya_cobrada=1`)
 
   const { data: arancelesDb } = await supabase
     .from('aranceles')
@@ -140,7 +143,7 @@ export default async function AdminCobroPage({
       aranceles={(arancelesDb ?? []) as Parameters<typeof CobroClient>[0]['aranceles']}
       paqueteActivo={paqueteActivo}
       autoUsarPaquete={autoUsarPaquete}
-      returnPath="/admin/agenda/dia"
+      returnPath={returnPath}
     />
   )
 }
