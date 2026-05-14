@@ -435,7 +435,7 @@ export function DrawerDetalleCita({
           </div>
 
           {/* Sub-estado operativo — solo visible cuando la cita está completada */}
-          {isCompletada && subEstado === 'cobrada' && (
+          {isCompletada && subEstado === 'cobrada' && !paquetePacienteIdLocal && (
             <div className="flex items-center justify-between -mt-3">
               <p className="text-xs text-slate-400">Cobro</p>
               <Badge variant="activo" className="gap-1">
@@ -444,12 +444,21 @@ export function DrawerDetalleCita({
               </Badge>
             </div>
           )}
-          {isCompletada && subEstado === 'pdte_cobro' && (
+          {isCompletada && subEstado === 'pdte_cobro' && !paquetePacienteIdLocal && (
             <div className="flex items-center justify-between -mt-3">
               <p className="text-xs text-slate-400">Cobro</p>
               <Badge variant="pendiente" className="gap-1">
                 <Clock className="w-3 h-3" />
                 Pendiente de cobro
+              </Badge>
+            </div>
+          )}
+          {isCompletada && paquetePacienteIdLocal && (
+            <div className="flex items-center justify-between -mt-3">
+              <p className="text-xs text-slate-400">Cobro</p>
+              <Badge variant="activo" className="gap-1">
+                <Package className="w-3 h-3" />
+                Cubierta por paquete
               </Badge>
             </div>
           )}
@@ -629,17 +638,21 @@ export function DrawerDetalleCita({
             </div>
           )}
 
-          {/* Cobrar + Eliminar — solo recepcionista/admin (el cobro lo hace la recepción) */}
+          {/* Cobrar + Eliminar — solo recepcionista/admin (el cobro lo hace la recepción).
+              Si la cita está imputada a un paquete, la sesión ya está cubierta —
+              no se cobra individualmente. */}
           {!esDoctor && isCompletada && (
             <div className="space-y-2">
-              <Link
-                href={`${cobroBasePath}/${cita.id}`}
-                className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
-                onClick={onClose}
-              >
-                <DollarSign className="w-4 h-4" />
-                Registrar cobro
-              </Link>
+              {!paquetePacienteIdLocal && (
+                <Link
+                  href={`${cobroBasePath}/${cita.id}`}
+                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                  onClick={onClose}
+                >
+                  <DollarSign className="w-4 h-4" />
+                  Registrar cobro
+                </Link>
+              )}
 
               <div className="h-px bg-slate-100 my-1" />
 

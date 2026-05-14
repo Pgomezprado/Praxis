@@ -175,9 +175,15 @@ export function CitaCard({ cita, showMedico = false, esDoctor = false, onEstadoC
         <div className="relative flex-shrink-0 flex items-center gap-1">
           {loading && <Loader2 className="w-4 h-4 text-slate-400 animate-spin" />}
 
-          {/* Botón cobro — solo recepcionista/admin, no médico (el cobro lo hace la recepción) */}
+          {/* Botón cobro — solo recepcionista/admin, no médico (el cobro lo hace la recepción).
+              Si la cita está imputada a un paquete, no se cobra individualmente. */}
           {!esDoctor && isCompletada && !isCancelada && (
-            cobrada ? (
+            cita.paquetePacienteId ? (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 border border-indigo-200">
+                <Package className="w-3 h-3" />
+                Por paquete
+              </span>
+            ) : cobrada ? (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 border border-emerald-200">
                 <CheckCircle2 className="w-3 h-3" />
                 Cobrado
