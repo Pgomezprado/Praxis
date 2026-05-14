@@ -26,7 +26,7 @@ export async function getCitasByFecha(
   let query = supabase
     .from('citas')
     .select(`
-      id, folio, fecha, hora_inicio, hora_fin, motivo, tipo, estado, creada_por, created_at,
+      id, folio, fecha, hora_inicio, hora_fin, motivo, tipo, estado, creada_por, created_at, paquete_paciente_id,
       doctor:usuarios!citas_doctor_id_fkey ( id, nombre, nombres, apellido_paterno, apellido_materno, especialidad ),
       paciente:pacientes!citas_paciente_id_fkey ( id, nombre, nombres, apellido_paterno, apellido_materno, rut, email, telefono )
     `)
@@ -50,7 +50,7 @@ export async function getCitasByRango(
   let query = supabase
     .from('citas')
     .select(`
-      id, folio, fecha, hora_inicio, hora_fin, motivo, tipo, estado, creada_por, created_at,
+      id, folio, fecha, hora_inicio, hora_fin, motivo, tipo, estado, creada_por, created_at, paquete_paciente_id,
       doctor:usuarios!citas_doctor_id_fkey ( id, nombre, nombres, apellido_paterno, apellido_materno, especialidad ),
       paciente:pacientes!citas_paciente_id_fkey ( id, nombre, nombres, apellido_paterno, apellido_materno, rut, email, telefono )
     `)

@@ -221,6 +221,12 @@ export function AgendaEquipoClient({ medicos, citas, fecha }: AgendaEquipoClient
     )
   }
 
+  function handlePaqueteAsociado(citaId: string, paquetePacienteId: string) {
+    setCitasLocales(prev => prev.map(c =>
+      c.id === citaId ? { ...c, paquetePacienteId } : c
+    ))
+  }
+
   function handleAbrirCambioHora(id: string) {
     const cita = citasLocales.find((c) => c.id === id) ?? null
     setCitaCambioHora(cita)
@@ -433,6 +439,7 @@ export function AgendaEquipoClient({ medicos, citas, fecha }: AgendaEquipoClient
           setCitasLocales((prev) => prev.filter((c) => c.id !== id))
         }
         onRepetida={(nuevas) => setCitasLocales((prev) => [...prev, ...nuevas])}
+        onPaqueteAsociado={handlePaqueteAsociado}
       />
 
       {/* Modal cambio de hora */}
