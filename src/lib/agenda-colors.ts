@@ -5,8 +5,8 @@ export const ESTADO_BORDER: Record<MockCita['estado'], string> = {
   confirmada:  'border-l-blue-400',
   en_consulta: 'border-l-emerald-400',
   completada:  'border-l-slate-300', // fallback — usar colorDeCita() en su lugar
-  cancelada:   'border-l-red-300',
-  no_show:     'border-l-slate-400',
+  cancelada:   'border-l-slate-300', // gris neutro — no es un error, es un registro histórico
+  no_show:     'border-l-slate-300',
 }
 
 /**

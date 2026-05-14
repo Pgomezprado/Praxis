@@ -40,7 +40,7 @@ export default async function AdminMedicosPage() {
       .select('doctor_id')
       .eq('clinica_id', clinicaId)
       .gte('fecha', inicioMesStr)
-      .neq('estado', 'cancelada'),
+      .not('estado', 'in', '(cancelada,no_show)'),
   ])
 
   // Obtener estado de activación de Auth para detectar invitaciones pendientes

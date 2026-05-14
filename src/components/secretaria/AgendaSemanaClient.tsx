@@ -76,12 +76,14 @@ function shortMedicoName(nombre: string): string {
 
 // ── config ────────────────────────────────────────────────────────────────────
 
+const ESTADOS_TERMINALES_NEG: MockCita['estado'][] = ['cancelada', 'no_show']
+
 const ESTADO_LABEL: Record<MockCita['estado'], string> = {
   confirmada:  'Confirmada',
   pendiente:   'Pendiente',
   en_consulta: 'En consulta',
   completada:  'Completada',
-  cancelada:   'Cancelada',
+  cancelada:   'Anulada',
   no_show:     'No asistió',
 }
 
@@ -90,7 +92,7 @@ const ESTADO_DOT: Record<MockCita['estado'], string> = {
   pendiente:   'bg-amber-500',
   en_consulta: 'bg-emerald-500',
   completada:  'bg-slate-300',
-  cancelada:   'bg-red-400',
+  cancelada:   'bg-slate-400',
   no_show:     'bg-slate-400',
 }
 
@@ -99,7 +101,7 @@ const ESTADO_TEXT: Record<MockCita['estado'], string> = {
   pendiente:   'text-amber-700',
   en_consulta: 'text-emerald-700',
   completada:  'text-slate-500',
-  cancelada:   'text-red-600',
+  cancelada:   'text-slate-500',
   no_show:     'text-slate-500',
 }
 
@@ -129,6 +131,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
 
   const [citasLocales, setCitasLocales] = useState<MockCita[]>(allCitas)
   const [filtroMedico, setFiltroMedico] = useState(medicoId)
+  const [mostrarAnuladas, setMostrarAnuladas] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [fechaModalNueva, setFechaModalNueva] = useState(fecha)
   const [horaModalNueva, setHoraModalNueva] = useState<string | undefined>(undefined)
@@ -177,11 +180,20 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
   function citasDia(dia: string): MockCita[] {
     return citasLocales
       .filter((c) => {
-        if (c.estado === 'cancelada') return false
+        if (!mostrarAnuladas && ESTADOS_TERMINALES_NEG.includes(c.estado)) return false
         if (filtroMedico && c.medicoId !== filtroMedico) return false
         return c.fecha === dia
       })
       .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
+  }
+
+  /** Citas activas (excluye terminales negativos) para estadísticas y contadores */
+  function citasActivasDia(dia: string): MockCita[] {
+    return citasLocales.filter((c) => {
+      if (ESTADOS_TERMINALES_NEG.includes(c.estado)) return false
+      if (filtroMedico && c.medicoId !== filtroMedico) return false
+      return c.fecha === dia
+    })
   }
 
   function bloqueosDia(dia: string): BloqueoHorario[] {
@@ -250,12 +262,16 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
   // Duración del médico filtrado (fallback 30 min)
   const duracionMedico = medicos.find(m => m.id === filtroMedico)?.duracion_consulta ?? 30
 
-  // Total de citas (no incluye bloqueos)
-  const totalSemana = weekDays.reduce((sum, d) => sum + citasDia(d).length, 0)
+  // Total de citas activas (no incluye anuladas ni bloqueos)
+  const totalSemana = weekDays.reduce((sum, d) => sum + citasActivasDia(d).length, 0)
   const pendientesSemana = weekDays.reduce(
-    (sum, d) => sum + citasDia(d).filter((c) => c.estado === 'pendiente').length,
+    (sum, d) => sum + citasActivasDia(d).filter((c) => c.estado === 'pendiente').length,
     0,
   )
+  // Anuladas de la semana (para badge informativo)
+  const anuladasSemana = weekDays.reduce((sum, d) => sum + citasLocales.filter(
+    c => c.fecha === d && ESTADOS_TERMINALES_NEG.includes(c.estado) && (!filtroMedico || c.medicoId === filtroMedico)
+  ).length, 0)
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -343,8 +359,8 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
           </div>
         </div>
 
-        {/* Row 2 — summary + new appointment */}
-        <div className="px-4 sm:px-6 pb-3 flex items-center justify-between">
+        {/* Row 2 — summary + toggle anuladas + new appointment */}
+        <div className="px-4 sm:px-6 pb-3 flex items-center justify-between gap-3 flex-wrap">
           <p className="text-sm text-slate-500">
             <span className="font-semibold text-slate-700">{totalSemana}</span>{' '}
             citas esta semana
@@ -358,13 +374,27 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
               </>
             )}
           </p>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Nueva cita</span>
-          </button>
+          <div className="flex items-center gap-3 ml-auto">
+            {anuladasSemana > 0 && (
+              <button
+                onClick={() => setMostrarAnuladas(v => !v)}
+                className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${
+                  mostrarAnuladas
+                    ? 'bg-slate-200 text-slate-700 border-slate-300'
+                    : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                {mostrarAnuladas ? 'Ocultar' : 'Ver'} {anuladasSemana} anulada{anuladasSemana > 1 ? 's' : ''}
+              </button>
+            )}
+            <button
+              onClick={() => setModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Nueva cita</span>
+            </button>
+          </div>
         </div>
 
         {/* Aviso si no hay médico seleccionado */}
@@ -471,7 +501,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
               {weekDays.map((dia, i) => {
                 const isToday = dia === today
                 const isWeekend = i >= 5
-                const citas = citasDia(dia)
+                const citasActivas = citasActivasDia(dia)
                 const { diaNombre, diaNum } = formatDayHeader(dia)
                 return (
                   <div
@@ -494,13 +524,13 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
                     >
                       {diaNombre}
                     </p>
-                    {citas.length > 0 ? (
+                    {citasActivas.length > 0 ? (
                       <span
                         className={`inline-block mt-0.5 text-xs font-semibold px-1.5 py-0.5 rounded-full ${
                           isToday ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'
                         }`}
                       >
-                        {citas.length}
+                        {citasActivas.length}
                       </span>
                     ) : (
                       <div className="mt-0.5 h-5" />
@@ -558,7 +588,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
                           if (citaEnHora) {
                             const cita = citaEnHora
                             const span = calcSpan(cita.horaInicio, cita.horaFin)
-                            const isCancelled = cita.estado === 'cancelada'
+                            const isTerminalNeg = ESTADOS_TERMINALES_NEG.includes(cita.estado)
                             const isCompleted = cita.estado === 'completada'
                             const mc = MEDICO_COLORS[(medicoColorMap.get(cita.medicoId) as MedicoColorKey) ?? 'blue'] ?? MEDICO_COLORS.blue
                             return (
@@ -570,24 +600,31 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
                                 <div
                                   onClick={() => setCitaSeleccionada(cita)}
                                   className={`h-full rounded-lg px-2 py-1 border overflow-hidden transition-all cursor-pointer ${
-                                    isCancelled
-                                      ? 'border-red-100 bg-red-50/50 opacity-60 hover:opacity-80'
+                                    isTerminalNeg
+                                      ? 'border-slate-200 bg-slate-100/70 opacity-55 hover:opacity-75'
                                       : isCompleted
                                       ? 'border-slate-100 bg-slate-50 opacity-60 hover:opacity-80'
                                       : `${mc.border} ${mc.fill} ${mc.hover} hover:shadow-sm`
                                   }`}
                                 >
-                                  <p className={`text-xs font-bold tabular-nums leading-tight ${isCancelled || isCompleted ? 'text-slate-400' : 'text-slate-700'}`}>
+                                  {isTerminalNeg && (
+                                    <span className="inline-block text-[9px] font-semibold px-1 py-0.5 rounded bg-slate-300/60 text-slate-500 leading-none mb-0.5">
+                                      {ESTADO_LABEL[cita.estado]}
+                                    </span>
+                                  )}
+                                  <p className={`text-xs font-bold tabular-nums leading-tight ${isTerminalNeg || isCompleted ? 'text-slate-400' : 'text-slate-700'}`}>
                                     {cita.horaInicio}
                                     <span className="font-normal text-slate-400"> –{cita.horaFin}</span>
                                   </p>
-                                  <p className="text-xs font-semibold text-slate-800 truncate leading-tight mt-0.5">
+                                  <p className={`text-xs font-semibold truncate leading-tight mt-0.5 ${isTerminalNeg ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
                                     {cita.pacienteNombre.split(' ').slice(0, 2).join(' ')}
                                   </p>
-                                  <div className="flex items-center gap-1 mt-0.5">
-                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ESTADO_DOT[cita.estado]}`} />
-                                    <span className={`text-xs truncate ${ESTADO_TEXT[cita.estado]}`}>{ESTADO_LABEL[cita.estado]}</span>
-                                  </div>
+                                  {!isTerminalNeg && (
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ESTADO_DOT[cita.estado]}`} />
+                                      <span className={`text-xs truncate ${ESTADO_TEXT[cita.estado]}`}>{ESTADO_LABEL[cita.estado]}</span>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             )
@@ -664,7 +701,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
 
                         if (bloque.tipo === 'cita') {
                           const cita = bloque.cita
-                          const isCancelled = cita.estado === 'cancelada'
+                          const isTerminalNeg = ESTADOS_TERMINALES_NEG.includes(cita.estado)
                           const isCompleted = cita.estado === 'completada'
                           const mc = MEDICO_COLORS[(medicoColorMap.get(cita.medicoId) as MedicoColorKey) ?? 'blue'] ?? MEDICO_COLORS.blue
                           return (
@@ -676,25 +713,32 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
                               <div
                                 onClick={() => setCitaSeleccionada(cita)}
                                 className={`h-full rounded-lg px-2 py-1 border overflow-hidden transition-all cursor-pointer ${
-                                  isCancelled
-                                    ? 'border-red-100 bg-red-50/50 opacity-60 hover:opacity-80'
+                                  isTerminalNeg
+                                    ? 'border-slate-200 bg-slate-100/70 opacity-55 hover:opacity-75'
                                     : isCompleted
                                     ? 'border-slate-100 bg-slate-50 opacity-60 hover:opacity-80'
                                     : `${mc.border} ${mc.fill} ${mc.hover} hover:shadow-sm`
                                 }`}
                               >
-                                <p className={`text-xs font-bold tabular-nums leading-tight ${isCancelled || isCompleted ? 'text-slate-400' : 'text-slate-700'}`}>
+                                {isTerminalNeg && (
+                                  <span className="inline-block text-[9px] font-semibold px-1 py-0.5 rounded bg-slate-300/60 text-slate-500 leading-none mb-0.5">
+                                    {ESTADO_LABEL[cita.estado]}
+                                  </span>
+                                )}
+                                <p className={`text-xs font-bold tabular-nums leading-tight ${isTerminalNeg || isCompleted ? 'text-slate-400' : 'text-slate-700'}`}>
                                   {cita.horaInicio}
                                   <span className="font-normal text-slate-400"> –{cita.horaFin}</span>
                                 </p>
-                                <p className="text-xs font-semibold text-slate-800 truncate leading-tight mt-0.5">
+                                <p className={`text-xs font-semibold truncate leading-tight mt-0.5 ${isTerminalNeg ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
                                   {cita.pacienteNombre.split(' ').slice(0, 2).join(' ')}
                                 </p>
-                                <div className="flex items-center gap-1 mt-0.5">
-                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ESTADO_DOT[cita.estado]}`} />
-                                  <span className={`text-xs truncate ${ESTADO_TEXT[cita.estado]}`}>{ESTADO_LABEL[cita.estado]}</span>
-                                </div>
-                                {span >= 2 && (
+                                {!isTerminalNeg && (
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ESTADO_DOT[cita.estado]}`} />
+                                    <span className={`text-xs truncate ${ESTADO_TEXT[cita.estado]}`}>{ESTADO_LABEL[cita.estado]}</span>
+                                  </div>
+                                )}
+                                {span >= 2 && !isTerminalNeg && (
                                   <span className={`inline-block mt-0.5 text-xs px-1 py-0.5 rounded font-medium max-w-full truncate ${mc.dot} text-white`}>
                                     {shortMedicoName(cita.medicoNombre)}
                                   </span>
@@ -792,7 +836,7 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
                       if (citaEnHora) {
                         const cita = citaEnHora
                         const span = calcSpan(cita.horaInicio, cita.horaFin)
-                        const isCancelled = cita.estado === 'cancelada'
+                        const isTerminalNeg = ESTADOS_TERMINALES_NEG.includes(cita.estado)
                         const isCompleted = cita.estado === 'completada'
                         const mc = MEDICO_COLORS[(medicoColorMap.get(cita.medicoId) as MedicoColorKey) ?? 'blue'] ?? MEDICO_COLORS.blue
                         return (
@@ -804,25 +848,32 @@ export function AgendaSemanaClient({ allCitas, medicos, fecha, medicoId, diaPath
                             <div
                               onClick={() => setCitaSeleccionada(cita)}
                               className={`h-full rounded-lg px-2 py-1 border overflow-hidden transition-all cursor-pointer ${
-                                isCancelled
-                                  ? 'border-red-100 bg-red-50/50 opacity-60 hover:opacity-80'
+                                isTerminalNeg
+                                  ? 'border-slate-200 bg-slate-100/70 opacity-55 hover:opacity-75'
                                   : isCompleted
                                   ? 'border-slate-100 bg-slate-50 opacity-60 hover:opacity-80'
                                   : `${mc.border} ${mc.fill} ${mc.hover} hover:shadow-sm`
                               }`}
                             >
-                              <p className={`text-xs font-bold tabular-nums leading-tight ${isCancelled || isCompleted ? 'text-slate-400' : 'text-slate-700'}`}>
+                              {isTerminalNeg && (
+                                <span className="inline-block text-[9px] font-semibold px-1 py-0.5 rounded bg-slate-300/60 text-slate-500 leading-none mb-0.5">
+                                  {ESTADO_LABEL[cita.estado]}
+                                </span>
+                              )}
+                              <p className={`text-xs font-bold tabular-nums leading-tight ${isTerminalNeg || isCompleted ? 'text-slate-400' : 'text-slate-700'}`}>
                                 {cita.horaInicio}
                                 <span className="font-normal text-slate-400"> –{cita.horaFin}</span>
                               </p>
-                              <p className="text-xs font-semibold text-slate-800 truncate leading-tight mt-0.5">
+                              <p className={`text-xs font-semibold truncate leading-tight mt-0.5 ${isTerminalNeg ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
                                 {cita.pacienteNombre.split(' ').slice(0, 2).join(' ')}
                               </p>
-                              <div className="flex items-center gap-1 mt-0.5">
-                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ESTADO_DOT[cita.estado]}`} />
-                                <span className={`text-xs truncate ${ESTADO_TEXT[cita.estado]}`}>{ESTADO_LABEL[cita.estado]}</span>
-                              </div>
-                              {span >= 2 && (
+                              {!isTerminalNeg && (
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${ESTADO_DOT[cita.estado]}`} />
+                                  <span className={`text-xs truncate ${ESTADO_TEXT[cita.estado]}`}>{ESTADO_LABEL[cita.estado]}</span>
+                                </div>
+                              )}
+                              {span >= 2 && !isTerminalNeg && (
                                 <span className={`inline-block mt-0.5 text-xs px-1 py-0.5 rounded font-medium max-w-full truncate ${mc.dot} text-white`}>
                                   {shortMedicoName(cita.medicoNombre)}
                                 </span>

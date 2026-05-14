@@ -5,9 +5,11 @@ import type { EstadoMedicoHoy, MockMedicoAdmin } from '@/types/domain'
 
 export const metadata = { title: 'Inicio — Praxis' }
 
+const ESTADOS_TERMINALES_NEG = ['cancelada', 'no_show'] as const
+
 function getEstadoHoy(citasDoctor: { estado: string }[]): EstadoMedicoHoy {
   if (citasDoctor.some(c => c.estado === 'en_consulta')) return 'en_consulta'
-  if (citasDoctor.some(c => c.estado !== 'cancelada')) return 'disponible'
+  if (citasDoctor.some(c => !ESTADOS_TERMINALES_NEG.includes(c.estado as typeof ESTADOS_TERMINALES_NEG[number]))) return 'disponible'
   return 'sin_agenda'
 }
 
@@ -32,15 +34,15 @@ export default async function InicioPage() {
   ])
 
   const kpis = {
-    total:       citasHoy.length,
+    total:       citasHoy.filter(c => !ESTADOS_TERMINALES_NEG.includes(c.estado as typeof ESTADOS_TERMINALES_NEG[number])).length,
     pendientes:  citasHoy.filter(c => c.estado === 'pendiente').length,
     enConsulta:  citasHoy.filter(c => c.estado === 'en_consulta').length,
     completadas: citasHoy.filter(c => c.estado === 'completada').length,
-    canceladas:  citasHoy.filter(c => c.estado === 'cancelada').length,
+    canceladas:  citasHoy.filter(c => ESTADOS_TERMINALES_NEG.includes(c.estado as typeof ESTADOS_TERMINALES_NEG[number])).length,
   }
 
   const proximasCitas = citasHoy
-    .filter(c => c.estado !== 'cancelada' && c.estado !== 'completada')
+    .filter(c => !ESTADOS_TERMINALES_NEG.includes(c.estado as typeof ESTADOS_TERMINALES_NEG[number]) && c.estado !== 'completada')
     .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
     .slice(0, 6)
 
@@ -48,7 +50,7 @@ export default async function InicioPage() {
     const citasDoctor = citasHoy.filter(c => c.medicoId === m.id)
     const estadoHoy: { estado: EstadoMedicoHoy; citasAtendidas: number; citasTotal: number } = {
       estado: citasDoctor.length === 0 ? 'sin_agenda' : getEstadoHoy(citasDoctor),
-      citasTotal: citasDoctor.filter(c => c.estado !== 'cancelada').length,
+      citasTotal: citasDoctor.filter(c => !ESTADOS_TERMINALES_NEG.includes(c.estado as typeof ESTADOS_TERMINALES_NEG[number])).length,
       citasAtendidas: citasDoctor.filter(c => c.estado === 'completada').length,
     }
     const proximaCita = citasDoctor

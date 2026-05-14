@@ -32,7 +32,7 @@ const ESTADO_BADGE: Record<
   pendiente: { label: 'Agendada', variant: 'pendiente' },
   en_consulta: { label: 'En consulta', variant: 'activo' },
   completada: { label: 'Completada', variant: 'completado' },
-  cancelada: { label: 'Cancelada', variant: 'urgente' },
+  cancelada: { label: 'Anulada', variant: 'default' },
   no_show: { label: 'No asistió', variant: 'default' },
 }
 
