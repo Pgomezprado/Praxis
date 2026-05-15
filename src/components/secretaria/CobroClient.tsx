@@ -40,6 +40,9 @@ export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/age
   const router = useRouter()
   const modoEdicion = !!cobroExistente
 
+  // returnPath puede traer query (?fecha=...) — usar & en ese caso para no romper la URL
+  const cobradoUrl = `${returnPath}${returnPath.includes('?') ? '&' : '?'}cobrado=${cita.id}`
+
   // Pre-seleccionar arancel que coincide con el tipo de cita (solo en modo creación)
   const arancelInicial = modoEdicion ? undefined : aranceles.find(a => a.tipo_cita === cita.tipo)
 
@@ -101,7 +104,7 @@ export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/age
           const json = await res.json()
           throw new Error(json.error ?? 'Error al guardar los cambios')
         }
-        router.replace(`${returnPath}?cobrado=${cita.id}`)
+        router.replace(cobradoUrl)
         return
       }
 
@@ -116,7 +119,7 @@ export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/age
           const json = await res.json()
           throw new Error(json.error ?? 'Error al consumir sesión del paquete')
         }
-        router.replace(`${returnPath}?cobrado=${cita.id}`)
+        router.replace(cobradoUrl)
         return
       }
 
@@ -166,7 +169,7 @@ export function CobroClient({ cita, aranceles, paqueteActivo, returnPath = '/age
         }
       }
 
-      router.replace(`${returnPath}?cobrado=${cita.id}`)
+      router.replace(cobradoUrl)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error inesperado')
       setLoading(false)
