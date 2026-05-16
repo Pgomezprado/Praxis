@@ -84,13 +84,14 @@ export async function PATCH(
 
     const meTyped = me as { clinica_id: string; rol: string }
 
+    // El médico no cobra ni gestiona cobros — ningún PATCH está permitido para rol doctor
+    // (el admin con es_doctor=true tiene rol 'admin_clinica', no 'doctor', por lo que puede)
+    if (meTyped.rol === 'doctor') {
+      return Response.json({ error: 'No tienes permiso para gestionar cobros' }, { status: 403 })
+    }
+
     // Determinar si es edición completa (no solo estado/notas)
     const esEdicionCompleta = monto_neto !== undefined || concepto !== undefined || medio_pago !== undefined || paciente_id !== undefined || numero_boleta !== undefined
-
-    // Solo admin_clinica y recepcionista pueden editar campos del cobro
-    if (esEdicionCompleta && meTyped.rol === 'doctor') {
-      return Response.json({ error: 'No tienes permiso para editar cobros' }, { status: 403 })
-    }
 
     // Verificar que el cobro pertenece a la clínica
     const { data: cobroExistente } = await supabase

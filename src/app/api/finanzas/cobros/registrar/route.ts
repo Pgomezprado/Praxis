@@ -2,8 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import type { Cobro, Pago } from '@/types/database'
 
 // POST /api/finanzas/cobros/registrar — crea cobro y pago en una operación atómica
-// Si el pago falla, el cobro se elimina antes de retornar error.
-// Solo pueden usar este endpoint usuarios con rol doctor o admin_clinica.
+// Si el pago falla, el cobro se marca anulado (soft delete) antes de retornar error.
+// Roles permitidos: recepcionista y admin_clinica.
 export async function POST(req: Request) {
   try {
     const body = await req.json()
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
 
     const meTyped = me as { clinica_id: string; rol: string }
 
-    if (meTyped.rol !== 'doctor' && meTyped.rol !== 'admin_clinica' && meTyped.rol !== 'recepcionista') {
+    if (meTyped.rol !== 'admin_clinica' && meTyped.rol !== 'recepcionista') {
       return Response.json({ error: 'Sin permisos para registrar cobros' }, { status: 403 })
     }
 
@@ -65,8 +65,32 @@ export async function POST(req: Request) {
     if (!pacienteValido) return Response.json({ error: 'Paciente no pertenece a esta clínica' }, { status: 403 })
     if (!doctorValido) return Response.json({ error: 'Profesional no pertenece a esta clínica' }, { status: 403 })
 
-    // Si viene cita_id, verificar que no existe cobro activo para esa cita
+    // Verificar que el arancel pertenece a la clínica (si viene informado)
+    if (arancel_id) {
+      const { data: arancelValido } = await supabase
+        .from('aranceles')
+        .select('id')
+        .eq('id', arancel_id)
+        .eq('clinica_id', meTyped.clinica_id)
+        .single()
+      if (!arancelValido) {
+        return Response.json({ error: 'Arancel no pertenece a esta clínica' }, { status: 403 })
+      }
+    }
+
+    // Si viene cita_id, verificar que pertenece a la clínica del usuario y que no existe cobro activo
     if (cita_id) {
+      const { data: citaValida } = await supabase
+        .from('citas')
+        .select('id')
+        .eq('id', cita_id)
+        .eq('clinica_id', meTyped.clinica_id)
+        .single()
+
+      if (!citaValida) {
+        return Response.json({ error: 'La cita no pertenece a esta clínica' }, { status: 403 })
+      }
+
       const { data: cobrosExistentes } = await supabase
         .from('cobros')
         .select('id, folio_cobro, estado')
@@ -121,6 +145,10 @@ export async function POST(req: Request) {
         if (intento === 2) throw cobroError
         continue
       }
+      // Colisión en el índice único de cita (race condition entre dos requests simultáneos)
+      if (cobroError.code === '23505' && cobroError.message?.includes('cobros_cita_id_unico')) {
+        return Response.json({ error: 'Esta cita ya tiene un cobro registrado.' }, { status: 409 })
+      }
       throw cobroError
     }
 
@@ -157,7 +185,7 @@ export async function POST(req: Request) {
     }
 
     // PASO 3 — Marcar cobro como pagado (el monto cubre el total)
-    const { data: cobroFinal } = await supabase
+    const { data: cobroFinal, error: updateFinalError } = await supabase
       .from('cobros')
       .update({ estado: 'pagado' })
       .eq('id', cobro.id)
@@ -169,6 +197,32 @@ export async function POST(req: Request) {
         doctor:usuarios!cobros_doctor_id_fkey ( id, nombre, especialidad )
       `)
       .single()
+
+    if (updateFinalError || !cobroFinal) {
+      // Rollback: marcar el cobro como anulado y el pago como inactivo
+      await Promise.all([
+        supabase
+          .from('cobros')
+          .update({ activo: false, estado: 'anulado' })
+          .eq('id', cobro.id)
+          .eq('clinica_id', meTyped.clinica_id),
+        ...(pagoData
+          ? [supabase
+              .from('pagos')
+              .update({ activo: false })
+              .eq('id', (pagoData as Pago).id)
+              .eq('clinica_id', meTyped.clinica_id)]
+          : []),
+      ])
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Error al actualizar estado del cobro a pagado (cobro y pago revertidos):', updateFinalError)
+      }
+      return Response.json(
+        { error: 'Error al finalizar el cobro. La operación fue revertida.' },
+        { status: 500 }
+      )
+    }
 
     return Response.json(
       {
